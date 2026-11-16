@@ -281,11 +281,12 @@ public sealed class MainWindow : Window
     private static FrameworkElement SupportButton()
     {
         var sp = new StackPanel { Orientation = Orientation.Horizontal };
-        sp.Children.Add(new TextBlock { Text = "\u2615", FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 13, Foreground = B(Bg), Margin = new Thickness(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center });
-        sp.Children.Add(new TextBlock { Text = "SUPPORT ON KO-FI", FontFamily = Mono, FontSize = 11.5, FontWeight = FontWeights.Bold, Foreground = B(Bg), VerticalAlignment = VerticalAlignment.Center });
+        sp.Children.Add(new TextBlock { Text = "\u2615", FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 20, Foreground = B(Bg), Margin = new Thickness(0, 0, 9, 0), VerticalAlignment = VerticalAlignment.Center });
+        sp.Children.Add(new TextBlock { Text = "SUPPORT ON KO-FI", FontFamily = Mono, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = B(Bg), VerticalAlignment = VerticalAlignment.Center });
         var b = new Border
         {
-            Background = B(AmberC), Padding = new Thickness(10, 4, 11, 4), Margin = new Thickness(14, 0, 0, 0), Child = sp, Cursor = Cursors.Hand,
+            Background = B(AmberC), Padding = new Thickness(18, 7, 20, 7), Margin = new Thickness(18, 0, 4, 0), Child = sp, Cursor = Cursors.Hand,
+            CornerRadius = new CornerRadius(5), BorderBrush = B(Hud), BorderThickness = new Thickness(2),
             VerticalAlignment = VerticalAlignment.Center,
             ToolTip = "The BMS Suite is free. If it helps you, you can buy the author a coffee (" + SupportUrl + ")",
         };
