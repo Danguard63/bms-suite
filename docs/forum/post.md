@@ -55,9 +55,7 @@ This is an early version, so I am sure you will find things to improve. Please t
 
 A big thank you to **Benchmark Sims** for keeping Falcon alive and for the official Blender plugin, to the author of **Mission Commander**, which inspired the Campaign Editor, and to this community, whose forum posts, guides and add-on theaters taught me most of what I know about BMS.
 
-The BMS Suite is and will stay free. If it saves you some time and you feel like it, you can buy me a coffee on [Ko-fi](https://ko-fi.com/danguard63) ☕. It really helps keep new tools coming!
-
-[![Support me on Ko-fi](https://storage.ko-fi.com/cdn/kofi2.png?v=3)](https://ko-fi.com/danguard63)
+The BMS Suite is and will stay free. 🙂
 
 Happy building and check six! ✈️
 **Danguard63**
