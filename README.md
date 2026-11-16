@@ -44,6 +44,12 @@ Needs the .NET 8 SDK on Windows.
 
 The shared library is `TerrainTool\src\TerrainTool.Core`; every program references it.
 
+## License
+
+Copyright (C) 2026 Danguard63.
+
+The BMS Suite is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License version 3** ([LICENSE](LICENSE)). It comes with no warranty. If you distribute a modified version, its source code must be published under the same license. Third-party code and data keep their own licenses: see [CREDITS.md](CREDITS.md).
+
 The BMS Suite is free. If it helps you, you can buy me a coffee on [Ko-fi](https://ko-fi.com/danguard63) – thank you!
 
 Falcon BMS is a product of Benchmark Sims. This project is not affiliated with Benchmark Sims. Third-party data and code: see [CREDITS.md](CREDITS.md).

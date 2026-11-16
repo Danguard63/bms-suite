@@ -17,5 +17,7 @@ program that made it). Close BMS before installing anything, and back up your BM
 
 The BMS Suite is free. If it helps you: https://ko-fi.com/danguard63 (also the button in the main menu).
 
+License: GNU GPL version 3 (LICENSE.txt). Source code: https://github.com/Danguard63/BMS-suite
+
 Falcon BMS is a product of Benchmark Sims. This project is not affiliated with Benchmark Sims.
 See CREDITS.md for third-party code and data.
