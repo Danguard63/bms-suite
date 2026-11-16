@@ -278,14 +278,14 @@ public sealed class MainWindow : Window
     public const string SupportUrl = "https://ko-fi.com/danguard63";
 
     /// <summary>"Support on Ko-fi": apre la pagina delle donazioni nel browser.</summary>
-    private static FrameworkElement SupportButton()
+    private static FrameworkElement SupportButton(bool large = false)
     {
         var sp = new StackPanel { Orientation = Orientation.Horizontal };
-        sp.Children.Add(new TextBlock { Text = "\u2615", FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 20, Foreground = B(Bg), Margin = new Thickness(0, 0, 9, 0), VerticalAlignment = VerticalAlignment.Center });
-        sp.Children.Add(new TextBlock { Text = "SUPPORT ON KO-FI", FontFamily = Mono, FontSize = 15, FontWeight = FontWeights.Bold, Foreground = B(Bg), VerticalAlignment = VerticalAlignment.Center });
+        sp.Children.Add(new TextBlock { Text = "\u2615", FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = large ? 24 : 20, Foreground = B(Bg), Margin = new Thickness(0, 0, 9, 0), VerticalAlignment = VerticalAlignment.Center });
+        sp.Children.Add(new TextBlock { Text = "SUPPORT ON KO-FI", FontFamily = Mono, FontSize = large ? 18 : 15, FontWeight = FontWeights.Bold, Foreground = B(Bg), VerticalAlignment = VerticalAlignment.Center });
         var b = new Border
         {
-            Background = B(AmberC), Padding = new Thickness(18, 7, 20, 7), Margin = new Thickness(18, 0, 4, 0), Child = sp, Cursor = Cursors.Hand,
+            Background = B(AmberC), Padding = large ? new Thickness(24, 12, 26, 12) : new Thickness(18, 7, 20, 7), Margin = large ? new Thickness(0) : new Thickness(18, 0, 4, 0), Child = sp, Cursor = Cursors.Hand,
             CornerRadius = new CornerRadius(5), BorderBrush = B(Hud), BorderThickness = new Thickness(2),
             VerticalAlignment = VerticalAlignment.Center,
             ToolTip = "The BMS Suite is free. If it helps you, you can buy the author a coffee (" + SupportUrl + ")",
@@ -297,6 +297,31 @@ public sealed class MainWindow : Window
             try { Process.Start(new ProcessStartInfo(SupportUrl) { UseShellExecute = true }); } catch { }
         };
         return b;
+    }
+
+    /// <summary>Riquadro delle donazioni nello spazio principale del menu.</summary>
+    private static FrameworkElement SupportCard()
+    {
+        var dp = new DockPanel();
+        var cup = new TextBlock { Text = "\u2615", FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 40, Foreground = B(AmberC), Margin = new Thickness(0, 0, 18, 0), VerticalAlignment = VerticalAlignment.Center };
+        DockPanel.SetDock(cup, Dock.Left);
+        dp.Children.Add(cup);
+        var btn = SupportButton(large: true);
+        DockPanel.SetDock(btn, Dock.Right);
+        dp.Children.Add(btn);
+        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        text.Children.Add(new TextBlock { Text = "Free and open source, made in spare time", FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = B(Text) });
+        text.Children.Add(new TextBlock
+        {
+            Text = "If the BMS Suite saves you time, you can buy the author a coffee on Ko-fi. Every coffee helps new tools and updates. Thank you!",
+            FontSize = 13, Foreground = B(Sub), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 16, 0),
+        });
+        dp.Children.Add(text);
+        return new Border
+        {
+            Background = B(PanelHi), BorderBrush = B(AmberC, 200), BorderThickness = new Thickness(2), CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(20, 16, 20, 16), Margin = new Thickness(0, 0, 0, 8), Child = dp,
+        };
     }
 
     private FrameworkElement BuildLeft()
@@ -397,6 +422,9 @@ public sealed class MainWindow : Window
         safety.Children.Add(SmallButton("\uE8B7", "Suite folder", "Programs, settings and logs of the BMS Suite", () => OpenFolder(SuiteRoot())));
         safety.Children.Add(SmallButton("\uE838", "BMS Data folder", "Falcon BMS 4.38\\Data (read it, do not change it by hand)", () => OpenFolder(_data)));
         _right.Children.Add(safety);
+
+        _right.Children.Add(Section("SUPPORT", "The BMS Suite is free"));
+        _right.Children.Add(SupportCard());
         RefreshTiles();
     }
 

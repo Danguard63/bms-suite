@@ -1,6 +1,8 @@
 # BMS Suite
 
-[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-F2A900?logo=kofi&logoColor=white)](https://ko-fi.com/danguard63)
+<a href="https://ko-fi.com/danguard63"><img src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" height="48" alt="Support me on Ko-fi"></a>
+
+**The BMS Suite is free.** If it saves you time, you can [buy me a coffee on Ko-fi](https://ko-fi.com/danguard63) ☕ – every coffee helps new tools and updates.
 
 Editing tools for **Falcon BMS 4.38**: theaters, objectives, campaigns, user interface art, 3D models and databases.
 One main menu (`BMSSuite.exe`) starts every program on the theater you are working on.
@@ -51,5 +53,7 @@ Copyright (C) 2026 Danguard63.
 The BMS Suite is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License version 3** ([LICENSE](LICENSE)). It comes with no warranty. If you distribute a modified version, its source code must be published under the same license. Third-party code and data keep their own licenses: see [CREDITS.md](CREDITS.md).
 
 The BMS Suite is free. If it helps you, you can buy me a coffee on [Ko-fi](https://ko-fi.com/danguard63) – thank you!
+
+<a href="https://ko-fi.com/danguard63"><img src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" height="48" alt="Support me on Ko-fi"></a>
 
 Falcon BMS is a product of Benchmark Sims. This project is not affiliated with Benchmark Sims. Third-party data and code: see [CREDITS.md](CREDITS.md).
