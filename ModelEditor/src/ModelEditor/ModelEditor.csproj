@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>ModelEditor</AssemblyName>
+    <ApplicationIcon>ModelEditor.ico</ApplicationIcon>
+    <RootNamespace>ModelEditor</RootNamespace>
+    <StartupObject>ModelEditor.App</StartupObject>
+    <Version>0.1.0</Version>
+    <Product>BMS Model Editor</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- vista 3D DirectX 11 con materiali PBR (normal map, ombre): https://github.com/helix-toolkit/helix-toolkit (MIT) -->
+    <PackageReference Include="HelixToolkit.Wpf.SharpDX" Version="3.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- libreria comune (per ora dentro TerrainTool; nel repo GitHub sara' la cartella Shared) -->
+    <ProjectReference Include="..\..\..\TerrainTool\src\TerrainTool.Core\TerrainTool.Core.csproj" />
+  </ItemGroup>
+
+</Project>

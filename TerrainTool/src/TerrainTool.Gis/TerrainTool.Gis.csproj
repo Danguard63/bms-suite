@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <RootNamespace>TerrainTool.Gis</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TerrainTool.Core\TerrainTool.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GDAL/OGR/PROJ per .NET: libreria + binari nativi Windows -->
+    <PackageReference Include="MaxRev.Gdal.Core" Version="3.*" />
+    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal" Version="3.*" />
+  </ItemGroup>
+
+</Project>

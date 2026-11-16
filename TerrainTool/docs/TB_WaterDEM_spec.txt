@@ -1,0 +1,34 @@
+Terrain Builder - Water DEM mode: what it does (from the Mideast run of 18/10, Output\TB_Analysis of 25/10)
+==========================================================================================================
+Inputs: DEM <theater>_32768.RAW (int16 ft), Watermap.raw (u8: 0 land, 25 inland, 45 ocean), Coastline.raw (u8 0/255),
+        CoastPoints.shp (optional). Pixel = 2048 km / 32768 = 62.5 m (Mideast 128).
+
+Heightmap.raw (32768, int16)
+  - water pixels: DEM - 40 ft (inland and ocean alike; doc of v1.12 says 70 for ocean: here it is 40).
+  - first water pixel next to land: -27 ft instead of -40.
+  - ocean near the Coastline.raw lines (distance to the line, not to land): -1,-3,-4,-5,-6,-7,-9,-10,-14,-33,-40 at 1..21 px.
+  - land pixels within 3.5 px of water: min(DEM, 5x5 binomial mean 1-4-6-4-1 of the carved heightmap, floored)
+    (TB: -13/-14 ft next to inland water, -5 diagonal, ~0 beyond; our rule: mean error 0.1-0.2 ft on land).
+  - land far from water: unchanged.
+
+WaterHeightmap.raw (8192 = 32768/4, int16)
+  - cell with water: surface = min over the 3x3 neighbour cells of the 4x4-block DEM minimum (72-98% identical to TB).
+  - land cells: per pixel, land within 11 px of water carries the surface of the lowest water cell within 2 cells, other
+    pixels DEM - 300 ft; the cell is the mean of its 16 pixels (TB's values are multiples of 1/16 between the two).
+    Far from water: mean DEM - 298.5..301 (varies by area; ±1 ft, under the terrain, not visible).
+
+WaterReflectionDemRefmap.raw (8192, int16): equal to WaterHeightmap on one row in four (100% identical); the other three
+  rows hold leftover values (horizontal stripes visible in TB's map: a TB defect). The tool writes WaterHeightmap.
+
+Depthmap_Blue.raw (32768, u8): 0 land, 25 inland water, 125 ocean (not 128); dilated ~3-4 px onto land with the class
+  of the nearest water.
+Depthmap_Red.raw (32768, u8): 255 ocean; inland water within 6 px of the ocean = 138 - 23 x distance (115, 92, 69, 46,
+  23, 0; 99% identical); land pixels under a Coastline.raw line = 255; everything else 0.
+GlobalAlpha_Blue.raw (32768, u8): 255 ocean, 0 inland and land; ramp onto land at the coast in 25 steps of ~10.4
+  (255/24.5): 249, 239, ... 10 (coast radius/strength parameters); in the coast crop ~5 px (212, 82, 5).
+CullingMap.raw (2048, u8): 255 where the block is >= 11 blocks (chessboard) from every block with more than 4 land pixels
+  of 256 (any water counts as water); else 0. Full map: 4,447 blocks of 4.2M differ (TB samples more coarsely).
+FFTMap.raw (2048, u8): water blocks 64 inland / 128 ocean; land within 5 blocks (chessboard) of a block with >= 8 water
+  pixels takes the class of the nearest water (TB stamps 11x11 squares, not always: 66-86% of those blocks).
+  250 = shore waves: 11x11 squares placed by TB at scattered, apparently random places along CoastPoints.shp (129 patches
+  on the Mideast); the tool puts one every ~80 blocks of coast (every 50th point). 96.9% of blocks identical (was 88.7%).

@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>TerrainTool</AssemblyName>
+    <ApplicationIcon>TerrainTool.ico</ApplicationIcon>
+    <RootNamespace>TerrainTool.App</RootNamespace>
+    <Version>0.2.0</Version>
+    <Product>BMS New Terrain Tool</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TerrainTool.Core\TerrainTool.Core.csproj" />
+    <ProjectReference Include="..\TerrainTool.Gis\TerrainTool.Gis.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Dati di partenza copiati accanto all'eseguibile -->
+    <Content Include="..\..\Data\**\*.*" LinkBase="Data" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- old copies of windows that now live in the Campaign Editor and in Objective Studio: not compiled, they can be deleted -->
+    <Compile Remove="CampaignEditorWindow.cs" />
+    <Compile Remove="UnitWindows.cs" />
+    <Compile Remove="SquadronWindows.cs" />
+    <Compile Remove="UnitTableWindow.cs" />
+    <Compile Remove="StationWindow.cs" />
+    <Compile Remove="CampaignAiWindow.cs" />
+    <Compile Remove="TeListsWindow.cs" />
+    <Compile Remove="UnitSymbols.cs" />
+    <Compile Remove="AirDefenseWindow.cs" />
+    <Compile Remove="DeployWindow.cs" />
+    <Compile Remove="UnitConvertWindow.cs" />
+    <Compile Remove="TheaterPickerWindow.cs" />
+    <Compile Remove="ModelViewWindow.cs" />
+    <Compile Remove="ObjectiveEditorWindow.cs" />
+    <Compile Remove="Preview3DWindow.cs" />
+  </ItemGroup>
+
+</Project>

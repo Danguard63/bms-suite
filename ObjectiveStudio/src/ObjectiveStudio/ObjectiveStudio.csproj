@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>ObjectiveStudio</AssemblyName>
+    <ApplicationIcon>ObjectiveStudio.ico</ApplicationIcon>
+    <RootNamespace>ObjectiveStudio</RootNamespace>
+    <StartupObject>ObjectiveStudio.App</StartupObject>
+    <Version>0.2.0</Version>
+    <Product>BMS Objective Studio</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- libreria comune (per ora dentro TerrainTool; nel repo GitHub sara' la cartella Shared) -->
+    <ProjectReference Include="..\..\..\TerrainTool\src\TerrainTool.Core\TerrainTool.Core.csproj" />
+  </ItemGroup>
+
+</Project>

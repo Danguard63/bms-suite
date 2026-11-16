@@ -1,0 +1,684 @@
+<Window x:Class="TerrainTool.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TerrainTool.App"
+        Title="BMS New Terrain Tool" Height="860" Width="1360" MinWidth="1000" MinHeight="600"
+        WindowStartupLocation="CenterScreen" WindowState="Maximized">
+    <DockPanel>
+        <!-- Barra progetto -->
+        <Border DockPanel.Dock="Top" Background="#F0F2F5" BorderBrush="#D0D4DA" BorderThickness="0,0,0,1" Padding="10,8">
+            <DockPanel>
+                <WrapPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <Button Content="New project…" Click="OnNewProject" />
+                    <Button Content="Open…" Click="OnOpenProject" />
+                    <Button Content="Save" Click="OnSaveProject" FontWeight="SemiBold" />
+                    <Button Content="Objective Studio" Click="OnOpenObjectEditor" Margin="24,0,0,0"
+                            ToolTip="Objectives and airbases of this project (a separate program, folder ObjectiveStudio): Run Objects, objective editor, Install objects" />
+                    <Button Content="Campaign Editor" Click="OnOpenCampaignEditor"
+                            ToolTip="Campaigns and TE missions of this project (a separate program, folder CampaignEditor): edit, apply the object changes, install the campaign files" />
+                </WrapPanel>
+                <TextBlock x:Name="ProjectPathText" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#555" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <!-- Log -->
+        <Grid DockPanel.Dock="Bottom" Height="120">
+            <TextBox x:Name="LogBox" IsReadOnly="True" FontFamily="Consolas" FontSize="12" VerticalScrollBarVisibility="Auto"
+                     TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" BorderThickness="0,1,0,0" Background="#FAFAFA" />
+        </Grid>
+
+        <TabControl x:Name="Tabs" Margin="6" SelectionChanged="OnTabChanged">
+
+            <!-- 1 · TEATRO -->
+            <TabItem Header="1 · Theater &amp; projection">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="460" />
+                            <ColumnDefinition Width="24" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Theater parameters (Theater.txt)" Style="{StaticResource Section}" Margin="0,0,0,6" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="190" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="30" /><RowDefinition Height="30" /><RowDefinition Height="30" />
+                                    <RowDefinition Height="30" /><RowDefinition Height="30" /><RowDefinition Height="30" />
+                                    <RowDefinition Height="30" /><RowDefinition Height="30" /><RowDefinition Height="30" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Text="Project name" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="0" Grid.Column="1" x:Name="NameBox" Margin="0,3" TextChanged="OnParamChanged"
+                                         ToolTip="Internal name of the project, also used in the names of the work files (e.g. Mideast_32768.RAW): do not change it once the work has started. The name shown in BMS is 'Name in BMS'" />
+                                <TextBlock Grid.Row="1" Text="Size (km)" Style="{StaticResource Label}" />
+                                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="SizeCombo" Margin="0,3" SelectionChanged="OnParamChanged">
+                                    <ComboBoxItem Content="1024" />
+                                    <ComboBoxItem Content="2048" />
+                                </ComboBox>
+                                <TextBlock Grid.Row="2" Text="Map size (pixels)" Style="{StaticResource Label}" />
+                                <ComboBox Grid.Row="2" Grid.Column="1" x:Name="PixelsCombo" Margin="0,3" SelectionChanged="OnParamChanged">
+                                    <ComboBoxItem Content="16384" />
+                                    <ComboBoxItem Content="32768" />
+                                </ComboBox>
+                                <TextBlock Grid.Row="3" Text="Center latitude (°N)" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="3" Grid.Column="1" x:Name="LatBox" Margin="0,3" TextChanged="OnParamChanged" />
+                                <TextBlock Grid.Row="4" Text="Center longitude (°E)" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="4" Grid.Column="1" x:Name="LonBox" Margin="0,3" TextChanged="OnParamChanged" />
+                                <TextBlock Grid.Row="5" Text="Min height (ft)" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="5" Grid.Column="1" x:Name="MinHBox" Margin="0,3" TextChanged="OnParamChanged" />
+                                <TextBlock Grid.Row="6" Text="Max height (ft)" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="6" Grid.Column="1" x:Name="MaxHBox" Margin="0,3" TextChanged="OnParamChanged" />
+                                <TextBlock Grid.Row="7" Text="Name in BMS" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="7" Grid.Column="1" x:Name="DisplayNameBox" Margin="0,3" TextChanged="OnParamChanged"
+                                         ToolTip="Name shown in the BMS Launcher and in the Campaign Editor (written by Assemble into the .tdf). Empty = the name of the old theater's .tdf" />
+                                <TextBlock Grid.Row="8" Text="Description in BMS" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="8" Grid.Column="1" x:Name="DescriptionBox" Margin="0,3" TextChanged="OnParamChanged"
+                                         ToolTip="Description of the theater in BMS (the 'desc' line of the .tdf). Empty = standard text" />
+                            </Grid>
+
+                            <WrapPanel Margin="0,12,0,0">
+                                <Button Content="Choose area on the world map…" Click="OnPickArea" Margin="0,0,6,6"
+                                        ToolTip="Drag a 1024 or 2048 km square on a world map; it sets size and centre and can fill the airbase list from OurAirports" />
+                                <Button Content="Fit center to airbases" Click="OnFitCenter" Margin="0,0,6,6" />
+                                <Button Content="Write Theater.txt" Click="OnWriteTheaterTxt" Margin="0,0,6,6" />
+                                <Button Content="Compare with Korea" Click="OnShowKorea" Margin="0,0,6,6" />
+                            </WrapPanel>
+
+                            <TextBlock Text="Folders" Style="{StaticResource Section}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="190" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="32" /><RowDefinition Height="32" /><RowDefinition Height="32" /><RowDefinition Height="32" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Text="Project folder" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="0" Grid.Column="1" x:Name="ProjFolderBox" Margin="0,3" IsReadOnly="True" />
+                                <Button Grid.Row="0" Grid.Column="2" Content="Open" Margin="6,3,0,3" Click="OnOpenProjectFolder" />
+                                <TextBlock Grid.Row="1" Text="Korea NewTerrain (read-only)" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="KoreaBox" Margin="0,3" TextChanged="OnPathsChanged" />
+                                <Button Grid.Row="1" Grid.Column="2" Content="…" Margin="6,3,0,3" Click="OnBrowseKorea" />
+                                <TextBlock Grid.Row="2" Text="Terrain Builder" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="2" Grid.Column="1" x:Name="TbBox" Margin="0,3" TextChanged="OnPathsChanged" />
+                                <Button Grid.Row="2" Grid.Column="2" Content="…" Margin="6,3,0,3" Click="OnBrowseTb" />
+                                <TextBlock Grid.Row="3" Text="Old theater (read-only)" Style="{StaticResource Label}" />
+                                <TextBox Grid.Row="3" Grid.Column="1" x:Name="OldBox" Margin="0,3" TextChanged="OnPathsChanged" />
+                                <Button Grid.Row="3" Grid.Column="2" Content="…" Margin="6,3,0,3" Click="OnBrowseOld" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Computed values" Style="{StaticResource Section}" Margin="0,0,0,6" />
+                            <TextBox x:Name="InfoBox" IsReadOnly="True" FontFamily="Consolas" FontSize="13" TextWrapping="Wrap"
+                                     BorderThickness="1" Padding="8" Background="#FAFAFA" MinHeight="300" />
+                            <TextBlock Text="Theater.txt preview" Style="{StaticResource Section}" />
+                            <TextBox x:Name="PreviewBox" IsReadOnly="True" FontFamily="Consolas" FontSize="13" TextWrapping="Wrap"
+                                     BorderThickness="1" Padding="8" Background="#FAFAFA" />
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 2 · BASI E MAPPA -->
+            <TabItem Header="2 · Airbases &amp; check map">
+                <Grid Margin="6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="640" />
+                        <ColumnDefinition Width="6" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0">
+                        <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="Load CSV…" Click="OnLoadBases" />
+                            <Button Content="Save CSV" Click="OnSaveBases" />
+                            <CheckBox x:Name="OnlyTodoCheck" Content="Only to verify" VerticalAlignment="Center" Margin="6,0" Click="OnFilterBases" />
+                            <TextBlock Text="Tier" VerticalAlignment="Center" Margin="8,0,4,0" />
+                            <ComboBox x:Name="TierFilter" Width="95" SelectedIndex="0" SelectionChanged="OnFilterBases">
+                                <ComboBoxItem Content="All" />
+                                <ComboBoxItem Content="Main" />
+                                <ComboBoxItem Content="Secondary" />
+                                <ComboBoxItem Content="Micro" />
+                                <ComboBoxItem Content="Server" />
+                            </ComboBox>
+                        </WrapPanel>
+                        <TextBlock DockPanel.Dock="Top" x:Name="BasesSummary" Margin="0,0,0,6" TextWrapping="Wrap" Foreground="#444" />
+                        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,6" TextWrapping="Wrap" Foreground="#666" FontSize="11"
+                                   Text="Lat/Lon = real position (OurAirports). LatOld/LonOld = position in the old theater (navaids PDF), shifted 0.2–1.1° east. For bases to verify, enter the real Lat/Lon and set Status = ok. Tier = build priority: Main first, Micro only if needed. Server = neutral airbase for the PvP server aircraft (only one)." />
+                        
+                        <DataGrid x:Name="BasesGrid" AutoGenerateColumns="False" CanUserAddRows="True" CanUserDeleteRows="True"
+                                  HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto" FrozenColumnCount="1"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" SelectionMode="Single"
+                                  SelectionChanged="OnBaseSelected" CellEditEnding="OnBaseEdited" RowHeight="22">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="150" />
+                                <DataGridComboBoxColumn Header="Tier" Width="82" SelectedItemBinding="{Binding Tier}"
+                                                        ItemsSource="{x:Static local:BaseRow.TierChoices}" />
+                                <DataGridTextColumn Header="Country" Binding="{Binding Country}" Width="80" />
+                                <DataGridTextColumn Header="ICAO" Binding="{Binding Icao}" Width="60" />
+                                <DataGridTextColumn Header="Lat" Binding="{Binding LatText}" Width="62" />
+                                <DataGridTextColumn Header="Lon" Binding="{Binding LonText}" Width="62" />
+                                <DataGridTextColumn Header="LatOld" Binding="{Binding LatOldText}" Width="62" />
+                                <DataGridTextColumn Header="LonOld" Binding="{Binding LonOldText}" Width="62" />
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" />
+                    <DockPanel Grid.Column="2">
+                        <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <CheckBox x:Name="ShowOldCheck" Content="Show old theater positions (purple)" VerticalAlignment="Center" Click="OnShowOld" />
+                            <Button Content="Fit view" Margin="12,0,0,0" Click="OnResetMap" />
+                        </WrapPanel>
+                        <TextBlock DockPanel.Dock="Bottom" x:Name="HoverBox" FontFamily="Consolas" Margin="0,4,0,0" />
+                        <TextBlock DockPanel.Dock="Bottom" Foreground="#666" FontSize="11" Margin="0,4,0,0"
+                                   Text="Hollow dots are drawn at their old theater position until verified · Wheel = zoom · Drag = pan · Double-click = fit view" TextWrapping="Wrap" />
+                        <Border BorderBrush="#888" BorderThickness="1">
+                            <local:MapView x:Name="Map" />
+                        </Border>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- 3 · DATI -->
+            <TabItem Header="3 · Source data">
+                <DockPanel Margin="10">
+                    <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button x:Name="DownloadButton" Content="Download selected" FontWeight="SemiBold" Click="OnDownload" />
+                        <Button x:Name="CancelDownloadButton" Content="Cancel" Click="OnCancelDownload" IsEnabled="False" />
+                        <Button Content="Refresh" Click="OnRefreshData" />
+                        <Button Content="Select all" Tag="sources" Click="OnSelectAll" />
+                        <Button Content="Deselect all" Tag="sources" Click="OnDeselectAll" />
+                        <TextBlock x:Name="AreaText" VerticalAlignment="Center" Margin="10,0" Foreground="#444" />
+                    </WrapPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <ProgressBar x:Name="DownloadProgressBar" Height="14" Minimum="0" Maximum="1" Value="0" />
+                        <TextBlock x:Name="DownloadStatus" Margin="0,4,0,0" FontFamily="Consolas" Foreground="#333" />
+                    </StackPanel>
+                    <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"
+                               Text="Tick the datasets and press Download: files go to the project Sources folder. Downloads resume where they stopped and files already present are skipped, so you can cancel and restart at any time. Tiles entirely at sea do not exist on the servers and are marked 'not available' (normal). SRTM and ALOS need a login and are only needed for TB's own DEM mode: download them by hand if you want them." />
+                    <DataGrid x:Name="DataGridSources" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
+                              GridLinesVisibility="Horizontal" RowHeight="26" HorizontalScrollBarVisibility="Auto">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Get" Width="40">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding Include, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  IsEnabled="{Binding IsAutomatic}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Dataset" Binding="{Binding Name}" Width="190" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Used for" Binding="{Binding Purpose}" Width="*" MinWidth="200" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Login" Binding="{Binding Login}" Width="120" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Files needed" Binding="{Binding Planned}" Width="85" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Present" Binding="{Binding Present}" Width="70" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="80" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Approx." Binding="{Binding ApproxSize}" Width="80" IsReadOnly="True" />
+                            <DataGridTemplateColumn Header="" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="Website" Padding="8,0" Margin="2,1" Click="OnOpenSourceUrl" Tag="{Binding}" />
+                                            <Button Content="Folder" Padding="8,0" Margin="2,1" Click="OnOpenSourceFolder" Tag="{Binding}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- 4 · ELABORAZIONE -->
+            <TabItem Header="4 · Processing">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="420" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0">
+                        <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="Output size" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="ProcSizeCombo" Width="190" SelectedIndex="0" Margin="0,0,10,0">
+                                <ComboBoxItem Content="1024 (preview test)" Tag="1024" />
+                                <ComboBoxItem Content="4096 (quick test)" Tag="4096" />
+                                <ComboBoxItem Content="Full size (map pixels)" Tag="full" />
+                            </ComboBox>
+                            <Button x:Name="RunStepsButton" Content="Run selected" FontWeight="SemiBold" Click="OnRunSteps" />
+                            <Button x:Name="CancelStepsButton" Content="Cancel" IsEnabled="False" Click="OnCancelSteps" />
+                            <Button Content="Open output folder" Click="OnOpenProcOutput" />
+                        <Button Content="Select all" Tag="steps" Click="OnSelectAll" />
+                        <Button Content="Deselect all" Tag="steps" Click="OnDeselectAll" />
+                        </WrapPanel>
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <ProgressBar x:Name="ProcProgressBar" Height="14" Minimum="0" Maximum="1" />
+                            <TextBlock x:Name="ProcStatus" Margin="0,4,0,0" FontFamily="Consolas" />
+                        </StackPanel>
+                        <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"
+                                   Text="These steps replace the QGIS work: each reads the downloaded Sources and writes RAW files ready for Terrain Builder into Output\TB_Input (test sizes go to Output\TB_Input_1024 / _4096). Try a test size first: it takes minutes and shows a preview. The full size takes much longer and needs several GB of disk." />
+                        <DataGrid x:Name="StepsGrid" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
+                                  GridLinesVisibility="Horizontal" SelectionMode="Single" SelectionChanged="OnStepSelected"
+                                  HorizontalScrollBarVisibility="Auto">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Run" Width="40">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding Run, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Step" Binding="{Binding Name}" Width="170" IsReadOnly="True" />
+                                <DataGridTextColumn Header="Inputs" Binding="{Binding Inputs}" Width="170" IsReadOnly="True" />
+                                <DataGridTextColumn Header="Last result" Binding="{Binding Result}" Width="200" IsReadOnly="True" />
+                                <DataGridTextColumn Header="What it does" Binding="{Binding Description}" Width="*" MinWidth="250" IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                    <DockPanel Grid.Column="2">
+                        <TextBlock DockPanel.Dock="Top" x:Name="PreviewTitle" Text="Preview" Style="{StaticResource Section}" Margin="0,0,0,6" />
+                        <TextBlock DockPanel.Dock="Bottom" x:Name="PreviewInfo" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#444" />
+                        <Border BorderBrush="#888" BorderThickness="1" Background="#1E232B">
+                            <Image x:Name="PreviewImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                        </Border>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- 5 · TEXTURE DDS -->
+            <TabItem Header="5 · Terrain files">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="420" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0">
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Terrain Builder output folder" Style="{StaticResource Label}" />
+                            <TextBox Grid.Column="1" x:Name="TbOutBox" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0">
+                                <Button Content="…" Click="OnBrowseTbOut" />
+                                <Button Content="Refresh" Click="OnRefreshTex" Margin="0" />
+                            </StackPanel>
+                        </Grid>
+                        <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button x:Name="RunTexButton" Content="Run selected" FontWeight="SemiBold" Click="OnRunTex" />
+                            <Button x:Name="CancelTexButton" Content="Cancel" IsEnabled="False" Click="OnCancelTex" />
+                            <Button Content="Open NewTerrain output" Click="OnOpenNewTerrainOut" />
+                            <Button Content="Photoreal tile editor…" Click="OnTileEditor"
+                                    ToolTip="2D map of the Photoreal 4K tiles with objectives, names, links and base layouts (from Output\Install); go to BMS X/Y, lat/lon or a tile; edit a tile in GIMP/Photoshop and import it back (the original is kept)." />
+                            <Button Content="Terrain preview…" Click="OnTerrainPreview"
+                                    ToolTip="Fly a free camera over the finished terrain of Output\NewTerrain (HeightMap, water surface, Photoreal tiles): pick a point on the theater map, an airbase or lat/lon." />
+                            <Button Content="Water DEM…" FontWeight="SemiBold" Click="OnWaterDem"
+                                    ToolTip="Terrain Builder's Water DEM mode rebuilt in this tool: checks before starting, progress bars, log file, threads chosen for this PC. Writes into Output\WaterDem; tick 'Use these water maps' there to use them here instead of TB's." />
+                            <Button x:Name="TbAnalyseButton" Content="Analyse Terrain Builder output" Click="OnAnalyseTb"
+                                    ToolTip="Reads the inputs (Output\TB_Input) and the Water DEM outputs of Terrain Builder at full resolution, using all CPU cores, and writes a small report into Output\TB_Analysis (statistics, reduced maps, full-resolution crops). Used to rebuild the Water DEM mode inside this tool." />
+                            <Button x:Name="ProbeButton" Content="Probe points (diagnostic)…" Click="OnProbe"
+                                    ToolTip="Diagnostic: cuts small windows of HeightMap, WaterHeightMap, Watermap and LandCoverMap around the points in probe.txt (name;lat;lon;radius km) into Output\Probe, to look at a problem area closely." />
+                            
+                            
+                        <Button Content="Select all" Tag="tex" Click="OnSelectAll" />
+                        <Button Content="Deselect all" Tag="tex" Click="OnDeselectAll" />
+                        </WrapPanel>
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <ProgressBar x:Name="TexProgressBar" Height="14" Minimum="0" Maximum="1" />
+                            <TextBlock x:Name="TexStatus" Margin="0,4,0,0" FontFamily="Consolas" />
+                        </StackPanel>
+                        <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"
+                                   Text="These jobs replace the Photoshop work: they read the RAW files written by Terrain Builder (set TB's output folder, e.g. the project's Output\TB_Output) and write the DDS textures and final RAW files into Output\NewTerrain, with the names BMS expects. Nothing is written into the BMS installation here: that is done by tab 9 'Install into BMS' (only inside BMS\Data\&lt;add-on&gt;, after confirmation, with backups)." />
+                        <DataGrid x:Name="TexGrid" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
+                                  GridLinesVisibility="Horizontal" SelectionMode="Single" SelectionChanged="OnTexSelected"
+                                  HorizontalScrollBarVisibility="Auto">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Run" Width="40">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding Run, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Output" Binding="{Binding Name}" Width="170" IsReadOnly="True" />
+                                <DataGridTextColumn Header="Inputs" Binding="{Binding Inputs}" Width="260" IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Last result" Binding="{Binding Result}" Width="150" IsReadOnly="True" />
+                                <DataGridTextColumn Header="What it does" Binding="{Binding Description}" Width="*" MinWidth="250" IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                    <DockPanel Grid.Column="2">
+                        <TextBlock DockPanel.Dock="Top" x:Name="TexPreviewTitle" Text="Preview" Style="{StaticResource Section}" Margin="0,0,0,6" />
+                        <TextBlock DockPanel.Dock="Bottom" x:Name="TexPreviewInfo" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#444" />
+                        <Border BorderBrush="#888" BorderThickness="1" Background="#1E232B">
+                            <Image x:Name="TexPreviewImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                        </Border>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- 6 · CONTROLLO NEWTERRAIN -->
+            <TabItem Header="6 · Terrain check">
+                <DockPanel Margin="10">
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Folder to check" Style="{StaticResource Label}" />
+                        <TextBox Grid.Column="1" x:Name="CheckFolderBox" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0">
+                            <Button Content="…" Click="OnBrowseCheckFolder" />
+                            <Button Content="Project output" Click="OnCheckUseOutput" />
+                            <Button Content="Korea (test)" Click="OnCheckUseKorea" />
+                            <Button Content="Check" FontWeight="SemiBold" Click="OnRunCheck" Margin="0" />
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock DockPanel.Dock="Top" x:Name="CheckSummary" Margin="0,0,0,6" Foreground="#444" TextWrapping="Wrap" />
+                    <DataGrid x:Name="CheckGrid" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                              GridLinesVisibility="Horizontal" RowHeight="22">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusLabel}" Width="120" />
+                            <DataGridTextColumn Header="File / folder" Binding="{Binding Entry.RelPath}" Width="280" />
+                            <DataGridTextColumn Header="Produced by" Binding="{Binding Producer}" Width="120" />
+                            <DataGridTextColumn Header="Actual" Binding="{Binding Actual}" Width="90" />
+                            <DataGridTextColumn Header="Expected" Binding="{Binding Expected}" Width="90" />
+                            <DataGridTextColumn Header="Korea" Binding="{Binding Korea}" Width="90" />
+                            <DataGridTextColumn Header="Description / notes" Binding="{Binding Text}" Width="*" />
+                        </DataGrid.Columns>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding StatusLabel}" Value="Missing">
+                                        <Setter Property="Background" Value="#FDECEC" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding StatusLabel}" Value="Wrong size">
+                                        <Setter Property="Background" Value="#FFF4E0" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding StatusLabel}" Value="OK">
+                                        <Setter Property="Background" Value="#EAF7EE" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <!-- 7 · CONTENUTI DEL TEATRO -->
+            <TabItem Header="7 · Theater content">
+                <TabControl x:Name="ContentTabs" Margin="6">
+                    <TabItem Header="2D map">
+                        <DockPanel Margin="10">
+                            <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button x:Name="RunMapButton" Content="Run selected" FontWeight="SemiBold" Click="OnRunMap" />
+                                <Button x:Name="CancelMapButton" Content="Cancel" IsEnabled="False" Click="OnCancelTex" />
+                                <Button Content="Open art output folder" Click="OnOpenArtFolder" ToolTip="Output\Art of the project" />
+                                <Button Content="Refresh" Click="OnRefreshMap" />
+                            </WrapPanel>
+                            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                                <ProgressBar x:Name="MapProgressBar" Height="14" Minimum="0" Maximum="1" />
+                                <TextBlock x:Name="MapStatus" Margin="0,4,0,0" FontFamily="Consolas" />
+                            </StackPanel>
+                            <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"
+                                       Text="The 2D map is the theater map BMS shows in Instant Action, TE and campaign (with the airbases and objectives on it). It is made from the satellite colour map of tab 4, so run it again when the terrain changes. Without it the UI shows the Korea map. The rest of the UI art (flags, backgrounds, campaign pictures, patches, texts, fonts, sounds) is made with the Art Editor: see the 'UI art' tab." />
+                            <DataGrid x:Name="MapGrid" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
+                                      GridLinesVisibility="Horizontal" SelectionMode="Single" HorizontalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTemplateColumn Header="Run" Width="40">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding Run, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Job" Binding="{Binding Name}" Width="200" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Inputs" Binding="{Binding Inputs}" Width="240" IsReadOnly="True">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Last result" Binding="{Binding Result}" Width="130" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="What it does" Binding="{Binding Description}" Width="*" MinWidth="250" IsReadOnly="True">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </TabItem>
+                    <TabItem Header="Objects &amp; campaigns">
+                        <StackPanel Margin="10" MaxWidth="900" HorizontalAlignment="Left">
+                            <TextBlock Text="Objectives, airbases and campaigns" Style="{StaticResource Section}" Margin="0,0,0,6" />
+                            <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                                       Text="The objectives and airbase layouts (job 'Objects', objective editor) and the campaigns and TE missions are made with two separate programs of the suite. They save into this project (Output\Install and CampaignEdits): 'Build theater' (tab 8) puts them into the theater." />
+                            <WrapPanel Margin="0,0,0,10">
+                                <Button Content="Open Objective Studio" FontWeight="SemiBold" Click="OnOpenObjectEditor" />
+                                <Button Content="Open the Campaign Editor" FontWeight="SemiBold" Click="OnOpenCampaignEditor" />
+                            </WrapPanel>
+                            <TextBlock x:Name="ContentStatus" TextWrapping="Wrap" FontFamily="Consolas" />
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="UI art">
+                        <StackPanel Margin="10" MaxWidth="900" HorizontalAlignment="Left">
+                            <TextBlock Text="UI art of the theater" Style="{StaticResource Section}" Margin="0,0,0,6" />
+                            <TextBlock TextWrapping="Wrap" Margin="0,0,0,10"
+                                       Text="Flags, main menu and screen backgrounds, campaign pictures, small maps, squadron patches, the texts of Theater.irc, fonts, button looks and sounds are made with the Art Editor (a separate program of the suite). Open this project in it (Open… → TerrainTool projects): it edits the project's art (Output\Art), and 'Build theater' puts it into the theater. What the theater does not have comes from the BMS art (KTO), which is never changed." />
+                            <WrapPanel>
+                                <Button Content="Open the Art Editor" FontWeight="SemiBold" Click="OnOpenArtEditor" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="Sim &amp; SAM">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="430" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0">
+                        <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button x:Name="SamCheckButton" Content="Check SAM systems &amp; positions" FontWeight="SemiBold" Click="OnSamCheck"
+                                    ToolTip="Reads the theater database (with DbEdits.txt applied), the Sim radar data and every campaign / TE of the project, and checks that each air defence battalion fits in the point list BMS gives it on its objective." />
+                            <Button Content="Install theater Sim into BMS…" Click="OnInstallSim"
+                                    ToolTip="Copies Output\Install\&lt;add-on&gt;\NT\Sim (made by 'Assemble' = full copy of BMS Data\Sim + the SimOverrides folder) into BMS\Data\&lt;add-on&gt;\NT\Sim and sets 'simdatadir' in the _NT.tdf (asks first). Replaced files and the .tdf are saved in Output\BmsBackup\&lt;date&gt;. BMS Data\Sim is never touched." />
+                            <Button Content="Copy a BMS Sim file to SimOverrides…" Click="OnSimCopyFile"
+                                    ToolTip="Pick a file of BMS Data\Sim (e.g. Misdata\SA-2F.dat, Radar\Fan_Song_F.dat): it is copied into the project's SimOverrides folder with the same path, ready to be edited." />
+                            <Button Content="Open SimOverrides" Click="OnSimOpenOverrides" />
+                            <CheckBox x:Name="SamAllTypes" Content="All SAM types" VerticalAlignment="Center" Margin="8,0,0,0" Click="OnSamFilter"
+                                      ToolTip="Also the battalion types not used in the project's campaigns" />
+                            <CheckBox x:Name="SamProblemsOnly" Content="Only problems" VerticalAlignment="Center" Margin="8,0,0,0" Click="OnSamFilter" />
+                        </WrapPanel>
+                        <TextBlock x:Name="SimStatus" DockPanel.Dock="Top" Margin="0,0,0,6" FontFamily="Consolas" TextWrapping="Wrap" />
+                        <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"
+                                   Text="How BMS places an air defence battalion on an objective: it takes ONE free point list of the objective's layout (SAM list, or AAA list for gun units; one battalion per list, preferring a list with at least as many points as vehicles), then puts each vehicle on a point of its kind (SAM launcher, radar, AAA, support, infantry) inside that list; when those run out, on any other point left in the list; when the list is full, the vehicle is not on the base points. More launchers than SAM points still fit while the list has free points of other kinds." />
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="6" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <DataGrid x:Name="SamGrid" Grid.Row="0" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                                      GridLinesVisibility="Horizontal" SelectionMode="Single" SelectionChanged="OnSamSelected" HorizontalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="UCD" Binding="{Binding Ucd}" Width="45" />
+                                    <DataGridTextColumn Header="Battalion type" Binding="{Binding Name}" Width="200" />
+                                    <DataGridTextColumn Header="Launchers" Binding="{Binding Launchers}" Width="65" />
+                                    <DataGridTextColumn Header="Missiles each" Binding="{Binding MissilesEach}" Width="80" />
+                                    <DataGridTextColumn Header="Missile" Binding="{Binding Missile}" Width="110" />
+                                    <DataGridTextColumn Header="Radars" Binding="{Binding Radars}" Width="160" />
+                                    <DataGridTextColumn Header="Rate of fire (Sim radar)" Binding="{Binding Fire}" Width="260" />
+                                    <DataGridTextColumn Header="Vehicles → points needed" Binding="{Binding Needs}" Width="230" />
+                                    <DataGridTextColumn Header="Battalions" Binding="{Binding Battalions}" Width="65" />
+                                    <DataGridTextColumn Header="Positions" Binding="{Binding Worst}" Width="*" MinWidth="160" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <DataGrid x:Name="SamPlaceGrid" Grid.Row="2" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                                      GridLinesVisibility="Horizontal" HorizontalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Campaign" Binding="{Binding File}" Width="130" />
+                                    <DataGridTextColumn Header="Team" Binding="{Binding Team}" Width="45" />
+                                    <DataGridTextColumn Header="Battalion" Binding="{Binding Unit}" Width="150" />
+                                    <DataGridTextColumn Header="Objective" Binding="{Binding Objective}" Width="230" />
+                                    <DataGridTextColumn Header="OCD" Binding="{Binding Ocd}" Width="50" />
+                                    <DataGridTextColumn Header="Point list" Binding="{Binding List}" Width="300" />
+                                    <DataGridTextColumn Header="Result" Binding="{Binding Result}" Width="*" MinWidth="160" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </DockPanel>
+                    <DockPanel Grid.Column="2">
+                        <TextBlock DockPanel.Dock="Top" Text="Database changes (DbEdits.txt)" Style="{StaticResource Section}" Margin="0,0,0,6" />
+                        <TextBlock DockPanel.Dock="Top" Foreground="#666" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Text="One change per line: TABLE Num Field Value  # comment   (e.g. UCD 161 ElementCount_1 3). Applied by the 'Objects' job on top of the BMS 4.38 database, so they survive BMS updates; the check on the left uses them right away. To get them into BMS: run 'Objects' + 'Assemble', then 'Install objects' (Objective Studio)." />
+                        <WrapPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                            <Button Content="Save" FontWeight="SemiBold" Click="OnDbEditsSave" />
+                            <Button Content="Reload" Click="OnDbEditsReload" />
+                        </WrapPanel>
+                        <TextBox x:Name="DbEditsBox" FontFamily="Consolas" AcceptsReturn="True" AcceptsTab="True"
+                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" />
+                    </DockPanel>
+                </Grid>
+                    </TabItem>
+                </TabControl>
+            </TabItem>
+            <!-- 8 · COSTRUZIONE DEL TEATRO -->
+            <TabItem Header="8 · Build theater">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="460" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0">
+                        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
+                                   Text="Puts together the theater ready for BMS in the project's Output\Install folder: our terrain files, the 2D map, objects, campaigns (with the fixes BMS 4.38 needs), Sim and UI art, and a new theater definition (.tdf). Nothing is written into BMS here: tab 9 installs it." />
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Theater name in BMS" Style="{StaticResource Label}" />
+                            <TextBox Grid.Column="1" x:Name="BuildNameBox" TextChanged="OnBuildNameChanged"
+                                     ToolTip="The name in BMS's theater list (the same as 'Display name' in tab 1)" />
+                        </Grid>
+                        <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                            <Button x:Name="BuildButton" Content="Build theater" FontWeight="SemiBold" Click="OnBuild" />
+                            <Button x:Name="CancelBuildButton" Content="Cancel" IsEnabled="False" Click="OnCancelTex" />
+                            <CheckBox x:Name="BuildRemake" Content="First re-make the 2D map if it is missing or older than the terrain" IsChecked="True" VerticalAlignment="Center" Margin="8,0,8,0" />
+                            <Button Content="Refresh" Click="OnRefreshBuild" />
+                            <Button Content="Open Output\Install" Click="OnOpenInstallFolder" />
+                        </WrapPanel>
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <ProgressBar x:Name="BuildProgressBar" Height="14" Minimum="0" Maximum="1" />
+                            <TextBlock x:Name="BuildStatus" Margin="0,4,0,0" FontFamily="Consolas" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="6" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <DataGrid x:Name="BuildGrid" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                                      GridLinesVisibility="Horizontal" SelectionMode="Single" MaxHeight="330">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Part" Binding="{Binding Part}" Width="150" />
+                                    <DataGridTextColumn Header="State" Binding="{Binding State}" Width="110" />
+                                    <DataGridTextColumn Header="Details" Binding="{Binding Details}" Width="*">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTemplateColumn Header="" Width="150">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="{Binding GoLabel}" Click="OnBuildGo" Margin="2" Padding="6,1" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                                <DataGrid.RowStyle>
+                                    <Style TargetType="DataGridRow">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding State}" Value="Missing"><Setter Property="Background" Value="#FDECEC" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding State}" Value="To re-make"><Setter Property="Background" Value="#FFF4E0" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding State}" Value="Ready"><Setter Property="Background" Value="#EAF7EE" /></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.RowStyle>
+                            </DataGrid>
+                            <DockPanel Grid.Row="2">
+                                <TextBlock DockPanel.Dock="Top" Text="Report of the last build" Style="{StaticResource Section}" Margin="0,0,0,4" />
+                                <TextBox x:Name="BuildReport" IsReadOnly="True" FontFamily="Consolas" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+                            </DockPanel>
+                        </Grid>
+                    </DockPanel>
+                    <DockPanel Grid.Column="2">
+                        <TextBlock DockPanel.Dock="Top" Text="Theater definition (.tdf) of the build" Style="{StaticResource Section}" Margin="0,0,0,6" />
+                        <TextBlock DockPanel.Dock="Top" x:Name="TdfPath" Foreground="#666" TextWrapping="Wrap" Margin="0,0,0,4" />
+                        <TextBox x:Name="TdfPreview" IsReadOnly="True" FontFamily="Consolas" TextWrapping="NoWrap"
+                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Background="#FAFAFA" />
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+            <!-- 9 · INSTALLAZIONE IN BMS -->
+            <TabItem Header="9 · Install into BMS">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10" MaxWidth="1000" HorizontalAlignment="Left">
+                        <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                                   Text="Copies the built theater (Output\Install) into BMS. Only new or changed files are copied; every file that is replaced is first saved in the project's Output\BmsBackup folder, so you can go back. Close BMS before installing. A backup of your own of the theater folder is a good idea the first time." />
+                        <TextBlock x:Name="InstallInfo" TextWrapping="Wrap" FontFamily="Consolas" Margin="0,0,0,10" />
+                        <TextBlock Text="Install" Style="{StaticResource Section}" Margin="0,0,0,4" />
+                        <WrapPanel Margin="0,0,0,10">
+                            <Button x:Name="InstallAllButton" Content="Install everything…" FontWeight="SemiBold" Click="OnInstallAll"
+                                    ToolTip="Terrain and water maps, Photoreal tiles, objects and campaigns, UI art and Sim: everything that is new or changed" />
+                            <Button Content="Install terrain &amp; water maps into BMS…" Click="OnInstallWater" ToolTip="Copies into BMS\Data\&lt;add-on&gt;\…\NewTerrain only the changed HeightMap.raw, WaterHeightMap.raw, DepthMap, CullingMap, FFTMap, GlobalAlpha, LandCoverMap and ForestMap (asks first). The replaced files are saved in Output\BmsBackup\&lt;date&gt;; the terrain caches are deleted so BMS rebuilds them." />
+                            <Button x:Name="InstallBmsButton" Content="Install Photoreal tiles into BMS…" Click="OnInstallBms" ToolTip="Copies into BMS\Data\&lt;add-on&gt; only the Photoreal 4K tiles that are new or changed (asks first, no cache is deleted). Objects: Objective Studio; campaign: Campaign Editor." />
+                            <Button Content="Install objects &amp; campaigns…" Click="OnInstallObjects" ToolTip="Objects (airbase layouts), campaign files and the theater definition (.tdf)" />
+                            <Button x:Name="InstallArtButton" Content="Install UI art…" Click="OnInstallArt" ToolTip="The 2D map and the UI art of the project (Output\Art) into the theater's art folder" />
+                            <Button Content="Install theater Sim…" Click="OnInstallSim" ToolTip="The theater's own Sim (BMS Data\Sim + SimOverrides), if the project has one" />
+                        </WrapPanel>
+                        <TextBlock Text="Go back" Style="{StaticResource Section}" Margin="0,0,0,4" />
+                        <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" Foreground="#444"
+                                   Text="Restore puts back into BMS the files saved before an installation (choose which one). Files that the installation added new stay: delete the theater folder in BMS to remove the theater completely." />
+                        <WrapPanel Margin="0,0,0,10">
+                            <Button Content="Restore a backup…" Click="OnRestoreBackup" />
+                            <Button Content="Remove from BMS's theater list…" Click="OnRemoveFromLst" ToolTip="The theater no longer appears in the BMS Launcher; its files stay" />
+                            <Button Content="Open the backups folder" Click="OnOpenBackups" />
+                        </WrapPanel>
+                        <TextBlock Text="Check" Style="{StaticResource Section}" Margin="0,0,0,4" />
+                        <WrapPanel>
+                            <Button Content="Check the terrain installed in BMS" Click="OnCheckInstalled" ToolTip="Runs the Terrain check (tab 6) on the NewTerrain folder of the theater in BMS" />
+                        </WrapPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>BMSSuite</AssemblyName>
+    <ApplicationIcon>BMSSuite.ico</ApplicationIcon>
+    <RootNamespace>BMSSuite</RootNamespace>
+    <StartupObject>BMSSuite.App</StartupObject>
+    <Version>0.1.0</Version>
+    <Product>BMS Suite</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- libreria comune (per ora dentro TerrainTool; nel repo GitHub sara' la cartella Shared) -->
+    <ProjectReference Include="..\..\..\TerrainTool\src\TerrainTool.Core\TerrainTool.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- icone dei programmi per le schede della home (disegnate da art/make_icons.py) -->
+    <Resource Include="Icons\*.png" />
+  </ItemGroup>
+
+</Project>

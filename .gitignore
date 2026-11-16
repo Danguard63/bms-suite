@@ -1,0 +1,32 @@
+# build output
+bin/
+obj/
+dist/
+*.user
+.vs/
+build.log
+
+# what the programs write while they run (settings, work folders, backups, caches, logs)
+Settings/
+Theaters/
+Projects/
+Cache/
+Transfers/
+Backup/
+Backups/
+BmsBackup/
+Screenshots/
+*.log
+model_check_*.txt
+
+# private notes and documents that stay off the repository
+STATO_LAVORI.txt
+docs/BMS-4.38-internals.md
+BMS 4.38 - logica interna.md
+MISSION COMMANDER/
+
+# old TerrainTool helpers (not used any more)
+TerrainTool/run_campaign.bat
+TerrainTool/publish.bat
+TerrainTool/LEGGIMI.txt
+TerrainTool/lc_histo.*
