@@ -18,7 +18,7 @@ public enum UnitKind { Unknown, Flight, Package, Squadron, Brigade, Battalion, T
 /// modificabili, cosi' in scrittura si cambiano solo quei byte e il resto resta identico.
 /// </summary>
 /// <summary>
-/// Waypoint di un'unita' (come Waypoint.cs di Mission Commander): X/Y nella griglia delle unita' (km), Z = quota / 10 piedi,
+/// Waypoint di un'unita' (formato studiato su Mission Commander): X/Y nella griglia delle unita' (km), Z = quota / 10 piedi,
 /// Arrive in ms dall'inizio della campagna, Action (WP_*), Flags (WPF_TARGET = 1, WPF_IP = 2, ...), bersaglio.
 /// </summary>
 public readonly record struct CampWaypoint(short X, short Y, short Z, uint Arrive, byte Action, byte RouteAction, uint Flags, VuId Target)
@@ -84,7 +84,7 @@ public sealed class CampUnit
     public int TotAt;
     /// <summary>Posizione (dall'inizio del record) di ogni waypoint.</summary>
     public int[] WpAt = Array.Empty<int>();
-    /// <summary>Squadrone: posizioni nel record (dal codice di Mission Commander, Squadron.cs) e valori.</summary>
+    /// <summary>Squadrone: posizioni nel record (studiate su Mission Commander) e valori.</summary>
     public int FuelAt, CsrAt, PilotsAt, PilotCount, PilotSize, ScheduleAt, RatingAt, KillsAt, PatchAt, PatchSize, RetaskAt;
     public int Fuel;
     public ushort Patch;
@@ -118,7 +118,7 @@ public sealed class CampUnit
 
 /// <summary>
 /// Lettura e scrittura del file .uni (unita') di una campagna Falcon BMS.
-/// Formato ricavato dal codice di Mission Commander (BMSUtils, con il permesso dell'autore) e verificato sui file 4.38.
+/// Formato studiato su Mission Commander (BMSUtils, con il permesso dell'autore, nessun codice copiato) e verificato sui file 4.38.
 /// Intestazione: i32 dimensione compressa, i16 numero unita', i32 dimensione espansa, poi LZSS.
 /// Ogni record: i16 tipo (indice CT + 100), poi CampaignBase, Unit, e i campi della classe (volo, package,
 /// squadrone, brigata, battaglione, task force) secondo Domain/Type della Falcon4_CT.

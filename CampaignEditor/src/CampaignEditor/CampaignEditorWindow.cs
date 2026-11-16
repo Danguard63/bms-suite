@@ -18,8 +18,8 @@ namespace CampaignEditor;
 /// Editor di campagna (finestra separata): apre un .tac (missione TE) o un .cam (campagna) e mostra sulla mappa del
 /// teatro, con o senza la foto, gli obiettivi colorati per squadra, i collegamenti e le unita' (divisione → brigata →
 /// battaglione, squadroni). Si spostano gli obiettivi e le unita' col mouse, si creano/tolgono collegamenti, si cambiano
-/// proprietari, ordini e obiettivi assegnati; "Validate" controlla tutto. Formati dal codice di Mission Commander
-/// (con il permesso dell'autore). Salva nel progetto (CampaignEdits + Output\Install); in BMS solo con "Install".
+/// proprietari, ordini e obiettivi assegnati; "Validate" controlla tutto. Ispirato a Mission Commander, formati
+/// studiati su di esso (con il permesso dell'autore, nessun codice copiato). Salva nel progetto (CampaignEdits + Output\Install); in BMS solo con "Install".
 /// </summary>
 public sealed class CampaignEditorWindow : Window
 {

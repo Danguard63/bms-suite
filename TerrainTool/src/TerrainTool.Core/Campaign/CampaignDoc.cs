@@ -134,7 +134,7 @@ public sealed record CampIssue(IssueLevel Level, string Category, string Message
 /// <summary>
 /// Una campagna (.cam) o missione TE (.tac) aperta nell'editor: archivio, intestazione (.cmp), obiettivi (.obj
 /// o, per le TE senza .obj, quelli dello scenario indicato nel .cmp), variazioni (.obd), unita' (.uni), squadre (.tea).
-/// Formati ricavati da Mission Commander (BMSUtils, con il permesso dell'autore) e verificati sui file 4.38.
+/// Formati studiati su Mission Commander (BMSUtils, con il permesso dell'autore, nessun codice copiato) e verificati sui file 4.38.
 /// </summary>
 public sealed class CampaignDoc
 {

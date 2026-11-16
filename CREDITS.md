@@ -7,7 +7,8 @@
 - **BMS Blender exporter** (bms-blender-plugin, Copyright (c) 2023 Benchmark Sims, MIT license): `ModelEditor\Data\DOF.xml`,
   `ModelEditor\Data\switch.xml` and the description of DOFs, switches and slots in BML files.
   License text: `ModelEditor\Data\LICENSE-bms-blender-plugin.txt`.
-- **Mission Commander** (BMSUtils): layout of units and squadrons in the campaign files, used with the author's permission.
+- **Mission Commander** (BMSUtils): the Campaign Editor is inspired by it, and the layout of units and squadrons in the campaign files
+  was studied on it, with the author's permission. No Mission Commander code is included.
 - **Natural Earth** (coastlines, borders, lakes) – https://www.naturalearthdata.com – public domain.
 - **OurAirports** (real airbase positions) – https://ourairports.com/data – public domain.
 - Data downloaded by TerrainTool when you run it (each under its own terms): Copernicus DEM, ESA WorldCover, GEBCO,

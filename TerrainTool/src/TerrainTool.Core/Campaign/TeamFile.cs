@@ -23,7 +23,7 @@ public sealed class CampTeam
 
 /// <summary>
 /// File .tea: i16 numero squadre, poi per ogni squadra Team + Air/Ground/Naval tasking manager.
-/// Formato dal codice di Mission Commander (BMSUtils). Si modificano solo bandiera, colore, nome e alleanze.
+/// Formato studiato su Mission Commander (BMSUtils). Si modificano solo bandiera, colore, nome e alleanze.
 /// </summary>
 public sealed class TeamFile
 {

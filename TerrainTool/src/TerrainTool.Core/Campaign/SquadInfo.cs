@@ -3,7 +3,7 @@ using System.Text;
 namespace TerrainTool.Core.Campaign;
 
 /// <summary>
-/// Lista degli squadroni nel .cmp (SquadInfo, dal codice di Mission Commander: CreateByteArray.cs), dopo la mappa della campagna:
+/// Lista degli squadroni nel .cmp (SquadInfo, formato studiato su Mission Commander), dopo la mappa della campagna:
 /// u16 numero, poi per squadrone X, Y (float, piedi: X = nord, Y = est), VU_ID, tipo CT, numero, icona della base, stemma, specialita',
 /// aerei, paese, nome della base (80 car.), padding, flag, CampId, texSet, nome (80 car.) = 196 byte (versione 102 e oltre).
 /// In Korea elenca tutti gli squadroni; la si tiene allineata quando si aggiunge, toglie, sposta o cambia uno squadrone.
