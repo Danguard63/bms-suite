@@ -15,7 +15,7 @@ namespace TerrainTool.Core.Models;
 ///  - switch: numero, ramo, acceso all'inizio; slot: numero, rotazione, origine (dove si montano le armi).
 /// Solo lettura.
 /// </summary>
-public sealed class BmlScene
+public sealed partial class BmlScene
 {
     public enum DofKind { Rotate = 0, Translate = 1, Scale = 2 }
 
