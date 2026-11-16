@@ -12,7 +12,7 @@ One main menu (`BMSSuite.exe`) starts every program on the theater you are worki
 | **Art Editor** | User interface art: flags, menu backgrounds, banners, campaign pictures, small maps, patches, fonts, sounds, texts. |
 | **Campaign Editor** | Campaigns (.cam) and Tactical Engagements (.tac): units, squadrons, objectives, priorities, stations, theater cells. |
 | **Model Editor** | 3D models: DirectX view with PBR materials, DOFs, switches, slots, Parent.dat checks. |
-| **Database Interchange** | Copies bases and objective layouts from one theater to another, renumbered for the destination (aircraft and vehicles next). |
+| **Database Interchange** | Copies bases and objective layouts, aircraft, helicopters, vehicles, ships, weapons and unit types from one theater to another, renumbered for the destination. |
 
 ## Download and install
 

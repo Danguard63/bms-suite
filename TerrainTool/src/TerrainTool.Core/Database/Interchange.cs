@@ -14,7 +14,7 @@ namespace TerrainTool.Core.Database;
 /// free number at the end of its table. Nothing is written here: Plan() makes the plan, Write() puts the files into a work
 /// folder, Install() copies them with a backup and a manifest (Restore removes what was added and puts back what was replaced).
 /// </summary>
-public static class Interchange
+public static partial class Interchange
 {
     private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
 
@@ -245,7 +245,7 @@ public static class Interchange
     private static string FeatKey(string name, DbRecord ct) => name.Trim().ToLowerInvariant() + "|" + ct.Int("GraphicsNormal", 0);
 
     /// <summary>Numbered textures (KoreaObj) of a classic model: copied if the destination does not have them; a different one with the same number is a problem.</summary>
-    private static void CheckTextures(Plan p, BmsTheater src, BmsTheater dst, string modelDir, string forWhat)
+    internal static void CheckTextures(Plan p, BmsTheater src, BmsTheater dst, string modelDir, string forWhat)
     {
         var sTex = new[] { Path.Combine(src.ModelsDir, "KoreaObj"), Path.Combine(p.BmsObjects, "KoreaObj") }.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -348,7 +348,7 @@ public static class Interchange
             File.Copy(o, target, true);
             added++;
         }
-        log.Add($"{added} files written (layouts, models, textures)");
+        log.Add($"{added} file(s) written (layouts, models, textures, racks)");
         foreach (var f in Directory.EnumerateFiles(p.Dst.ObjectDir, "FALCON4.*").Where(f => !f.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)))
         {
             try { File.Delete(f); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { log.Add($"{Path.GetFileName(f)}: NOT removed – {ex.Message}"); }

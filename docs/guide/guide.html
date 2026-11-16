@@ -384,7 +384,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
 <!-- ───────────── 10 ───────────── -->
 <section class="chapter">
   <h1><span class="num">10</span>Database Interchange</h1>
-  <p>Database Interchange copies things from one BMS 4.38 theater to another, with everything they need, renumbered for the destination. In this version: <b>bases and ground objective layouts</b>. Aircraft and vehicles come next.</p>
+  <p>Database Interchange copies things from one BMS 4.38 theater to another, with everything they need, renumbered for the destination. Two tabs: <b>bases and ground objective layouts</b>, and <b>aircraft, vehicles &amp; weapons</b> (aircraft, helicopters, ground vehicles, ships, weapons and unit types, with their aircraft data, sensors, radars, hardpoint lists, rocket pods, squadron stores and 3D models; new weapon numbers are added to the same racks in <code>BmsRack.dat</code>). Flight models and the other Sim files are not copied.</p>
   <figure><img src="shots/60_di_plan.jpg"><figcaption><b>Figure 10.1</b> Ramon-Eilat Airport from Israel to Mideast 4.38: the plan, before anything is written.</figcaption></figure>
   <ol class="steps">
     <li>Choose <b>From</b> (the source theater) and <b>To</b> (the destination). The destination must have its own objects database: the shared objects of BMS (Korea) are never written and are marked as not writable.</li>

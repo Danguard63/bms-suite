@@ -48,10 +48,12 @@ public sealed class BmsDatabase
 
     private BmsDatabase(string dir) { Dir = dir; }
 
+    private static readonly EnumerationOptions NoCase = new() { MatchCasing = MatchCasing.CaseInsensitive };
+
     public static BmsDatabase Load(string objectsDir)
     {
         var db = new BmsDatabase(objectsDir);
-        foreach (var f in Directory.EnumerateFiles(objectsDir, "Falcon4_*.xml"))
+        foreach (var f in Directory.EnumerateFiles(objectsDir, "Falcon4_*.xml", NoCase))
         {
             string code = Path.GetFileNameWithoutExtension(f)["Falcon4_".Length..].ToUpperInvariant();
             try
@@ -74,8 +76,8 @@ public sealed class BmsDatabase
         if (!db.Tables.ContainsKey("OCD") && Directory.Exists(ord))
         {
             var t = new SortedDictionary<int, DbRecord>();
-            foreach (var d in Directory.EnumerateDirectories(ord, "OCD_*"))
-                foreach (var f in Directory.EnumerateFiles(d, "OCD_*.XML"))
+            foreach (var d in Directory.EnumerateDirectories(ord, "OCD_*", NoCase))
+                foreach (var f in Directory.EnumerateFiles(d, "OCD_*.XML", NoCase))
                 {
                     try
                     {
