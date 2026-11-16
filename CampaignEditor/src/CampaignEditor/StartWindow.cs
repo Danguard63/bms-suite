@@ -65,17 +65,20 @@ public sealed class StartWindow : Window
                   "rebuild it from the New Terrain, compare it with the terrain BMS generates for the campaign",
     };
     private readonly string? _startProject;
+    /// <summary>Theater chosen in the BMS Suite main menu (selected in the list when nothing else is asked).</summary>
+    private readonly string? _startTheater;
     private CampaignWorkspace? _ws;
 
-    public StartWindow(string? project = null)
+    public StartWindow(string? project = null, string? theater = null, string? bmsData = null)
     {
         Title = "Campaign Editor – choose a theater or a project";
         Width = 1200; Height = 680;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         _workRoot = WorkRoot();
         _startProject = project;
+        _startTheater = theater;
         if (project != null) AddRecent(project);
-        _data.Text = LastDataDir() ?? @"C:\Falcon BMS 4.38\Data";
+        _data.Text = bmsData ?? LastDataDir() ?? @"C:\Falcon BMS 4.38\Data";
 
         var top = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         top.Children.Add(new TextBlock { Text = "BMS Data folder ", VerticalAlignment = VerticalAlignment.Center });
@@ -230,6 +233,7 @@ public sealed class StartWindow : Window
         else _info.Text = $"No BMS theaters found: {Path.Combine(dir, "TerrData", "TheaterDefinition", "theater.lst")} is missing or empty. Choose the Data folder of BMS (e.g. C:\\Falcon BMS 4.38\\Data).";
 
         var first = _list.Items.OfType<ListBoxItem>().FirstOrDefault(i => select != null && i.Tag is ProjectItem p && p.File.Equals(Path.GetFullPath(select), StringComparison.OrdinalIgnoreCase))
+                    ?? _list.Items.OfType<ListBoxItem>().FirstOrDefault(i => select == null && _startTheater != null && i.Tag is BmsTheater t && t.Name.Equals(_startTheater, StringComparison.OrdinalIgnoreCase))
                     ?? _list.Items.OfType<ListBoxItem>().FirstOrDefault(i => i.Tag != null);
         if (first != null) _list.SelectedItem = first;
     }

@@ -6,7 +6,8 @@ namespace ObjectiveStudio;
 
 /// <summary>
 /// Objective Studio for Falcon BMS: what is inside the objectives of any installed theater (or of a TerrainTool project).
-/// Without arguments it asks which theater to open. Arguments: --project &lt;file.ttproj&gt; [--textures &lt;model number&gt;].
+/// Without arguments it asks which theater to open. Arguments: --project &lt;file.ttproj&gt; [--textures &lt;model number&gt;],
+/// or --theater &lt;name&gt; --bms-data &lt;folder&gt; (from the BMS Suite main menu: opens that installed theater directly).
 /// </summary>
 public sealed class App : Application
 {
@@ -50,6 +51,17 @@ public sealed class App : Application
                     MainWindow = tw;
                     tw.Show();
                     return;
+                }
+                // started from the BMS Suite main menu: open its working theater directly (the start window only if it cannot be opened)
+                if (project == null && Arg("textures") == null && TerrainTool.Core.SuiteArgs.Theater(args) is { } chosen
+                    && TerrainTool.Core.Campaign.TheaterWorkspace.Problems(chosen).Count == 0)
+                {
+                    try
+                    {
+                        var p = TerrainTool.Core.Campaign.TheaterWorkspace.Open(chosen, ObjectiveStudio.MainWindow.TheatersRoot());
+                        project = Path.Combine(p.ProjectFolder, TerrainTool.Core.Campaign.TheaterWorkspace.FolderName(chosen) + ".ttproj");
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException) { Log(ex, "open " + chosen.Name); }
                 }
                 if (project == null)
                 {

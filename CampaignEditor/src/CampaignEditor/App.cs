@@ -6,7 +6,7 @@ namespace CampaignEditor;
 
 /// <summary>
 /// Campaign Editor per Falcon BMS: campagne (.cam) e missioni TE (.tac) di qualunque teatro installato, o di un progetto di TerrainTool.
-/// Salva anche nelle cartelle Campaign di BMS (avviso e backup in Backup\). Argomenti: --project &lt;file.ttproj&gt; [--open &lt;file .cam/.tac&gt;].
+/// Salva anche nelle cartelle Campaign di BMS (avviso e backup in Backup\). Argomenti: --project &lt;file.ttproj&gt; [--open &lt;file .cam/.tac&gt;], oppure --theater &lt;nome&gt; --bms-data &lt;cartella&gt; (dal menu della BMS Suite).
 /// </summary>
 public sealed class App : Application
 {
@@ -39,7 +39,8 @@ public sealed class App : Application
                 }
                 string? project = Arg("project"), open = Arg("open");
                 if (project != null && !File.Exists(project)) { MessageBox.Show("Project not found: " + project, "Campaign Editor"); project = null; }
-                var w = new StartWindow(project);
+                // from the BMS Suite main menu: --theater <name> --bms-data <folder> select that theater in the list
+                var w = new StartWindow(project, project == null ? TerrainTool.Core.SuiteArgs.TheaterName(args) : null, TerrainTool.Core.SuiteArgs.BmsData(args));
                 MainWindow = w;
                 w.Show();
                 if (open != null && File.Exists(open)) w.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => w.OpenEditor(open)));

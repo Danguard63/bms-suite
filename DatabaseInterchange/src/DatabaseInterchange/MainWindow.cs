@@ -51,13 +51,18 @@ public sealed class MainWindow : Window
 
     private static Button Btn(string t) => new() { Content = t, Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 8, 0) };
 
-    public MainWindow()
+    /// <summary>Theater chosen in the BMS Suite main menu: it becomes the destination (or the source, when it cannot be written).</summary>
+    private string? _startTheater;
+
+    public MainWindow(string? bmsData = null, string? theater = null)
     {
         Title = "BMS Database Interchange";
+        _startTheater = theater;
         Width = 1400; Height = 880; MinWidth = 1000; MinHeight = 600;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         try { _data.Text = File.Exists(Settings("bms_data_folder.txt")) ? File.ReadAllText(Settings("bms_data_folder.txt")).Trim() : @"C:\Falcon BMS 4.38\Data"; }
         catch { _data.Text = @"C:\Falcon BMS 4.38\Data"; }
+        if (bmsData != null) _data.Text = bmsData;
 
         var top = new WrapPanel { Margin = new Thickness(6) };
         void L(string s) => top.Children.Add(new TextBlock { Text = s, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) });
@@ -144,11 +149,21 @@ public sealed class MainWindow : Window
             _from.Items.Add(new ComboBoxItem { Content = t.Name, Tag = t, ToolTip = t.ObjectDir });
             _to.Items.Add(new ComboBoxItem { Content = t.Name + (shared ? "  (shared: not writable)" : ""), Tag = t, IsEnabled = !shared, ToolTip = t.ObjectDir });
         }
-        int Find(ComboBox c, string? n) => c.Items.OfType<ComboBoxItem>().ToList().FindIndex(i => i.Tag is BmsTheater t && t.Name == n && i.IsEnabled);
-        _from.SelectedIndex = Math.Max(0, Find(_from, Read("from.txt")));
-        int ti = Find(_to, Read("to.txt"));
+        int Find(ComboBox c, string? n) => c.Items.OfType<ComboBoxItem>().ToList().FindIndex(i => i.Tag is BmsTheater t && string.Equals(t.Name, n, StringComparison.OrdinalIgnoreCase) && i.IsEnabled);
+        string? from = Read("from.txt"), to = Read("to.txt");
+        if (_startTheater != null)
+        {
+            // the working theater of the main menu is where things are brought; a shared (read only) theater can only be the source
+            if (Find(_to, _startTheater) >= 0) { to = _startTheater; if (string.Equals(from, to, StringComparison.OrdinalIgnoreCase)) from = null; }
+            else if (Find(_from, _startTheater) >= 0) from = _startTheater;
+            _startTheater = null;
+        }
+        _from.SelectedIndex = Math.Max(0, Find(_from, from));
+        int ti = Find(_to, to);
         if (ti < 0) ti = _to.Items.OfType<ComboBoxItem>().ToList().FindIndex(i => i.IsEnabled && i.Tag != From);
         _to.SelectedIndex = ti;
+        if (From != null && To != null && From.Name == To.Name)
+            _from.SelectedIndex = Math.Max(0, _from.Items.OfType<ComboBoxItem>().ToList().FindIndex(i => i.Tag is BmsTheater t && t.Name != To.Name));
         _status.Text = $"{_from.Items.Count} theaters in theater.lst";
     }
 

@@ -32,7 +32,8 @@ public sealed class App : Application
         {
             try
             {
-                var w = new MainWindow();
+                // from the BMS Suite main menu: --theater <name> --bms-data <folder> open the art of that theater
+                var w = new MainWindow(TerrainTool.Core.SuiteArgs.Theater(args, Settings.Get("data")));
                 MainWindow = w;
                 w.Show();
             }

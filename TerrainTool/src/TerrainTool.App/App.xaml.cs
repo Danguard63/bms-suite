@@ -21,7 +21,8 @@ public partial class App : Application
         try
         {
             // il campaign editor e' ora un programma a parte (cartella CampaignEditor)
-            Window w = new TerrainTool.App.MainWindow();
+            // from the BMS Suite main menu: --theater <name> opens the project of that theater, if there is one
+            Window w = new TerrainTool.App.MainWindow(global::TerrainTool.Core.SuiteArgs.TheaterName(e.Args));
             MainWindow = w;
             w.Show();
         }

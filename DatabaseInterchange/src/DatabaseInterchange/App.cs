@@ -20,7 +20,7 @@ public sealed class App : Application
     {
         Startup += (_, _) =>
         {
-            try { var w = new MainWindow(); MainWindow = w; w.Show(); }
+            try { var w = new MainWindow(TerrainTool.Core.SuiteArgs.BmsData(args), TerrainTool.Core.SuiteArgs.TheaterName(args)); MainWindow = w; w.Show(); }
             catch (Exception ex)
             {
                 Log(ex);

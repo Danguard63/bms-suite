@@ -48,7 +48,10 @@ public sealed class MainWindow : Window
     private string ObjectsDir => Path.Combine(_data.Text.Trim(), "Terrdata", "objects");
     private string ModelsRoot => Path.Combine(ObjectsDir, "Models");
 
-    public MainWindow(string? data, int? startModel)
+    /// <summary>Theater chosen in the BMS Suite main menu: selected the first time the theater list is read.</summary>
+    private string? _startTheater;
+
+    public MainWindow(string? data, int? startModel, string? theater = null)
     {
         _startModel = startModel;
         Title = "BMS Model Editor";
@@ -57,6 +60,7 @@ public sealed class MainWindow : Window
 
         try { if (data == null && File.Exists(DataSetting)) data = File.ReadAllText(DataSetting).Trim(); } catch { }
         _data.Text = data ?? FindBmsData() ?? @"C:\Falcon BMS 4.38\Data";
+        _startTheater = theater;
 
         var top = new WrapPanel { Margin = new Thickness(6) };
         void L(string s) => top.Children.Add(new TextBlock { Text = s, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) });
@@ -185,7 +189,8 @@ public sealed class MainWindow : Window
         if (_theater.Items.Count == 0) { _status.Text = "No theater in theater.lst: only the BMS models are shown."; _th = null; _ = LoadAsync(); return; }
         string? last = null;
         try { if (File.Exists(TheaterSetting)) last = File.ReadAllText(TheaterSetting).Trim(); } catch { }
-        int i = _theater.Items.OfType<ComboBoxItem>().ToList().FindIndex(x => x.Tag is BmsTheater t && t.Name == last);
+        if (_startTheater != null) { last = _startTheater; _startTheater = null; }
+        int i = _theater.Items.OfType<ComboBoxItem>().ToList().FindIndex(x => x.Tag is BmsTheater t && string.Equals(t.Name, last, StringComparison.OrdinalIgnoreCase));
         _theater.SelectedIndex = Math.Max(0, i);
     }
 

@@ -32,8 +32,12 @@ public partial class MainWindow : Window
     private static string SettingsFile => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BmsTerrainTool", "last_project.txt");
 
-    public MainWindow()
+    /// <summary>Theater chosen in the BMS Suite main menu: the project that builds it is opened, if there is one.</summary>
+    private readonly string? _startTheater;
+
+    public MainWindow(string? startTheater = null)
     {
+        _startTheater = startTheater;
         InitializeComponent();
         _mapLines = BaseMap.Load(Path.Combine(AppData, "mappa_base.txt"));
         Map.Lines = _mapLines;
@@ -52,6 +56,8 @@ public partial class MainWindow : Window
     private void Startup()
     {
         Log($"BMS New Terrain Tool {typeof(MainWindow).Assembly.GetName().Version} — data in {AppData}");
+        // from the BMS Suite main menu: the project whose theater has that name in BMS (otherwise the last project, as always)
+        if (_startTheater != null && ProjectOf(_startTheater) is { } mine) { OpenProject(mine); return; }
         try
         {
             string last = File.Exists(SettingsFile) ? TheaterProject.FindMoved(File.ReadAllText(SettingsFile).Trim()) : "";
@@ -62,6 +68,29 @@ public partial class MainWindow : Window
         // Primo avvio: progetto Mideast predefinito accanto al tool
         string folder = Path.Combine(DefaultProjectsRoot(), "Mideast");
         CreateProject(folder, "Mideast");
+    }
+
+    /// <summary>The project (in the Projects folder) that builds the theater with this name in BMS, or null.</summary>
+    private static string? ProjectOf(string theater)
+    {
+        try
+        {
+            string root = DefaultProjectsRoot();
+            if (!Directory.Exists(root)) return null;
+            foreach (var f in Directory.EnumerateFiles(root, "*.ttproj", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    var p = TheaterProject.Load(f);
+                    if (p.InstalledTheaterTdf is { Length: > 0 }) continue;   // work folders of installed theaters are not TerrainTool projects
+                    if (string.Equals(p.Theater.DisplayName, theater, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(p.Theater.Name, theater, StringComparison.OrdinalIgnoreCase)) return f;
+                }
+                catch (Exception) { }
+            }
+        }
+        catch (Exception) { }
+        return null;
     }
 
     private static string DefaultProjectsRoot()

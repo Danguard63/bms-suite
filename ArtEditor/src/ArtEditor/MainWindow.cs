@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using TerrainTool.Core.Campaign;
 using TerrainTool.Core.Dds;
 
 namespace ArtEditor;
@@ -37,7 +38,10 @@ public sealed class MainWindow : Window
     private static readonly Brush Dark = Fz(new SolidColorBrush(Color.FromRgb(0x1E, 0x23, 0x2B)));
     private static T Fz<T>(T f) where T : Freezable { f.Freeze(); return f; }
 
-    public MainWindow()
+    /// <summary>Theater chosen in the BMS Suite main menu: its art is opened at the start instead of the last one.</summary>
+    private readonly BmsTheater? _startTheater;
+
+    public MainWindow(BmsTheater? startTheater = null)
     {
         Title = "BMS Art Editor";
         Width = 1500; Height = 920; MinWidth = 1000; MinHeight = 600;
@@ -108,8 +112,19 @@ public sealed class MainWindow : Window
         root.Children.Add(main);
         Content = root;
 
+        _startTheater = startTheater;
         Loaded += (_, _) =>
         {
+            // from the BMS Suite main menu: the art of its working theater (the KTO art is never opened in place: Open… then)
+            if (_startTheater is { } t)
+            {
+                string r = ArtSet.ArtRoot(t.ArtDir);
+                bool kto = Path.GetFullPath(r).TrimEnd('\\').Equals(Path.GetFullPath(Path.Combine(t.DataDir, "Art")).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+                if (!kto && Directory.Exists(r)) { _dataDir = t.DataDir; Load(r, t.Name); return; }
+                _dataDir = t.DataDir;
+                OpenArt();
+                return;
+            }
             string? last = Settings.Get("work");
             if (last != null && Directory.Exists(last)) Load(last, Settings.Get("label") ?? Path.GetFileName(last));
             else OpenArt();
