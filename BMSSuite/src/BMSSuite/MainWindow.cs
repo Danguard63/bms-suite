@@ -264,11 +264,38 @@ public sealed class MainWindow : Window
         name.Children.Add(new TextBlock { Text = "EDITING TOOLS FOR FALCON BMS 4.38", FontFamily = Mono, FontSize = 10.5, Foreground = B(Sub) });
         logo.Children.Add(name);
         var dp = new DockPanel { Margin = new Thickness(22, 12, 22, 12) };
+        var support = SupportButton();
+        DockPanel.SetDock(support, Dock.Right);
+        dp.Children.Add(support);
         DockPanel.SetDock(_chips, Dock.Right);
         dp.Children.Add(_chips);
         dp.Children.Add(logo);
         var strip = new Border { Background = B(Panel), BorderBrush = B(AmberC, 160), BorderThickness = new Thickness(0, 0, 0, 2), Child = dp };
         return strip;
+    }
+
+    /// <summary>Pagina delle donazioni dell'autore.</summary>
+    public const string SupportUrl = "https://ko-fi.com/danguard63";
+
+    /// <summary>"Support on Ko-fi": apre la pagina delle donazioni nel browser.</summary>
+    private static FrameworkElement SupportButton()
+    {
+        var sp = new StackPanel { Orientation = Orientation.Horizontal };
+        sp.Children.Add(new TextBlock { Text = "\u2615", FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 13, Foreground = B(Bg), Margin = new Thickness(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center });
+        sp.Children.Add(new TextBlock { Text = "SUPPORT ON KO-FI", FontFamily = Mono, FontSize = 11.5, FontWeight = FontWeights.Bold, Foreground = B(Bg), VerticalAlignment = VerticalAlignment.Center });
+        var b = new Border
+        {
+            Background = B(AmberC), Padding = new Thickness(10, 4, 11, 4), Margin = new Thickness(14, 0, 0, 0), Child = sp, Cursor = Cursors.Hand,
+            VerticalAlignment = VerticalAlignment.Center,
+            ToolTip = "The BMS Suite is free. If it helps you, you can buy the author a coffee (" + SupportUrl + ")",
+        };
+        b.MouseEnter += (_, _) => b.Background = B(Hud);
+        b.MouseLeave += (_, _) => b.Background = B(AmberC);
+        b.MouseLeftButtonUp += (_, _) =>
+        {
+            try { Process.Start(new ProcessStartInfo(SupportUrl) { UseShellExecute = true }); } catch { }
+        };
+        return b;
     }
 
     private FrameworkElement BuildLeft()

@@ -14,5 +14,7 @@ Keep this folder somewhere you can write to (for example C:\BMS Suite), not in P
 Before a program writes into BMS it backs up every file it replaces (main menu → Backups; restore from the
 program that made it). Close BMS before installing anything, and back up your BMS Data folder before you start.
 
+The BMS Suite is free. If it helps you: https://ko-fi.com/danguard63 (also the button in the main menu).
+
 Falcon BMS is a product of Benchmark Sims. This project is not affiliated with Benchmark Sims.
 See CREDITS.md for third-party code and data.

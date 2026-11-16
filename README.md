@@ -1,5 +1,7 @@
 # BMS Suite
 
+[![Support on Ko-fi](https://img.shields.io/badge/Support%20on-Ko--fi-F2A900?logo=kofi&logoColor=white)](https://ko-fi.com/danguard63)
+
 Editing tools for **Falcon BMS 4.38**: theaters, objectives, campaigns, user interface art, 3D models and databases.
 One main menu (`BMSSuite.exe`) starts every program on the theater you are working on.
 
@@ -37,5 +39,7 @@ Needs the .NET 8 SDK on Windows.
 - GitHub Actions builds the package on every push to `main` (run → Artifacts); publishing a release `vX.Y.Z` on GitHub builds the zip and attaches it.
 
 The shared library is `TerrainTool\src\TerrainTool.Core`; every program references it.
+
+The BMS Suite is free. If it helps you, you can buy me a coffee on [Ko-fi](https://ko-fi.com/danguard63) – thank you!
 
 Falcon BMS is a product of Benchmark Sims. This project is not affiliated with Benchmark Sims. Third-party data and code: see [CREDITS.md](CREDITS.md).
