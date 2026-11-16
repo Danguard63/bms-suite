@@ -23,6 +23,10 @@ One main menu (`BMSSuite.exe`) starts every program on the theater you are worki
 Needs Windows 10/11 x64 and the **.NET 8 Desktop Runtime** (free, from Microsoft:
 https://dotnet.microsoft.com/download/dotnet/8.0 → ".NET Desktop Runtime" x64). Windows asks to install it the first time if it is missing.
 
+## User guide
+
+[BMS-Suite-User-Guide.pdf](docs/BMS-Suite-User-Guide.pdf) – every program with screenshots, typical workflows and troubleshooting. It is also inside the release zip.
+
 ## Safety
 
 - The programs read Falcon BMS. Before a program writes into BMS it copies every file it replaces into its own backup folder,

@@ -52,6 +52,7 @@ if ($LASTEXITCODE -ne 0) { throw "publish of BMSSuite failed" }
 Copy-Item -Recurse -Force "Data\NaturalEarth" (Join-Path $pkg "Data\NaturalEarth")
 Copy-Item -Force "tools\README-release.txt" (Join-Path $pkg "README.txt")
 Copy-Item -Force "CREDITS.md" (Join-Path $pkg "CREDITS.md")
+if (Test-Path "docs\BMS-Suite-User-Guide.pdf") { Copy-Item -Force "docs\BMS-Suite-User-Guide.pdf" (Join-Path $pkg "BMS-Suite-User-Guide.pdf") }
 if (Test-Path "LICENSE") { Copy-Item -Force "LICENSE" (Join-Path $pkg "LICENSE.txt") }
 
 $zip = Join-Path $Out "BMSSuite-$Version.zip"

@@ -4,6 +4,7 @@ BMS Suite
 Editing tools for Falcon BMS 4.38.
 
 Start: BMSSuite.exe (the main menu). Choose the theater on the left, then a program.
+User guide: BMS-Suite-User-Guide.pdf
 
   Programs\<program>   one folder per program; each keeps its settings, work folders and backups there
   Data\NaturalEarth    map data used by the programs
