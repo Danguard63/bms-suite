@@ -13,6 +13,7 @@ public sealed class App : Application
     private App()
     {
         DispatcherUnhandledException += OnUnhandled;
+        BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
     }
 
     private int Run(string[] args)

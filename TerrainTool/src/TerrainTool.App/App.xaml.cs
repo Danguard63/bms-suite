@@ -13,6 +13,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
         // il processo finisce quando non resta nessuna finestra visibile (anche se una finestra e' stata creata ma mai mostrata,
         // o se l'avvio fallisce): cosi' non resta in memoria a bloccare TerrainTool.exe per il build
         ShutdownMode = ShutdownMode.OnExplicitShutdown;

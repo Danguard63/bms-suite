@@ -18,6 +18,7 @@ public sealed class App : Application
         // il processo finisce quando non resta nessuna finestra visibile: cosi' non blocca l'exe per il build
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += OnUnhandled;
+        BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
         EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.UnloadedEvent, new RoutedEventHandler((_, _) => ExitIfNoWindows()));
     }
 

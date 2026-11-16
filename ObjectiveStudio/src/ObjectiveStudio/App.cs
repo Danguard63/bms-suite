@@ -22,6 +22,7 @@ public sealed class App : Application
         // il processo finisce quando non resta nessuna finestra visibile: cosi' non resta in memoria a bloccare l'exe per il build
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += OnUnhandled;
+        BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
         // errori fuori dal thread dell'interfaccia (lavori in background): prima chiudevano il programma senza lasciare traccia
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log(e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString()), "fatal");
         TaskScheduler.UnobservedTaskException += (_, e) => { Log(e.Exception, "background task"); e.SetObserved(); };
