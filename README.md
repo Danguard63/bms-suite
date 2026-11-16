@@ -34,7 +34,7 @@ Needs the .NET 8 SDK on Windows.
 
 - One program: run `build.bat` in its folder, then `run.bat`.
 - The whole package: `powershell -ExecutionPolicy Bypass -File tools\make-release.ps1 -Version 0.1.0` → `dist\BMSSuite-0.1.0.zip`.
-- GitHub Actions builds the package on every push to `main` (run → Artifacts); pushing a tag `vX.Y.Z` publishes a release.
+- GitHub Actions builds the package on every push to `main` (run → Artifacts); publishing a release `vX.Y.Z` on GitHub builds the zip and attaches it.
 
 The shared library is `TerrainTool\src\TerrainTool.Core`; every program references it.
 

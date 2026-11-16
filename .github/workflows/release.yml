@@ -1,11 +1,12 @@
 name: Build and release
 
 # every push to main builds the package (download it from the run's "Artifacts");
-# a tag like v0.1.0 also publishes it as a GitHub release with the zip attached
+# publishing a release (tag like v0.1.0) builds it again and attaches the zip to the release
 on:
   push:
     branches: [main]
-    tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -25,7 +26,7 @@ jobs:
         id: ver
         shell: pwsh
         run: |
-          if ($env:GITHUB_REF_TYPE -eq 'tag') { $v = $env:GITHUB_REF_NAME.TrimStart('v') } else { $v = "0.0.0-dev.$env:GITHUB_RUN_NUMBER" }
+          if ($env:GITHUB_EVENT_NAME -eq 'release') { $v = '${{ github.event.release.tag_name }}'.TrimStart('v') } else { $v = "0.0.0-dev.$env:GITHUB_RUN_NUMBER" }
           "version=$v" >> $env:GITHUB_OUTPUT
 
       - name: Core tests
@@ -41,9 +42,9 @@ jobs:
           name: BMSSuite-${{ steps.ver.outputs.version }}
           path: dist/BMSSuite-${{ steps.ver.outputs.version }}.zip
 
-      - name: GitHub release
-        if: github.ref_type == 'tag'
+      - name: Attach the zip to the release
+        if: github.event_name == 'release'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create $env:GITHUB_REF_NAME "dist/BMSSuite-${{ steps.ver.outputs.version }}.zip" --title "BMS Suite ${{ steps.ver.outputs.version }}" --generate-notes
+        run: gh release upload "${{ github.event.release.tag_name }}" "dist/BMSSuite-${{ steps.ver.outputs.version }}.zip" --clobber
