@@ -8,8 +8,5 @@
     <RootNamespace>TerrainTool.Core</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="Models\bms_blender_import.py" LogicalName="TerrainTool.Core.Models.bms_blender_import.py" />
-  </ItemGroup>
 
 </Project>
