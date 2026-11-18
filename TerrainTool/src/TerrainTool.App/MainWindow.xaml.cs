@@ -423,6 +423,35 @@ public partial class MainWindow : Window
         catch (Exception ex) { Log("ERROR: " + ex.Message); MessageBox.Show(this, ex.Message, "Error"); }
     }
 
+    private void OnStandardProjection(object sender, RoutedEventArgs e)
+    {
+        SaveProject();
+        if (!GeorefMigration.CanMigrate(_project))
+        {
+            MessageBox.Show(this, _project.Theater.SourceGeoref != null
+                    ? "This project already uses the standard projection. The old add-on's georeference is kept: its objectives and campaign units are carried over by Run Objects and Apply object changes."
+                    : "This project already uses the standard projection.", "Standard projection", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        string msg = "BMS computes lat/long (DED, DTC, Tacview) with a standard transverse Mercator on the theater centre. This project follows "
+                   + "the old theater's own georeference, so lat/long in BMS can be off by kilometres away from the centre.\n\n"
+                   + "Switching to the standard projection:\n"
+                   + "  • the project files with positions in theater feet (objective_edits, coastal_moves, bridges, real_places, water_paint, "
+                   + "network_edits, the Campaign Editor's saves) are converted, with a backup copy;\n"
+                   + "  • the old add-on's objectives and campaign units are carried over by Run Objects and Apply object changes.\n\n"
+                   + "Afterwards the terrain has to be rebuilt: all GIS steps, Terrain Builder and the textures, then Run Objects and Apply object changes.\n\nContinue?";
+        if (MessageBox.Show(this, msg, "Standard projection", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        try
+        {
+            foreach (var n in GeorefMigration.Migrate(_project, _projectFile)) Log(n);
+            ShowProject();
+            string path = _project.WriteTheaterTxt();
+            SaveProject();
+            Log($"Written {path}");
+        }
+        catch (Exception ex) { Log("ERROR: " + ex.Message); MessageBox.Show(this, ex.Message, "Error"); }
+    }
+
     private void OnShowKorea(object sender, RoutedEventArgs e)
     {
         string path = Path.Combine(_project.KoreaNewTerrain, "Theater.txt");

@@ -106,6 +106,35 @@ public static class ObjectChangeApplier
         notes.Add($"Campaign files rewritten with the new objective positions: {patched} (Te_New_Nt.tac, te_new.tac, *.cam)");
         foreach (var pr in problems.Take(20)) notes.Add("   " + pr);
 
+        // old add-on in another grid (project moved to the standard projection): units, waypoints and bullseye follow.
+        // Only the files read from the old add-on: the Campaign Editor's saves (CampaignEdits) were converted once, when the project was.
+        var grid = new TerrainTool.Core.Theater.TheaterGrid(p.Theater);
+        if (grid.Reprojects)
+        {
+            var udb = CampaignDb.Load(DbDirs(p).Where(Directory.Exists));
+            foreach (var (src, name) in jobs)
+            {
+                if (src.StartsWith(campEdits, StringComparison.OrdinalIgnoreCase)) continue;
+                string dst = Path.Combine(campOut, name);
+                if (!File.Exists(dst)) continue;
+                var d = CampaignDoc.Load(dst, udb.ClassOf);
+                string log = TerrainTool.Core.Theater.GeorefMigration.Reproject(d, grid);
+                d.Save(dst);
+                notes.Add($"{name}: {log}");
+            }
+            // campaign regions (<theater>.pak) of the old add-on, resampled; a copy in CampaignEdits was converted with the project
+            if (Directory.Exists(oldCamp) && Directory.EnumerateFiles(oldCamp, "*.pak").FirstOrDefault() is { } pak
+                && !(Directory.Exists(campEdits) && Directory.EnumerateFiles(campEdits, "*.pak").Any()))
+            {
+                if (TerrainTool.Core.Theater.GeorefMigration.ReprojectPak(File.ReadAllBytes(pak), grid) is { } pk)
+                {
+                    File.WriteAllBytes(Path.Combine(campOut, Path.GetFileName(pak)), pk);
+                    notes.Add($"{Path.GetFileName(pak)}: campaign regions resampled to the standard projection");
+                }
+            }
+            notes.Add("Rebuild the theater cells (<theater>.thr) on the new terrain: Campaign Editor, Theater cells");
+        }
+
         // tipi degli obiettivi coerenti con le disposizioni attuali (un giro precedente di Objects puo' aver lasciato CT di copie che non esistono piu')
         // (theater conversion only: an installed theater keeps the types it has, except the objectives changed here)
         if (!p.IsInstalledTheater)
@@ -165,7 +194,7 @@ public static class ObjectChangeApplier
     }
 
     /// <summary>Objects database to read the campaign units with: the build, then the theater's own.</summary>
-    private static IEnumerable<string> DbDirs(TheaterProject p)
+    public static IEnumerable<string> DbDirs(TheaterProject p)
     {
         if (p.IsInstalledTheater) return new[] { ObjectsJob.InstalledObjectsOut(p), p.SourceObjectsDir };
         string addOnName = new DirectoryInfo(p.OldTheaterFolder).Name;

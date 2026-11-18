@@ -43,6 +43,13 @@ public sealed class TheaterConfig
     /// </summary>
     public TheaterWarp? Warp { get; set; }
 
+    /// <summary>
+    /// Georeference of the old add-on this project converts, when it differs from this theater's grid (e.g. an old theater
+    /// rebuilt on the standard projection BMS uses for lat/long): its objectives and campaign units are in that grid and are
+    /// carried over through lat/lon. Null = the old add-on uses the same grid as this theater.
+    /// </summary>
+    public TheaterWarp? SourceGeoref { get; set; }
+
     /// <summary>Pipeline PROJ per gdalwarp/ogr2ogr -ct, oppure null con la proiezione standard.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public string? GdalCoordinateOperation => Warp?.GdalPipeline();
@@ -135,6 +142,26 @@ public sealed class TheaterGrid
         Config.Warp != null ? Config.Warp.Inverse(x, y) : _tm.Inverse(x - _fe, y - _fn);
 
     public bool Contains(double x, double y) => x >= 0 && y >= 0 && x <= Config.SizeMeters && y <= Config.SizeMeters;
+
+    /// <summary>True when the old add-on's positions are in another grid (SourceGeoref) and have to be carried over.</summary>
+    public bool Reprojects => Config.SourceGeoref != null;
+
+    /// <summary>Old add-on grid → this theater, in BMS feet (north, east). Unchanged when the grids are the same.</summary>
+    public (double NorthFt, double EastFt) FromSourceFt(double northFt, double eastFt)
+    {
+        if (Config.SourceGeoref is not { } s) return (northFt, eastFt);
+        var (lat, lon) = s.Inverse(eastFt * 0.3048, northFt * 0.3048);
+        var (x, y) = ToTheater(lat, lon);
+        return (y * TheaterConfig.FeetPerMeter, x * TheaterConfig.FeetPerMeter);
+    }
+
+    /// <summary>Old add-on grid → this theater, in campaign grid cells (x east, y north), as BMS SimToGrid/GridToSim.</summary>
+    public (int X, int Y) FromSourceGrid(int x, int y)
+    {
+        if (!Reprojects) return (x, y);
+        var (n, e) = FromSourceFt(Campaign.CampaignDoc.GridToSim(y), Campaign.CampaignDoc.GridToSim(x));
+        return (Campaign.CampaignDoc.SimToGrid(e), Campaign.CampaignDoc.SimToGrid(n));
+    }
 
     /// <summary>Lat/lon dei quattro angoli (SW, SE, NE, NW).</summary>
     public (double Lat, double Lon)[] Corners()

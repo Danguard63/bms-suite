@@ -202,6 +202,7 @@ public sealed class EditorData
         if (!File.Exists(camp)) camp = oldCampFile;
         CampObjSource = overlay != null ? camp + " + Output\\ObjectChanges.json (latest Run Objects)" : camp;
         var edits = ObjectiveEdits.Load(p.ProjectFolder);
+        var srcGrid = p.Theater.CreateGrid();
         // basi con la rotazione messa dentro la disposizione: qui direzione vera e disposizione non girata (Output\EditorLayouts)
         _baked = BakedLayouts.Load(p.ProjectFolder);
         _bakedDir = BakedLayouts.Folder(p.ProjectFolder);
@@ -219,6 +220,8 @@ public sealed class EditorData
             int id = int.Parse(m.Groups[1].Value, Ci);
             int ocd = int.TryParse(G("OcdIndex"), NumberStyles.Integer, Ci, out var oc) ? oc : -1;
             double x = D(G("PositionX")), y = D(G("PositionY")), h = D(G("Heading"));
+            // old add-on in another grid (project on the standard projection): its positions carried over
+            if (srcGrid.Reprojects && string.Equals(camp, oldCampFile, StringComparison.OrdinalIgnoreCase)) (x, y) = srcGrid.FromSourceFt(x, y);
             string? newName = null;
             bool stale = false;
             if (overlay != null && overlay.TryGetValue(id, out var chg))

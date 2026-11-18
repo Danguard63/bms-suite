@@ -102,7 +102,10 @@ public static class OsmRunways
         if (File.Exists(oldCamp))
             foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(oldCamp),
                 @"<CampObj CampId=""(\d+)"">.*?<Heading>(.*?)</Heading>\s*<PositionX>(.*?)</PositionX>\s*<PositionY>(.*?)</PositionY>", System.Text.RegularExpressions.RegexOptions.Singleline))
-                old[int.Parse(m.Groups[1].Value, Ci)] = (double.Parse(m.Groups[3].Value, Ci), double.Parse(m.Groups[4].Value, Ci), double.Parse(m.Groups[2].Value, Ci));
+            {
+                var (on, oe) = grid.FromSourceFt(double.Parse(m.Groups[3].Value, Ci), double.Parse(m.Groups[4].Value, Ci));   // old add-on grid → this theater
+                old[int.Parse(m.Groups[1].Value, Ci)] = (on, oe, double.Parse(m.Groups[2].Value, Ci));
+            }
         var todo = new List<(EdObjective O, double Lat, double Lon, double Hdg, double LenM)>();
         foreach (var o in d.Objectives.Where(o => !o.Junction && o.Type is 1 or 2 && !have.Contains(o.Id)))
         {

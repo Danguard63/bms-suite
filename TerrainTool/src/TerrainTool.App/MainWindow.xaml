@@ -86,6 +86,8 @@
                                 <Button Content="Fit center to airbases" Click="OnFitCenter" Margin="0,0,6,6" />
                                 <Button Content="Write Theater.txt" Click="OnWriteTheaterTxt" Margin="0,0,6,6" />
                                 <Button Content="Compare with Korea" Click="OnShowKorea" Margin="0,0,6,6" />
+                                <Button Content="Switch to standard projection…" Click="OnStandardProjection" Margin="0,0,6,6"
+                                        ToolTip="Old theater converted with its own georeference: rebuild it on the projection BMS uses for lat/long (DED, DTC, Tacview). Objectives and campaign units are carried over" />
                             </WrapPanel>
 
                             <TextBlock Text="Folders" Style="{StaticResource Section}" />

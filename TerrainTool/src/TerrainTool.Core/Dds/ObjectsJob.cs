@@ -247,6 +247,17 @@ public sealed partial class ObjectsJob : TextureJob
         // 4) spianamento e copertura delle basi
         // 4a) basi spostate sulle coordinate reali (airbase_targets.csv del progetto): nuova CampObjData.XML
         var objs = LoadCampObjs(OldCampObjData(c)!);
+        // the old add-on's positions as they are in its file (its grid): what the campaign files contain before Apply object changes
+        var orig = objs.GroupBy(o => o.Id).ToDictionary(g => g.Key, g => g.First());
+        var srcGrid = new TerrainTool.Core.Theater.TheaterGrid(c.Project.Theater);
+        if (srcGrid.Reprojects)
+        {
+            objs = objs.Select(o => { var (n, e) = srcGrid.FromSourceFt(o.X, o.Y); return o with { X = n, Y = e }; }).ToList();
+            double far = objs.Max(o => Math.Sqrt((o.X - orig[o.Id].X) * (o.X - orig[o.Id].X) + (o.Y - orig[o.Id].Y) * (o.Y - orig[o.Id].Y))) / FtPerM / 1000;
+            int outside = objs.Count(o => o.X < 0 || o.Y < 0 || o.X > c.Project.Theater.SizeMeters * FtPerM || o.Y > c.Project.Theater.SizeMeters * FtPerM);
+            notes.Add($"Old add-on positions carried over to the standard projection: {objs.Count} objectives (largest shift {far:0.0} km)"
+                      + (outside > 0 ? $", {outside} now outside the theater" : ""));
+        }
         _bake.Clear();
         _bridgeTld.Clear();
         _bridgeShift.Clear();
@@ -328,11 +339,12 @@ public sealed partial class ObjectsJob : TextureJob
             foreach (var o in objs)
             {
                 var b = before[o.Id];
-                if (o == b) continue;
+                if (o == b && !srcGrid.Reprojects) continue;
+                var ob = orig.TryGetValue(o.Id, out var oo) ? oo : b;   // position in the campaign files (old grid when reprojecting)
                 changes.Objectives.Add(new TerrainTool.Core.Campaign.ObjectiveChange(o.Id, o.Ocd, o.Name != b.Name ? o.Name : null, Hd(o), o.X, o.Y, edits.ContainsKey(o.Id)));
                 changes.Moves.Add(removed.TryGetValue(o.Id, out int jct)
-                    ? new CampaignArchive.Move(b.Name, b.X, b.Y, o.X, o.Y, o.Heading, jct, o.Id, true, o.Name)
-                    : new CampaignArchive.Move(o.Name, b.X, b.Y, o.X, o.Y, Hd(o), newType.TryGetValue(o.Id, out int t) ? t : -1, o.Id,
+                    ? new CampaignArchive.Move(b.Name, ob.X, ob.Y, o.X, o.Y, o.Heading, jct, o.Id, true, o.Name)
+                    : new CampaignArchive.Move(o.Name, ob.X, ob.Y, o.X, o.Y, Hd(o), newType.TryGetValue(o.Id, out int t) ? t : -1, o.Id,
                                                NewFeatures: swapped.TryGetValue(o.Id, out var sw) ? sw.Features : replaced.TryGetValue(o.Id, out var rp) ? rp.Features : -1));
             }
             changes.RemovedBases = removedBases.OrderBy(x => x).ToList();

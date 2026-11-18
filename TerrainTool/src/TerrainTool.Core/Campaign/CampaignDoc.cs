@@ -156,6 +156,9 @@ public sealed class CampaignDoc
     /// <summary>Il .cmp e' cambiato (lista squadroni...): va riscritto al salvataggio.</summary>
     public void CmpChanged() => _cmpDirty = true;
     private const int CmpTeamsAt = 128, CmpTeamSize = 222;
+    /// <summary>Bullseye in the campaign header (.cmp): i16 x (east), i16 y (north) in grid cells, after the theater size,
+    /// day, teams and experience bytes and the bullseye name (verified on the Mideast128 save0.cam and te_new.tac: Kuwait City).</summary>
+    private const int CmpBullseyeAt = CmpTeamsAt + 8 * CmpTeamSize + 16 + 26;
     public List<CampObjective> Objectives = new();
     public bool ObjectivesOwn;          // false = presi dallo scenario (sola lettura per posizione e collegamenti)
     public string? ObjectivesFrom;
@@ -319,6 +322,28 @@ public sealed class CampaignDoc
     // ---- modifiche ----
 
     public bool CanEditObjectives => ObjectivesOwn;
+
+    /// <summary>Bullseye position (grid cells, x east, y north), or null when the campaign header is not readable.</summary>
+    public (int X, int Y)? Bullseye => CmpRaw != null && CmpRaw.Length >= CmpBullseyeAt + 4
+        ? (BitConverter.ToInt16(CmpRaw, CmpBullseyeAt), BitConverter.ToInt16(CmpRaw, CmpBullseyeAt + 2)) : null;
+
+    public void SetBullseye(int x, int y)
+    {
+        if (CmpRaw == null || CmpRaw.Length < CmpBullseyeAt + 4) return;
+        BitConverter.TryWriteBytes(CmpRaw.AsSpan(CmpBullseyeAt, 2), (short)x);
+        BitConverter.TryWriteBytes(CmpRaw.AsSpan(CmpBullseyeAt + 2, 2), (short)y);
+        _cmpDirty = true;
+    }
+
+    /// <summary>Bullseye from the old add-on's grid to this theater's. Returns "x,y → x,y", or null if unchanged or not readable.</summary>
+    public string? ReprojectBullseye(TerrainTool.Core.Theater.TheaterGrid g)
+    {
+        if (Bullseye is not { } b) return null;
+        var (x, y) = g.FromSourceGrid(b.X, b.Y);
+        if (x == b.X && y == b.Y) return null;
+        SetBullseye(x, y);
+        return $"{b.X},{b.Y} → {x},{y}";
+    }
 
     public void MoveObjective(CampObjective o, double northFt, double eastFt)
     {
