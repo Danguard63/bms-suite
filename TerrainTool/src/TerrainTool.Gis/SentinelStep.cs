@@ -138,7 +138,7 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
                 ctx.Token.ThrowIfCancellationRequested();
                 int id = ty * n + tx + 1;
                 string ok = Path.Combine(ctx.Work("s2_done"), id + ".ok");
-                if (!File.Exists(ok)) continue;
+                if (!File.Exists(ok) || ctx.Project.Theater.OlderThanGrid(ok)) continue;
                 byte[]? px0 = null;
                 try { px0 = have.GetChunk(tx, ty, 3, 0, 0, out _); } catch (Exception) { }
                 if (px0 == null) continue;
@@ -162,7 +162,9 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
             ctx.Token.ThrowIfCancellationRequested();
             int idx0 = ty * n + tx + 1;
             // tessere gia' complete in un giro precedente: non si rifanno
-            if (!_test && File.Exists(Path.Combine(doneDir, idx0 + ".ok")) && File.Exists(Path.Combine(outDir, idx0 + ".dds")))
+            // (made before the theater grid changed: made again)
+            if (!_test && File.Exists(Path.Combine(doneDir, idx0 + ".ok")) && File.Exists(Path.Combine(outDir, idx0 + ".dds"))
+                && !ctx.Project.Theater.OlderThanGrid(Path.Combine(doneDir, idx0 + ".ok")))
             { skipped++; made++; continue; }
             var (la, lo) = lat[(tx, ty)];
             long tileMiss = 0;

@@ -749,12 +749,14 @@ public sealed partial class ObjectsJob : TextureJob
         string? data = TerrainTool.Core.Campaign.CampaignWorkspace.BmsDataDir(p.KoreaNewTerrain);
         string? bmsCamp = data != null ? Path.Combine(data, addOn, "Campaign") : null;
         string? cache = bmsCamp != null && Directory.Exists(bmsCamp) ? Directory.EnumerateFiles(bmsCamp, "*.terrain.binpb").FirstOrDefault() : null;
+        // caches made on the terrain before the grid changed (switch to the standard projection) are in the old grid
+        if (cache != null && p.Theater.OlderThanGrid(cache)) { notes.Add($"Bridge cells: {cache} is older than the new theater grid, not used"); cache = null; }
         // l'installazione degli oggetti cancella la cache di BMS (la rifa' BMS al primo avvio): se manca, la copia che
         // l'installazione salva nel progetto. Senza nessuna delle due le copie dei ponti (OCD/CT nuovi) non si fanno e la
         // campagna, che le usa, manderebbe BMS in crash (l'installazione lo blocca).
         if (cache == null && Directory.Exists(KeptTerrainCacheFolder(p)))
         {
-            cache = Directory.EnumerateFiles(KeptTerrainCacheFolder(p), "*.terrain.binpb").OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault();
+            cache = Directory.EnumerateFiles(KeptTerrainCacheFolder(p), "*.terrain.binpb").Where(f => !p.Theater.OlderThanGrid(f)).OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault();
             if (cache != null) notes.Add($"Bridge cells: BMS campaign terrain missing, using the copy kept by the last install ({cache}, {File.GetLastWriteTime(cache):yyyy-MM-dd HH:mm})");
         }
         if (cache == null)

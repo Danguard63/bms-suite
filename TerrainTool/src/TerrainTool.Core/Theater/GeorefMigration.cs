@@ -52,6 +52,7 @@ public static class GeorefMigration
         var old = t.Warp;
         t.SourceGeoref = old;
         t.Warp = null;
+        t.GridChangedUtc = DateTime.UtcNow;
         t.CenterLat = Math.Round(clat, 6);
         t.CenterLon = Math.Round(clon, 6);
         var g = t.CreateGrid();

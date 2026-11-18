@@ -50,6 +50,13 @@ public sealed class TheaterConfig
     /// </summary>
     public TheaterWarp? SourceGeoref { get; set; }
 
+    /// <summary>When the theater grid last changed (switch to the standard projection): terrain data made before (photoreal
+    /// tiles marked done, BMS campaign terrain caches) are in the old grid and are made again.</summary>
+    public DateTime? GridChangedUtc { get; set; }
+
+    /// <summary>True if a file was made before the last change of the grid.</summary>
+    public bool OlderThanGrid(string file) => GridChangedUtc is { } t && File.GetLastWriteTimeUtc(file) < t;
+
     /// <summary>Pipeline PROJ per gdalwarp/ogr2ogr -ct, oppure null con la proiezione standard.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public string? GdalCoordinateOperation => Warp?.GdalPipeline();
