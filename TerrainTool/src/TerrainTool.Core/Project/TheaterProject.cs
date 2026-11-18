@@ -39,6 +39,9 @@ public sealed class TheaterProject
     public string WaterDemOutput => Path.Combine(ProjectFolder, "Output", "WaterDem");
     /// <summary>Se vero, i lavori delle texture prendono le mappe dell'acqua da WaterDemOutput invece che dall'uscita di Terrain Builder.</summary>
     public bool UseToolWaterDem { get; set; }
+    /// <summary>Year of the EOX Sentinel-2 cloudless mosaic for the photoreal tiles: 2016 (CC BY 4.0) or a later year
+    /// (2018-2024, CC BY-NC-SA 4.0: non-commercial, share-alike). Each year has its own download cache.</summary>
+    public int PhotorealYear { get; set; } = 2016;
     public string TbOutputOrDefault => string.IsNullOrWhiteSpace(TbOutputFolder) ? Path.Combine(ProjectFolder, "Output", "TB_Output") : TbOutputFolder;
 
     private static readonly JsonSerializerOptions Opts = new() { WriteIndented = true };

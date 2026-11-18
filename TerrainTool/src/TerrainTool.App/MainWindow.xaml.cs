@@ -212,6 +212,9 @@ public partial class MainWindow : Window
         CheckFolderBox.Text = _project.OutputNewTerrain;
         TbOutBox.Text = _project.TbOutputOrDefault;
         ProjectPathText.Text = _projectFile;
+        foreach (ComboBoxItem it in PhotoYearCombo.Items)
+            if ((string)it.Tag == _project.PhotorealYear.ToString(Ci)) PhotoYearCombo.SelectedItem = it;
+        if (PhotoYearCombo.SelectedItem == null) PhotoYearCombo.SelectedIndex = 0;
         Title = $"BMS New Terrain Tool — {t.Name}";
         _loading = false;
         Recalculate();
@@ -421,6 +424,16 @@ public partial class MainWindow : Window
             Log($"Written {path}");
         }
         catch (Exception ex) { Log("ERROR: " + ex.Message); MessageBox.Show(this, ex.Message, "Error"); }
+    }
+
+    private void OnPhotoYearChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || PhotoYearCombo.SelectedItem is not ComboBoxItem it || !int.TryParse((string)it.Tag, NumberStyles.Integer, Ci, out int y)) return;
+        if (y == _project.PhotorealYear) return;
+        _project.PhotorealYear = y;
+        SaveProject();
+        Log($"Photoreal imagery: EOX Sentinel-2 cloudless {y}" + (y == 2016 ? " (CC BY 4.0)" : " (CC BY-NC-SA 4.0: non-commercial, share-alike; credit it in the theater)")
+            + ". 'Sentinel-2 photoreal 4K' makes all tiles again with it; run the Kuwait/test step first to compare.");
     }
 
     private void OnStandardProjection(object sender, RoutedEventArgs e)

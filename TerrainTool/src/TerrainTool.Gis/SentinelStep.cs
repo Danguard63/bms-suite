@@ -25,10 +25,55 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
     public override string Id => _test ? "s2photoreal_test" : "s2photoreal";
     public override string Name => _test ? "Sentinel-2 photoreal 4K (test: Kuwait)" : "Sentinel-2 photoreal 4K";
     public override string Description => (_test
-        ? "TEST on the 4K tiles around Kuwait International only. "
+        ? "TEST on the 4K tiles around the airbase nearest to the theater centre only, to check imagery and alignment. "
         : "Whole theater (about 100,000+ web tiles, several GB, hours the first time; it resumes where it stopped). ")
-        + "Downloads EOX Sentinel-2 cloudless 2016 (CC BY 4.0, 10 m) into Sources\\Imagery\\S2C2016 and writes Output\\NewTerrain\\Photoreal\\4K "
-        + "(replaces the NASA placeholder tiles it covers). Where 2016 has no imagery (black: small Gulf islands...) it fills from EOX 2018-2023 (CC BY-NC-SA 4.0), and remakes the tiles already made with black parts. Credit: Sentinel-2 cloudless by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016).";
+        + "Downloads the EOX Sentinel-2 cloudless mosaic of the year chosen above (2016: CC BY 4.0; 2018-2024: CC BY-NC-SA 4.0, non-commercial), 10 m, "
+        + "into Sources\\Imagery\\S2C<year> and writes Output\\NewTerrain\\Photoreal\\4K (replaces the NASA placeholder tiles it covers). "
+        + "Where that year has no imagery (black: small Gulf islands...) it fills from the other years, and remakes the tiles already made with black parts. "
+        + "Credit: Sentinel-2 cloudless by EOX IT Services GmbH (Contains modified Copernicus Sentinel data <year>).";
+
+    /// <summary>Years EOX publishes (layer s2cloudless-&lt;year&gt;_3857); 2016 is the CC BY one.</summary>
+    public static readonly int[] Years = { 2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024 };
+    public static int YearOf(GisContext ctx) => Years.Contains(ctx.Project.PhotorealYear) ? ctx.Project.PhotorealYear : 2016;
+    public static string LicenseOf(int year) => year == 2016 ? "CC BY 4.0" : "CC BY-NC-SA 4.0 (non-commercial, share-alike)";
+    private static string[] TemplatesOf(int year) => year == 2016 ? Templates : new[] { FallbackTpl.Replace("{layer}", $"s2cloudless-{year}_3857") };
+    /// <summary>Fill order for black parts: the nearest years first, 2016 last.</summary>
+    private static string[] FallbacksOf(int year) => year == 2016 ? FallbackLayers
+        : Years.Where(y => y != year).OrderBy(y => y == 2016 ? 1 : 0).ThenBy(y => Math.Abs(y - year)).ThenByDescending(y => y)
+               .Select(y => $"s2cloudless-{y}_3857").ToArray();
+    private static string[] _fallbacks = FallbackLayers;
+    /// <summary>Work folder of the tiles marked done: one per year, so another year makes them again.</summary>
+    private static string DoneName(int year) => year == 2016 ? "s2_done" : "s2_done_" + year;
+
+    /// <summary>Test area: the airbase of the project list nearest to the theater centre (Lat/Lon columns), else the centre.</summary>
+    private static (double Lat, double Lon) TestPoint(GisContext ctx)
+    {
+        var t = ctx.Theater;
+        (double, double) best = (t.CenterLat, t.CenterLon);
+        try
+        {
+            string csv = ctx.Project.AirbasesCsv;
+            if (!File.Exists(csv)) return best;
+            var lines = File.ReadAllLines(csv);
+            if (lines.Length < 2) return best;
+            var h = lines[0].TrimStart('\uFEFF').Split(';');
+            int cLa = Array.FindIndex(h, x => x.Trim().Equals("Lat", StringComparison.OrdinalIgnoreCase));
+            int cLo = Array.FindIndex(h, x => x.Trim().Equals("Lon", StringComparison.OrdinalIgnoreCase));
+            if (cLa < 0 || cLo < 0) return best;
+            double bd = double.MaxValue;
+            foreach (var l in lines.Skip(1))
+            {
+                var f = l.Split(';');
+                if (f.Length <= Math.Max(cLa, cLo)) continue;
+                if (!double.TryParse(f[cLa], NumberStyles.Float, CultureInfo.InvariantCulture, out double la) ||
+                    !double.TryParse(f[cLo], NumberStyles.Float, CultureInfo.InvariantCulture, out double lo)) continue;
+                double d = Math.Pow(la - t.CenterLat, 2) + Math.Pow((lo - t.CenterLon) * Math.Cos(t.CenterLat * Math.PI / 180), 2);
+                if (d < bd) { bd = d; best = (la, lo); }
+            }
+        }
+        catch (IOException) { }
+        return best;
+    }
 
     public const int Zoom = 13;
     private const int TilePx = Photoreal4KJob.TilePx;
@@ -73,7 +118,10 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
         double sizeM = ctx.SizeMeters;
         int n = (int)Math.Round(ctx.Theater.SizeKm / TileKm);
         double px = sizeM / (n * TilePx);
-        string cache = Path.Combine(ctx.SourcesDir, "Imagery", "S2C2016");
+        int year = YearOf(ctx);
+        _fallbacks = FallbacksOf(year);
+        string cache = Path.Combine(ctx.SourcesDir, "Imagery", "S2C" + year);
+        res.Notes.Add($"Imagery: EOX Sentinel-2 cloudless {year} ({LicenseOf(year)})");
         string outDir = Path.Combine(ctx.Project.OutputNewTerrain, "Photoreal", "4K");
         Directory.CreateDirectory(outDir);
 
@@ -81,7 +129,8 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
         var todo = new List<(int Tx, int Ty)>();
         if (_test)
         {
-            var (kx, ky) = grid.ToTheater(29.2266, 47.9689);
+            var (tla, tlo) = TestPoint(ctx);
+            var (kx, ky) = grid.ToTheater(tla, tlo);
             double tm = TileKm * 1000;
             for (int ty = 0; ty < n; ty++)
                 for (int tx = 0; tx < n; tx++)
@@ -137,7 +186,7 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
             {
                 ctx.Token.ThrowIfCancellationRequested();
                 int id = ty * n + tx + 1;
-                string ok = Path.Combine(ctx.Work("s2_done"), id + ".ok");
+                string ok = Path.Combine(ctx.Work(DoneName(year)), id + ".ok");
                 if (!File.Exists(ok) || ctx.Project.Theater.OlderThanGrid(ok)) continue;
                 byte[]? px0 = null;
                 try { px0 = have.GetChunk(tx, ty, 3, 0, 0, out _); } catch (Exception) { }
@@ -146,14 +195,14 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
                 for (int k = 0; k < px0.Length; k += 4) if (px0[k] <= 8 && px0[k + 1] <= 8 && px0[k + 2] <= 8) black++;
                 if (black > 64) { File.Delete(ok); redo++; }
             }
-            if (redo > 0) res.Notes.Add($"{redo} tiles already made had black parts (no 2016 imagery): made again, filling them from EOX 2018-2023");
+            if (redo > 0) res.Notes.Add($"{redo} tiles already made had black parts (no {year} imagery): made again, filling them from the other years");
         }
         int made = 0;
         var tile = new byte[(long)TilePx * TilePx * 3];
         var dec = new ConcurrentDictionary<(int, int), byte[]?>();
         long missingPx = 0;
         _decodeErrors = 0; while (DecodeMsgs.TryDequeue(out _)) { }
-        string doneDir = ctx.Work("s2_done");
+        string doneDir = ctx.Work(DoneName(year));
         Directory.CreateDirectory(doneDir);
         var incomplete = new List<string>();
         int skipped = 0;
@@ -207,7 +256,7 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
         {
             res.Notes.Add($"Black areas (no 2016 imagery) filled from later EOX years: {_fallbackTiles} web tiles, {_fallbackPixels:N0} pixels (" +
                           string.Join(", ", FallbackByLayer.OrderBy(k => k.Key).Select(k => $"{k.Key.Replace("_3857", "")}: {k.Value}")) + ")");
-            res.Notes.Add("Credit for those parts: Sentinel-2 cloudless - https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2018-2023), CC BY-NC-SA 4.0 (non-commercial)");
+            res.Notes.Add("Credit for those parts: Sentinel-2 cloudless - https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data, years in the list above), CC BY 4.0 for 2016, CC BY-NC-SA 4.0 (non-commercial) for 2018 and later");
         }
         if (_stillBlackTiles > 0) res.Notes.Add($"{_stillBlackTiles} web tiles still have black parts: no EOX year has imagery there (open sea, or a download failed: {_fallbackFailed} failed downloads, run again to retry)");
         res.Notes.Add($"Source: {tpl.Replace("{z}/{y}/{x}.jpg", "")} (EOX Sentinel-2 cloudless 2016, CC BY 4.0)");
@@ -270,7 +319,7 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
         if (_sourcesDir == null || _http == null) return t;
         var res = t != null ? (byte[])t.Clone() : null;
         int filled = 0, emptyInARow = 0;
-        foreach (var layer in FallbackLayers)
+        foreach (var layer in _fallbacks)
         {
             var f = Fallback(layer, x, y);
             // due anni di fila senza niente (tutto nero o assente): mare aperto, inutile scaricare gli altri
@@ -388,7 +437,8 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
         // primo modello che risponde con un'immagine
         string? tpl = null;
         var probe = need.First();
-        foreach (var t in Templates)
+        int year = YearOf(ctx);
+        foreach (var t in TemplatesOf(year))
         {
             try
             {
@@ -397,7 +447,7 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
             }
             catch (Exception) when (!ctx.Token.IsCancellationRequested) { }
         }
-        if (tpl == null) throw new IOException("EOX Sentinel-2 cloudless 2016 tiles not reachable (tried: " + string.Join(", ", Templates) + ")");
+        if (tpl == null) throw new IOException($"EOX Sentinel-2 cloudless {year} tiles not reachable (tried: " + string.Join(", ", TemplatesOf(year)) + ")");
         res.Notes.Add($"{need.Count} web tiles needed, {missing.Count} to download");
         int done = 0, failed = 0, none = 0; long bytes = 0;
         Parallel.ForEach(missing, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ctx.Token }, t =>

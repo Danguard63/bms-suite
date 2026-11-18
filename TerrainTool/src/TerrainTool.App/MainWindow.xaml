@@ -253,6 +253,12 @@
                                 <ComboBoxItem Content="4096 (quick test)" Tag="4096" />
                                 <ComboBoxItem Content="Full size (map pixels)" Tag="full" />
                             </ComboBox>
+                            <TextBlock Text="Photoreal imagery" Style="{StaticResource Label}" />
+                            <ComboBox x:Name="PhotoYearCombo" Width="230" Margin="0,0,10,0" SelectionChanged="OnPhotoYearChanged"
+                                      ToolTip="EOX Sentinel-2 cloudless mosaic for 'Sentinel-2 photoreal 4K'. 2016 is CC BY 4.0; 2018 and later are CC BY-NC-SA 4.0 (non-commercial, share-alike: fine for a free theater, keep the credit). Each year downloads into its own cache">
+                                <ComboBoxItem Content="Sentinel-2 cloudless 2016 (CC BY)" Tag="2016" />
+                                <ComboBoxItem Content="Sentinel-2 cloudless 2024 (CC BY-NC-SA)" Tag="2024" />
+                            </ComboBox>
                             <Button x:Name="RunStepsButton" Content="Run selected" FontWeight="SemiBold" Click="OnRunSteps" />
                             <Button x:Name="CancelStepsButton" Content="Cancel" IsEnabled="False" Click="OnCancelSteps" />
                             <Button Content="Open output folder" Click="OnOpenProcOutput" />
