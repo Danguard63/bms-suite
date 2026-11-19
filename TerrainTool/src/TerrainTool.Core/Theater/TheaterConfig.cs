@@ -159,6 +159,10 @@ public sealed class TheaterGrid
         if (Config.SourceGeoref is not { } s) return (northFt, eastFt);
         var (lat, lon) = s.Inverse(eastFt * 0.3048, northFt * 0.3048);
         var (x, y) = ToTheater(lat, lon);
+        // a position that would fall outside the theater stays where it was: things parked on the old grid's edge
+        // (carriers waiting at cell 0,0) are placeholders, not places on the ground
+        double size = Config.SizeMeters;
+        if (x < 0 || y < 0 || x >= size || y >= size) return (northFt, eastFt);
         return (y * TheaterConfig.FeetPerMeter, x * TheaterConfig.FeetPerMeter);
     }
 

@@ -254,9 +254,9 @@ public sealed partial class ObjectsJob : TextureJob
         {
             objs = objs.Select(o => { var (n, e) = srcGrid.FromSourceFt(o.X, o.Y); return o with { X = n, Y = e }; }).ToList();
             double far = objs.Max(o => Math.Sqrt((o.X - orig[o.Id].X) * (o.X - orig[o.Id].X) + (o.Y - orig[o.Id].Y) * (o.Y - orig[o.Id].Y))) / FtPerM / 1000;
-            int outside = objs.Count(o => o.X < 0 || o.Y < 0 || o.X > c.Project.Theater.SizeMeters * FtPerM || o.Y > c.Project.Theater.SizeMeters * FtPerM);
+            int kept = objs.Count(o => o.X == orig[o.Id].X && o.Y == orig[o.Id].Y);
             notes.Add($"Old add-on positions carried over to the standard projection: {objs.Count} objectives (largest shift {far:0.0} km)"
-                      + (outside > 0 ? $", {outside} now outside the theater" : ""));
+                      + (kept > 0 ? $", {kept} left where they were (they would fall outside the theater: placeholders on the old grid's edge)" : ""));
         }
         _bake.Clear();
         _bridgeTld.Clear();
