@@ -23,7 +23,7 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
     public Sentinel2PhotorealStep(bool testArea) { _test = testArea; }
 
     public override string Id => _test ? "s2photoreal_test" : "s2photoreal";
-    public override string Name => _test ? "Sentinel-2 photoreal 4K (test: Kuwait)" : "Sentinel-2 photoreal 4K";
+    public override string Name => _test ? "Sentinel-2 photoreal 4K (test area)" : "Sentinel-2 photoreal 4K";
     public override string Description => (_test
         ? "TEST on the 4K tiles around the airbase nearest to the theater centre only, to check imagery and alignment. "
         : "Whole theater (about 100,000+ web tiles, several GB, hours the first time; it resumes where it stopped). ")
