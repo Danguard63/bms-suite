@@ -13,6 +13,8 @@ namespace TerrainTool.Core.Dds;
 public sealed class BmsInstaller
 {
     public static readonly string[] HeightMapCaches = { "TerrainLevelingData.bin", "LandCoverData.binpb", "SpecialPolygonData.binpb" };
+    /// <summary>Line-of-sight maps BMS writes from the heightmap: stale when the heightmap changes.</summary>
+    public static readonly string[] LosCaches = { "LOS250.raw", "LOSMin.raw", "LOSMax.raw" };
 
     public string DataDir { get; }
     public string Target { get; }        // <BMS>\Data\<add-on>

@@ -163,6 +163,15 @@ public sealed class TheaterInstaller
         foreach (var nt in Directory.Exists(Target) ? Directory.EnumerateDirectories(Target, "NewTerrain", SearchOption.AllDirectories).ToList() : new())
             foreach (var c in BmsInstaller.HeightMapCaches)
                 if (Path.Combine(nt, "HeightMaps", c) is var f && File.Exists(f)) { Check(f); File.Delete(f); log($"  Removed cache {c}"); }
+        // line-of-sight maps that BMS made from an older heightmap: it makes them again when they are missing
+        foreach (var nt in Directory.Exists(Target) ? Directory.EnumerateDirectories(Target, "NewTerrain", SearchOption.AllDirectories).ToList() : new())
+        {
+            string hm = Path.Combine(nt, "HeightMaps", "HeightMap.raw");
+            if (!File.Exists(hm)) continue;
+            foreach (var c in BmsInstaller.LosCaches)
+                if (Path.Combine(nt, "HeightMaps", c) is var f && File.Exists(f) && File.GetLastWriteTimeUtc(f) < File.GetLastWriteTimeUtc(hm))
+                { Check(f); File.Delete(f); log($"  Removed {c} (made by BMS from an older heightmap; it makes it again)"); }
+        }
         string obj = Path.Combine(Target, "Terrdata", ObjectsJob.FolderName);
         if (ObjectsChanged && Directory.Exists(obj))
             foreach (var f in Directory.EnumerateFiles(obj, "FALCON4.*").Where(f => Path.GetFileName(f).StartsWith("FALCON4.", StringComparison.Ordinal)).ToList())
