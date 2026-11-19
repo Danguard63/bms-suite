@@ -118,7 +118,11 @@ public static class TheaterSimData
                     var srcRec = Regex.Match(xml, $@"([ \t]*)<{e.Table} Num=""{src}"">(.*?)</{e.Table}>", RegexOptions.Singleline);
                     if (!srcRec.Success) throw new InvalidOperationException($"DbEdits.txt line {e.Line}: COPY {e.Table} {src}: record not found");
                     int max = Regex.Matches(xml, $@"<{e.Table} Num=""(\d+)"">").Select(x => int.Parse(x.Groups[1].Value, CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
-                    if (Regex.IsMatch(xml, $@"<{e.Table} Num=""{e.Num}"">")) { notes.Add($"DB: {e.Table} {e.Num} already exists (COPY skipped)"); continue; }
+                    // the database is copied fresh from BMS every time: a record already there is BMS's own (an update added it),
+                    // and the edits after the COPY would overwrite it
+                    if (Regex.IsMatch(xml, $@"<{e.Table} Num=""{e.Num}"">"))
+                        throw new InvalidOperationException($"DbEdits.txt line {e.Line}: COPY {e.Table} {src} {e.Num}: this BMS version already has {e.Table} {e.Num} " +
+                            $"(a BMS update added it). Use the next free number, {max + 1}, here and in the lines that refer to {e.Num}");
                     if (e.Num != max + 1) throw new InvalidOperationException($"DbEdits.txt line {e.Line}: COPY {e.Table} {src} {e.Num}: the new record must be the next free number, {max + 1}");
                     int close = xml.LastIndexOf($"</{e.Table}Records>", StringComparison.Ordinal);
                     if (close < 0) throw new InvalidOperationException($"DbEdits.txt line {e.Line}: </{e.Table}Records> not found");
