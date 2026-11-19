@@ -25,7 +25,7 @@ public sealed class AssembleJob : TextureJob
     };
 
     /// <summary>File nostri obbligatori per partire.</summary>
-    private static readonly string[] Required =
+    public static readonly string[] Required =
     {
         @"HeightMaps\HeightMap.raw", @"HeightMaps\WaterHeightMap.raw", @"WaterMaps\DepthMap_nsrgb.dds", @"WaterMaps\CullingMap_nsrgb.dds",
         @"WaterMaps\FFTMap.raw", @"WaterMaps\ColorMap.dds", @"GroundTypes\GlobalAlpha_nsrgb.dds", @"GroundTypes\LandCoverMap.raw",

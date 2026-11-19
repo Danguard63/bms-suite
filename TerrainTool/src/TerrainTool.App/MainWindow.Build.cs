@@ -148,11 +148,14 @@ public partial class MainWindow
             if (Directory.Exists(nt))
             {
                 var res = NewTerrainChecker.Check(nt, _project.Theater, Directory.Exists(_project.KoreaNewTerrain) ? _project.KoreaNewTerrain : null);
-                int ok = res.Count(r => r.Status is CheckStatus.Ok or CheckStatus.Present), miss = res.Count(r => r.Status == CheckStatus.Missing), wrong = res.Count(r => r.Status == CheckStatus.WrongSize);
+                int ok = res.Count(r => r.Status is CheckStatus.Ok or CheckStatus.Present), wrong = res.Count(r => r.Status == CheckStatus.WrongSize);
+                // only the files this tool makes stop the build: the generic art comes from Korea during the build, and BMS writes
+                // its own caches (LOS250, LOSMin/Max, TerrainLevelingData, LandCoverData, SpecialPolygonData) at the first start
+                int miss = AssembleJob.Required.Count(r => !File.Exists(Path.Combine(nt, r)) && !Directory.Exists(Path.Combine(nt, r)));
                 rows.Add(new BuildRow
                 {
                     Part = "Terrain files", State = miss + wrong == 0 ? "Ready" : "Missing",
-                    Details = miss + wrong == 0 ? $"{ok}/{res.Count} OK" : $"{miss} missing, {wrong} wrong size (of {res.Count}): make them in tab 5",
+                    Details = miss + wrong == 0 ? $"{ok}/{res.Count} present (the others come from Korea during the build or are written by BMS)" : $"{miss} missing, {wrong} wrong size (of {AssembleJob.Required.Length} files this tool makes): make them in tab 5",
                     GoLabel = "Go to Terrain check", Go = () => { GoTab(5); CheckFolderBox.Text = nt; OnRunCheck(this, new RoutedEventArgs()); },
                 });
             }
