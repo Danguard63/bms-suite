@@ -87,10 +87,11 @@ public static class ObjectChangeApplier
             .Distinct(StringComparer.OrdinalIgnoreCase);
         foreach (var n in cams)
             if (FindCamp(n!) is string f) jobs.Add((f, Path.GetFileName(f)));
-        // installed theater: every TE of the theater has the objectives too
-        if (p.IsInstalledTheater && Directory.Exists(oldCamp))
+        // every TE of the theater has the objectives too (installed theater), and in a project moved to the standard projection
+        // its units and waypoints have to follow (the editor's saved copy, if any, was converted with the project)
+        if ((p.IsInstalledTheater || p.Theater.SourceGeoref != null) && Directory.Exists(oldCamp))
             foreach (var f in Directory.EnumerateFiles(oldCamp, "*.tac"))
-                if (!jobs.Any(j => j.Dst.Equals(Path.GetFileName(f), StringComparison.OrdinalIgnoreCase))) jobs.Add((f, Path.GetFileName(f)));
+                if (!jobs.Any(j => j.Dst.Equals(Path.GetFileName(f), StringComparison.OrdinalIgnoreCase))) jobs.Add((FindIn(campEdits, Path.GetFileName(f)) ?? f, Path.GetFileName(f)));
         int fromEdits = jobs.Count(j => j.Src.StartsWith(campEdits, StringComparison.OrdinalIgnoreCase));
         if (fromEdits > 0) notes.Add($"{fromEdits} file(s) taken from the campaign editor's saves ({campEdits}), updated there too");
         int patched = 0; var problems = new HashSet<string>();

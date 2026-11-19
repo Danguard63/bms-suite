@@ -24,6 +24,7 @@ public sealed class TheaterCellsWindow : Window
     private readonly string _thrName;
     private readonly string? _currentPath;
     private readonly string? _cachePath;
+    private readonly string? _staleCache;
     private TheaterCells? _current, _built;
     private CampaignTerrainCache? _cache;
 
@@ -63,6 +64,8 @@ public sealed class TheaterCellsWindow : Window
         _currentPath = dirs.SelectMany(d => Directory.EnumerateFiles(d, "*.thr")).FirstOrDefault();
         _thrName = _currentPath != null ? Path.GetFileName(_currentPath) : CampaignWorkspace.SafeName(ws.Name) + ".thr";
         _cachePath = _bmsCampaign != null && Directory.Exists(_bmsCampaign) ? Directory.EnumerateFiles(_bmsCampaign, "*.terrain.binpb").FirstOrDefault() : null;
+        // written by BMS before the project's grid changed (standard projection): it describes the old terrain, not this one
+        if (_cachePath != null && _ws.Project?.Theater.OlderThanGrid(_cachePath) == true) { _staleCache = _cachePath; _cachePath = null; }
 
         var intro = new TextBlock
         {
@@ -126,6 +129,7 @@ public sealed class TheaterCellsWindow : Window
                 Log($"BMS campaign terrain {Path.GetFileName(_cachePath)} ({File.GetLastWriteTime(_cachePath):yyyy-MM-dd HH:mm}): {_cache.SizeX}×{_cache.SizeY} km");
                 if (_current != null) Log("Current .thr – " + _cache.CompareWater(_current));
             }
+            else if (_staleCache != null) Log($"BMS campaign terrain {Path.GetFileName(_staleCache)} ({File.GetLastWriteTime(_staleCache):yyyy-MM-dd HH:mm}) is older than the theater's new grid: not used. Install the theater, start a campaign once in BMS, then reopen this window.");
             else Log("No *.terrain.binpb in the BMS Campaign folder: BMS writes it when a campaign of this theater is loaded (start one once, then reopen this window).");
         }
         catch (Exception ex) { Log("BMS campaign terrain: " + ex.Message); }
