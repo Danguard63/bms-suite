@@ -145,6 +145,8 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
             for (int ty = 0; ty < n; ty++)
                 for (int tx = 0; tx < n; tx++)
                     if (land == null || land[ty * n + tx]) todo.Add((tx, ty));
+            if (land == null) res.Notes.Add("No water map of this grid yet (Watermap step): every tile is made, open sea too. Run the Watermap step first to skip the sea tiles");
+            else res.Notes.Add($"{n * n - todo.Count} tiles of open sea skipped");
         }
         res.Notes.Add($"{todo.Count} tiles of 64 km to make ({px:0.##} m/px), web zoom {Zoom}");
 
@@ -486,23 +488,34 @@ public sealed class Sentinel2PhotorealStep : ProcessingStep
     private static string Url(string tpl, int x, int y) =>
         tpl.Replace("{z}", Zoom.ToString(CultureInfo.InvariantCulture)).Replace("{x}", x.ToString(CultureInfo.InvariantCulture)).Replace("{y}", y.ToString(CultureInfo.InvariantCulture));
 
-    /// <summary>Tessere con terra, dalla LandCoverMap del tool (1 = mare). null se non c'e'.</summary>
+    /// <summary>
+    /// Tessere con terra. Prima la Watermap di questa stessa scheda (passo 2, 45 = mare): c'e' gia' in un teatro nuovo, mentre la
+    /// LandCoverMap la fa la scheda 5 piu' tardi. Senza nessuna delle due null (tutte le tessere, mare aperto compreso: lento).
+    /// </summary>
     private static bool[]? LandTiles(GisContext ctx, int n)
     {
+        string wm = ctx.Out("Watermap.raw");
+        if (File.Exists(wm) && !ctx.Project.Theater.OlderThanGrid(wm)) return Tiles(wm, n, 45);
         string lc = Path.Combine(ctx.Project.OutputNewTerrain, "GroundTypes", "LandCoverMap.raw");
-        if (!File.Exists(lc)) return null;
-        long len = new FileInfo(lc).Length;
+        if (File.Exists(lc) && !ctx.Project.Theater.OlderThanGrid(lc)) return Tiles(lc, n, GroundTypes.Water);
+        return null;
+    }
+
+    private static bool[]? Tiles(string raw, int n, byte sea)
+    {
+        long len = new FileInfo(raw).Length;
         int ls = (int)Math.Round(Math.Sqrt(len));
+        if ((long)ls * ls != len || ls < n) return null;
         int per = ls / n, step = Math.Max(1, per / 256);
         var land = new bool[n * n];
-        using var fs = new FileStream(lc, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 22);
+        using var fs = new FileStream(raw, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 22);
         var row = new byte[ls];
-        for (int y = 0; y < ls; y += step)
+        for (int y = 0; y < per * n; y += step)
         {
             fs.Position = (long)y * ls;
             fs.ReadExactly(row);
-            for (int x = 0; x < ls; x += step)
-                if (row[x] != GroundTypes.Water) land[(y / per) * n + x / per] = true;
+            for (int x = 0; x < per * n; x += step)
+                if (row[x] != sea) land[(y / per) * n + x / per] = true;
         }
         return land;
     }
