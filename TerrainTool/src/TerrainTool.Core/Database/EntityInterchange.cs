@@ -105,7 +105,7 @@ public static partial class Interchange
         var counts = p.Records.GroupBy(r => r.Table).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}");
         p.Report.Insert(0, $"{src.Name} → {dst.Name}: {cts.Count} item(s); new records: {(p.Records.Count == 0 ? "none" : string.Join(", ", counts))}; " +
                            $"{x.Reused} records reused; {p.ReusedModels} models already there, {p.CopiedModels} copied into {Path.Combine(dst.ModelsDir, "Models")}");
-        if (x.SharedModels)
+        if (x.SharedModels && modelMap == null)
             p.Report.Add($"Note: {dst.Name} takes its 3D models from BMS's shared Terrdata\\objects, which is never written: models that only {src.Name} has cannot be copied.");
         if (x.AnyAircraft)
             p.Report.Add("Note: aircraft keep their flight model, weapon and radar data numbers (Sim): both theaters use BMS's Sim data.");
