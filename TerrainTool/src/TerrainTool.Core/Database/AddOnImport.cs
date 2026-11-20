@@ -214,6 +214,22 @@ public static class AddOnImport
             if (cts.Count == 0) continue;
             var dst = new BmsTheater { Name = p.Theater.Name, DataDir = bmsData, ObjectDir = dbDir, ModelsDir = bmsObjects };
             var plan = Interchange.MakeEntities(src, dst, bmsData, cts, preferDestination: true, modelMap: modelMap);
+            // what comes along (weapons, pods, tanks the add-on has and BMS has not): their 3D models too, when BMS has no
+            // model with that number or a different one; then the plan again with those numbers
+            int before = modelMap.Count;
+            foreach (var (t, _, f) in plan.Records.Where(r => r.Table == "CT"))
+                foreach (var (field, value) in f.Where(x => x.Field.StartsWith("Graphics", StringComparison.Ordinal)))
+                {
+                    if (!int.TryParse(value, NumberStyles.Integer, Ci, out int m) || m <= 0 || modelMap.ContainsKey(m) || modelMap.ContainsValue(m) || models.SameAsBms(m)) continue;
+                    if (!Directory.Exists(Path.Combine(src.ModelsDir, "Models", m.ToString(Ci)))) continue;
+                    var mp = models.Plan(m);
+                    if (!mp.Ok) { notes.Add($"Imports: model {m}: {mp.Problem}"); continue; }
+                    modelMap[m] = mp.Target;
+                    foreach (var (rel, from) in models.Files(mp)) files.Append(rel).Append(';').Append(from).Append("\r\n");
+                    notes.Add($"Imports: model {m} (a weapon or store that comes along): {mp.Text}");
+                }
+            if (modelMap.Count > before)
+                plan = Interchange.MakeEntities(src, dst, bmsData, cts, preferDestination: true, modelMap: modelMap);
             foreach (var pr in plan.Problems) notes.Add("Imports: problem: " + pr);
             // the tables with the new records, written over the database being built
             if (plan.Records.Count > 0)
