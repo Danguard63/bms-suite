@@ -113,7 +113,7 @@ public sealed class SimFilesView : DockPanel
         {
             var t = new DataTrigger { Binding = new Binding(nameof(Row.State)), Value = st };
             t.Setters.Add(new Setter(BackgroundProperty, new SolidColorBrush(bg)));
-            t.Setters.Add(new Setter(ForegroundProperty, new SolidColorBrush(fg)));
+            t.Setters.Add(new Setter(Control.ForegroundProperty, new SolidColorBrush(fg)));
             if (tipPath != null) t.Setters.Add(new Setter(ToolTipProperty, new Binding(tipPath)));
             rs.Triggers.Add(t);
         }
