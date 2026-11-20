@@ -136,6 +136,15 @@ public sealed class ObjectiveEditorWindow : Window
         hdgRow.Children.Add(_rwyHeading);
         hdgRow.Children.Add(_setHeading);
         hdgRow.Children.Add(_alignReal);
+        var report = new Button { Content = "Alignment report…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(6, 0, 0, 0),
+            ToolTip = "Every airbase with the distance of its main runway from the real one, worst first (red = off, yellow = to check). Click a row to see the base here." };
+        report.Click += (_, _) =>
+        {
+            if (_alignWin is { IsLoaded: true }) { _alignWin.Activate(); return; }
+            _alignWin = new AlignmentWindow(_d, this) { Owner = this };
+            _alignWin.Show();
+        };
+        hdgRow.Children.Add(report);
         bottom.Children.Add(hdgRow);
         bottom.Children.Add(buttons);
         bottom.Children.Add(help);
@@ -328,6 +337,29 @@ public sealed class ObjectiveEditorWindow : Window
         _map.PushUndo(o);
         _d.SetJunction(o, !o.Junction);
         AfterEdit();
+    }
+
+    private AlignmentWindow? _alignWin;
+
+    /// <summary>Selects an objective in the table and centres the map on it (from the alignment report).</summary>
+    public void ShowObjective(EdObjective o)
+    {
+        if (!_view.Contains(o)) { _typeFilter.SelectedIndex = 0; _onlyChanged.IsChecked = false; _search.Text = ""; _view.Refresh(); }
+        _map.Select(o, center: true);
+        _syncing = true;
+        try { _grid.SelectedItem = o; _grid.ScrollIntoView(o); }
+        finally { _syncing = false; }
+        ShowInfo();
+    }
+
+    /// <summary>"Align to real runway" on an objective (undo works as for the button).</summary>
+    public bool AlignToReal(EdObjective o)
+    {
+        _map.Select(o, center: false);
+        _map.PushUndo(o);
+        if (!_d.AlignToReal(o)) return false;
+        AfterEdit();
+        return true;
     }
 
     private void AfterEdit()
