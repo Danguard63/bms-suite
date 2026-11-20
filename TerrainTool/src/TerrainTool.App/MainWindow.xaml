@@ -567,6 +567,8 @@
                         <WrapPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
                             <Button Content="Save" FontWeight="SemiBold" Click="OnDbEditsSave" />
                             <Button Content="Reload" Click="OnDbEditsReload" />
+                            <Button Content="Aircraft &amp; vehicles from the old add-on…" Click="OnAddOnImport" Margin="12,0,0,0"
+                                    ToolTip="Choose aircraft, helicopters, vehicles, ships, weapons and unit types that the old add-on has and BMS has not (e.g. national variants). They are brought in by every 'Run Objects', renumbered on the BMS version in use; what BMS has with the same name stays BMS's. Saved in imports.csv." />
                         </WrapPanel>
                         <TextBox x:Name="DbEditsBox" FontFamily="Consolas" AcceptsReturn="True" AcceptsTab="True"
                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" />

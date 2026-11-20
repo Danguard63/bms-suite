@@ -161,6 +161,9 @@ public sealed partial class ObjectsJob : TextureJob
         notes.Add($"BMS 4.38 database: {dbFiles} files");
         // modifiche del progetto al database (DbEdits.txt), rifatte a ogni giro sopra la copia della 4.38
         notes.AddRange(TheaterSimData.ApplyDbEdits(dst, TheaterSimData.DbEditsFile(c.Project)));
+        // aircraft, vehicles and unit types chosen from the old add-on (imports.csv), renumbered on this BMS version
+        string bmsData = AssembleJob.FindDataDir(c.Project.KoreaNewTerrain)!;
+        notes.AddRange(Database.AddOnImport.Apply(c.Project, dst, bmsData, Path.Combine(install, "imports_map.csv")));
         p.Report(0.05);
 
         // 2) rimappatura delle strutture

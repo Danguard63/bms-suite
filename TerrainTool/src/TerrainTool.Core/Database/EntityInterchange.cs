@@ -75,12 +75,17 @@ public static partial class Interchange
     public static string SensorTable(int type) => type switch { 0 => "ICD", 1 => "RCD", 2 => "RWD", 3 => "VSD", _ => "" };
 
     /// <summary>The plan to copy these CT entries (aircraft, vehicles, ships, weapons, unit types) of src into dst (nothing written).</summary>
-    public static Plan MakeEntities(BmsTheater src, BmsTheater dst, string dataDir, IList<int> cts)
+    /// <param name="preferDestination">For a source of another BMS version (an old add-on): what the destination already has
+    /// with the same name (weapons, sensors, unit vehicles; the aircraft data with the same flight model) is used as it is in
+    /// the destination instead of being added again with the source's values, and fields the destination's tables do not
+    /// know are left out. Only the chosen entries themselves are added.</param>
+    public static Plan MakeEntities(BmsTheater src, BmsTheater dst, string dataDir, IList<int> cts, bool preferDestination = false)
     {
         var p = new Plan { Src = src, Dst = dst, BmsObjects = Path.Combine(dataDir, "Terrdata", "objects") };
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
-        var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir));
+        var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination };
+        foreach (int ct in cts) x.Selected.Add(ct);
         foreach (int ct in cts)
         {
             int before = p.Records.Count;
@@ -92,6 +97,7 @@ public static partial class Interchange
                 : $"{name} (CT {ct}) → CT {n} in {dst.Name}");
         }
         x.Racks();
+        if (preferDestination) x.DropUnknownFields();
         var counts = p.Records.GroupBy(r => r.Table).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}");
         p.Report.Insert(0, $"{src.Name} → {dst.Name}: {cts.Count} item(s); new records: {(p.Records.Count == 0 ? "none" : string.Join(", ", counts))}; " +
                            $"{x.Reused} records reused; {p.ReusedModels} models already there, {p.CopiedModels} copied into {Path.Combine(dst.ModelsDir, "Models")}");
@@ -111,6 +117,10 @@ public static partial class Interchange
         public readonly bool SharedModels;
         public int Reused;
         public bool AnyAircraft;
+        /// <summary>See MakeEntities(preferDestination).</summary>
+        public bool PreferDestination;
+        /// <summary>The CT entries chosen by the user (always added when the destination has no identical one).</summary>
+        public readonly HashSet<int> Selected = new();
         private readonly Dictionary<(string, int), int> _map = new();
         private readonly Dictionary<string, int> _next = new(StringComparer.OrdinalIgnoreCase);
         /// <summary>EntityIdx of the CT entries added by this plan (they are not in D yet).</summary>
@@ -154,6 +164,19 @@ public static partial class Interchange
             if (sr.Name.Length > 0)
                 foreach (var r in D.All(table))
                     if (r.Name == sr.Name && Same(r.Fields, fields) && (alsoSame?.Invoke(r) ?? true)) { Reused++; return _map[(table, sr.Num)] = r.Num; }
+            if (PreferDestination)
+            {
+                // the destination's own version: same name, or (aircraft data, no name) the same number with the same flight model
+                var keep = sr.Name.Length > 0
+                    ? (dSame != null && dSame.Name == sr.Name ? dSame : D.All(table).FirstOrDefault(r => r.Name == sr.Name))
+                    : table == "ACD" && dSame != null && dSame.Get("AirframeDatIdx") == sr.Get("AirframeDatIdx") ? dSame : null;
+                if (keep != null)
+                {
+                    Reused++;
+                    P.Report.Add($"  {Label(table, sr)}: the destination's own {Label(table, keep)} is used (its values, not the source's)");
+                    return _map[(table, sr.Num)] = keep.Num;
+                }
+            }
             int n = Next(table);
             P.Records.Add((table, n, fields));
             string why = dSame == null ? "" : dSame.Name == sr.Name && sr.Name.Length > 0 ? $" ({table} {sr.Num} of the destination is different)" : $" ({table} {sr.Num} is another record in the destination)";
@@ -281,6 +304,20 @@ public static partial class Interchange
                 return _map[("CT", sct)] = sct;
             }
             string name = se.Name;
+            // another version's weapon or vehicle that the destination has with the same name: the destination's one, as it is
+            // (decided before anything it points to is looked at, so nothing of the source's version is added for it)
+            if (PreferDestination && !Selected.Contains(sct))
+            {
+                var own = D.Get("CT", sct) is { } dn && dn.Int("EntityType") == et && D.Get(table, dn.Int("EntityIdx"))?.Name == name ? dn
+                    : D.All("CT").FirstOrDefault(c => c.Int("EntityType") == et && D.Get(table, c.Int("EntityIdx"))?.Name == name);
+                if (own != null)
+                {
+                    Reused += 2;
+                    _map[(table, se.Num)] = own.Int("EntityIdx");
+                    P.Report.Add($"  {table} '{name}' (CT {sct}): the destination's own CT {own.Num} is used");
+                    return _map[("CT", sct)] = own.Num;
+                }
+            }
             // a placeholder against loops (a unit's vehicle is never the unit itself, but stay safe)
             _map[("CT", sct)] = sct;
 
@@ -364,6 +401,25 @@ public static partial class Interchange
                 P.Records.Add(("RKT", n, f));
                 P.Report.Add($"  rocket pod {S.Get("WCD", podWcd)?.Name}: added as RKT {n}");
             }
+        }
+
+        /// <summary>
+        /// Leaves out of the new records the fields that no record of the same table in the destination has (a field of
+        /// another BMS version). Numbered fields (WpnStores_12, ElementFlags_3…) count by their family name.
+        /// </summary>
+        public void DropUnknownFields()
+        {
+            static string Family(string f) => Regex.Replace(f, @"_\d+$", "_#");
+            var known = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            var dropped = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (var (t, _, fields) in P.Records)
+            {
+                if (!known.TryGetValue(t, out var k))
+                    known[t] = k = D.All(t).SelectMany(r => r.Fields).Select(f => Family(f.Field)).ToHashSet(StringComparer.Ordinal);
+                if (k.Count == 0) continue;
+                fields.RemoveAll(f => { bool drop = !k.Contains(Family(f.Field)); if (drop) dropped.Add($"{t}.{f.Field}"); return drop; });
+            }
+            if (dropped.Count > 0) P.Report.Add($"Fields the destination's database does not have, left out: {string.Join(", ", dropped)}");
         }
 
         /// <summary>

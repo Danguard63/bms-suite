@@ -46,6 +46,16 @@ public partial class MainWindow
 
     private void OnDbEditsReload(object sender, RoutedEventArgs e) => LoadDbEdits();
 
+    private void OnAddOnImport(object sender, RoutedEventArgs e)
+    {
+        string? data = AssembleJob.FindDataDir(_project.KoreaNewTerrain);
+        if (string.IsNullOrWhiteSpace(_project.OldTheaterFolder) || !Directory.Exists(_project.OldTheaterFolder))
+        { MessageBox.Show(this, "Set the old theater folder in tab 1 first.", "Old add-on", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (data == null)
+        { MessageBox.Show(this, "BMS 4.38 not found: set 'Korea NewTerrain' in tab 1 first.", "Old add-on", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        new AddOnImportWindow(_project, data) { Owner = this }.ShowDialog();
+    }
+
     private void OnDbEditsSave(object sender, RoutedEventArgs e)
     {
         string f = TheaterSimData.DbEditsFile(_project);
