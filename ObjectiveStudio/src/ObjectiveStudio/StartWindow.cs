@@ -21,6 +21,7 @@ public sealed class StartWindow : Window
     private readonly TextBlock _info = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0), FontSize = 11.5 };
     private readonly Button _open = new() { Content = "Open theater", IsDefault = true, FontWeight = FontWeights.SemiBold, Padding = new Thickness(14, 3, 14, 3), Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
     private readonly ListBox _recent = new() { Height = 110 };
+    private readonly Button _openRecent = new() { Content = "Open", FontWeight = FontWeights.SemiBold, Padding = new Thickness(14, 3, 14, 3), Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, IsEnabled = false };
 
     public StartWindow()
     {
@@ -45,7 +46,9 @@ public sealed class StartWindow : Window
         sp.Children.Add(_open);
 
         sp.Children.Add(Head("Recent"));
+        sp.Children.Add(Note("Theaters and TerrainTool projects opened before: select one and press Open (or double-click it)."));
         sp.Children.Add(_recent);
+        sp.Children.Add(_openRecent);
 
         sp.Children.Add(Head("Theater conversion (TerrainTool project)"));
         sp.Children.Add(Note("For a theater being converted from an older BMS version with TerrainTool: open its project (.ttproj)."));
@@ -55,11 +58,21 @@ public sealed class StartWindow : Window
         _theaters.SelectionChanged += (_, _) => ShowTheater();
         _theaters.MouseDoubleClick += (_, _) => OpenTheater();
         _open.Click += (_, _) => OpenTheater();
-        _recent.MouseDoubleClick += (_, _) => { if (_recent.SelectedItem is ListBoxItem { Tag: string f }) Done(f); };
+        _recent.MouseDoubleClick += (_, _) => OpenRecent();
+        _openRecent.Click += (_, _) => OpenRecent();
+        _recent.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) { OpenRecent(); e.Handled = true; } };
+        // one list at a time: a recent entry selected makes its Open the default button, a theater selected the other one
+        _recent.SelectionChanged += (_, _) =>
+        {
+            bool on = _recent.SelectedItem is ListBoxItem { Tag: string };
+            _openRecent.IsEnabled = on; _openRecent.IsDefault = on; _open.IsDefault = !on;
+            if (on) _theaters.SelectedItem = null;
+        };
+        _theaters.SelectionChanged += (_, _) => { if (_theaters.SelectedItem != null) { _recent.SelectedItem = null; _open.IsDefault = true; } };
         _data.LostFocus += (_, _) => LoadTheaters();
 
         foreach (var f in MainWindow.Recent().Where(File.Exists))
-            _recent.Items.Add(new ListBoxItem { Content = MainWindow.Describe(f), Tag = f, ToolTip = f + "\nDouble-click to open" });
+            _recent.Items.Add(new ListBoxItem { Content = MainWindow.Describe(f), Tag = f, ToolTip = f + "\nSelect and press Open, or double-click" });
         if (_recent.Items.Count == 0) _recent.Items.Add(new ListBoxItem { Content = "(nothing yet)", IsEnabled = false });
         LoadTheaters();
     }
@@ -143,8 +156,23 @@ public sealed class StartWindow : Window
     private void BrowseProject()
     {
         var dlg = new Microsoft.Win32.OpenFileDialog { Title = "TerrainTool project", Filter = "TerrainTool project (*.ttproj)|*.ttproj" };
+        // start where the projects are: the folder of the last project opened, else TerrainTool\Projects of the Suite
+        string? last = MainWindow.Recent().FirstOrDefault(f => f.EndsWith(".ttproj", StringComparison.OrdinalIgnoreCase) && File.Exists(f) && !IsWorkFolderProject(f));
+        string? projects = global::TerrainTool.Core.SuiteLayout.FolderOf("TerrainTool") is { } tt ? Path.Combine(tt, "Projects") : null;
+        string? start = last != null ? Path.GetDirectoryName(Path.GetDirectoryName(last)) : projects;
+        if (start != null && Directory.Exists(start)) dlg.InitialDirectory = start;
+        else if (projects != null && Directory.Exists(projects)) dlg.InitialDirectory = projects;
         if (dlg.ShowDialog(this) == true) Done(dlg.FileName);
     }
+
+    private void OpenRecent()
+    {
+        if (_recent.SelectedItem is ListBoxItem { Tag: string f }) Done(f);
+    }
+
+    /// <summary>The .ttproj of an installed theater lives in Objective Studio's own Theaters folder, not among the TerrainTool projects.</summary>
+    private static bool IsWorkFolderProject(string f) =>
+        Path.GetFullPath(f).StartsWith(Path.GetFullPath(Path.Combine(MainWindow.Root(), "Theaters")), StringComparison.OrdinalIgnoreCase);
 
     private void Done(string file)
     {
