@@ -114,6 +114,13 @@ public sealed class StartWindow : Window
         buttons.Children.Add(_installAll);
         _thr.Click += (_, _) => { if (_ws != null) new TheaterCellsWindow(_ws) { Owner = this }.Show(); };
         buttons.Children.Add(_thr);
+        buttons.Children.Add(UnitText.Btn("TE lists…", () =>
+        {
+            var ws = _ws ?? MakeWorkspace();
+            if (ws == null) { MessageBox.Show(this, "Choose a project or a theater on the left.", Title); return; }
+            try { new TeListsWindow(ws, CampaignDb.Load(ws.DbDirs)) { Owner = this }.Show(); }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "TE lists", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        }, "TePlanes.lst, TeUnits.lst, TeNavalUnits.lst: the aircraft, battalions and naval units offered in the Tactical Engagement (also in the editor's toolbar)"));
         buttons.Children.Add(UnitText.Btn("Remove project from the list", RemoveProject, "Only from this list: no file is deleted"));
 
         var right = new DockPanel();
