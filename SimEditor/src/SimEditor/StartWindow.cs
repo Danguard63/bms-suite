@@ -80,6 +80,8 @@ public sealed class StartWindow : Window
         open.IsEnabled = _recent.Items.Count > 0;
         _recent.SelectionChanged += (_, _) => open.IsEnabled = _recent.SelectedItem != null;
         _recent.KeyDown += (_, e) => { if (e.Key == Key.Enter) Open(); };
+        // the first project selected and the list focused: the highlight shows, Enter opens it
+        Loaded += (_, _) => { _recent.Focus(); if (_recent.SelectedItem is ListBoxItem it) it.Focus(); };
     }
 
     private void Open()
