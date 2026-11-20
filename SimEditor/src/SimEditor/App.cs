@@ -15,6 +15,9 @@ public sealed class App : Application
 
     private App()
     {
+        // the project window comes after the start dialog: with the default "close on last window" the program would end
+        // as soon as the dialog closes, before the project window is shown
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += OnUnhandled;
         BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
     }
@@ -37,6 +40,7 @@ public sealed class App : Application
                 var w = new MainWindow(project);
                 MainWindow = w;
                 w.Show();
+                ShutdownMode = ShutdownMode.OnLastWindowClose;
             }
             catch (Exception ex)
             {
