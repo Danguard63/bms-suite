@@ -10,7 +10,7 @@ namespace DatabaseInterchange;
 
 /// <summary>
 /// Aircraft, vehicles &amp; weapons tab → "From an old add-on into a TerrainTool project…": what the project's old add-on has and BMS
-/// has not, with what can be brought in now (it uses BMS's 3D models) and what not yet (its own model). The ticks are saved in the
+/// has not, with what can be brought in (with BMS's 3D models or its own ones, added to BMS's models) and what not. The ticks are saved in the
 /// project's imports.csv; Run Objects (Objective Studio) brings them in at every run.
 /// </summary>
 public sealed class AddOnImportWindow : Window
@@ -21,12 +21,16 @@ public sealed class AddOnImportWindow : Window
         public AddOnImport.Candidate C { get; init; } = null!;
         public bool Pick { get => _pick; set { if (_pick == value) return; _pick = value && C.CanImport; PropertyChanged?.Invoke(this, new(nameof(Pick))); } }
         public bool Enabled => C.CanImport;
+        private bool _own;
+        /// <summary>Use the add-on's 3D model (added to BMS's models): always for an own model, a choice when BMS has a different one.</summary>
+        public bool Own { get => _own || C.Fit == AddOnImport.Fit.OwnModel; set { if (_own == value) return; _own = value && C.OwnModelPossible; PropertyChanged?.Invoke(this, new(nameof(Own))); PropertyChanged?.Invoke(this, new(nameof(State))); } }
+        public bool OwnEnabled => C.OwnModelPossible && C.Fit == AddOnImport.Fit.OtherModel;
         public string Kind => C.Kind;
         public string Name => C.Name;
         public int Ct => C.Ct;
         public string What => C.What;
         public string Note => C.Note;
-        public string State => !C.CanImport ? "not yet" : C.Fit == AddOnImport.Fit.OtherModel ? "check" : "ok";
+        public string State => !C.CanImport ? "not possible" : C.Fit == AddOnImport.Fit.OtherModel && !Own ? "check" : C.Fit == AddOnImport.Fit.OwnModel || Own ? "own model" : "ok";
         public event PropertyChangedEventHandler? PropertyChanged;
     }
 
@@ -35,7 +39,7 @@ public sealed class AddOnImportWindow : Window
     private readonly ICollectionView _view;
     private readonly ComboBox _kind = new() { MinWidth = 150, Margin = new Thickness(0, 0, 8, 0) };
     private readonly TextBox _search = new() { MinWidth = 180, Margin = new Thickness(0, 0, 8, 0), ToolTip = "Search by name" };
-    private readonly CheckBox _all = new() { Content = "Show also what cannot be brought in yet", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+    private readonly CheckBox _all = new() { Content = "Show also what cannot be brought in", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
 
     public AddOnImportWindow(TheaterProject p, string bmsData)
@@ -47,10 +51,11 @@ public sealed class AddOnImportWindow : Window
 
         AddOnImport.Analysis a;
         Cursor = System.Windows.Input.Cursors.Wait;
-        try { a = AddOnImport.Analyze(p.OldTheaterFolder, bmsData); }
+        try { a = AddOnImport.Analyze(p.OldTheaterFolder, bmsData, AddOnModels.LoadAssigned(p.ProjectFolder), AddOnModels.LoadInstalled(p.ProjectFolder)); }
         finally { Cursor = null; }
-        var saved = AddOnImport.Load(p).Where(c => string.Equals(c.Source, p.OldTheaterFolder, StringComparison.OrdinalIgnoreCase)).Select(c => c.Name).ToHashSet();
-        foreach (var c in a.Candidates) _rows.Add(new Row { C = c, Pick = saved.Contains(c.Name) });
+        var savedList = AddOnImport.Load(p).Where(c => string.Equals(c.Source, p.OldTheaterFolder, StringComparison.OrdinalIgnoreCase)).ToList();
+        var saved = savedList.Select(c => c.Name).ToHashSet();
+        foreach (var c in a.Candidates) _rows.Add(new Row { C = c, Pick = saved.Contains(c.Name), Own = savedList.Any(x => x.Name == c.Name && x.OwnModel) });
         var lost = saved.Where(n => _rows.All(r => r.Name != n)).ToList();
 
         var head = new TextBlock
@@ -59,7 +64,9 @@ public sealed class AddOnImportWindow : Window
             Text = $"{p.OldTheaterFolder}: {a.Version}. {a.Candidates.Count} entries the add-on has and BMS has not (by name), " +
                    $"{a.Candidates.Count(c => c.CanImport)} can be brought in now.\n" +
                    "Brought in: the chosen record with BMS's own versions of what it uses (weapons, radars, sensors, flight data with the same name stay BMS's), " +
-                   "renumbered on the BMS version in use at every 'Run Objects'. Not yet: entries with their own 3D model (the theater uses BMS's models, which are never changed). " +
+                   "renumbered on the BMS version in use at every 'Run Objects'. Own 3D models (blue): added to BMS's models by 'Install objects', with their number or a free one, " +
+                   "and their textures when BMS has none with that number; never replacing anything of BMS (a model whose texture number BMS uses for another texture cannot be brought: renumbering it would mean changing the model file). " +
+                   "Yellow: BMS has a different model with that number; tick 'Add-on model' to use the add-on's one. " +
                    "Flyable aircraft stay BMS's: a variant flies like the BMS aircraft whose flight data it uses. Unit types (squadrons, battalions) bring their vehicles: tick the squadron to use the aircraft in a campaign.",
         };
         _kind.Items.Add("All kinds");
@@ -79,8 +86,17 @@ public sealed class AddOnImportWindow : Window
             Header = "Bring", Binding = new Binding(nameof(Row.Pick)) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
             ElementStyle = pickStyle, EditingElementStyle = pickStyle, Width = 50,
         });
+        var ownStyle = new Style(typeof(CheckBox));
+        ownStyle.Setters.Add(new Setter(IsEnabledProperty, new Binding(nameof(Row.OwnEnabled))));
+        ownStyle.Setters.Add(new Setter(HorizontalAlignmentProperty, HorizontalAlignment.Center));
+        grid.Columns.Add(new DataGridCheckBoxColumn
+        {
+            Header = new TextBlock { Text = "Add-on model", ToolTip = "Use the add-on's 3D model instead of BMS's different model with the same number: it is added to BMS's models with a free number (nothing of BMS is replaced). Always on for an aircraft or vehicle with its own model." },
+            Binding = new Binding(nameof(Row.Own)) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged },
+            ElementStyle = ownStyle, EditingElementStyle = ownStyle, Width = 85,
+        });
         void Col(string h, string path, double w) => grid.Columns.Add(new DataGridTextColumn { Header = h, Binding = new Binding(path), Width = new DataGridLength(w), IsReadOnly = true });
-        Col("", nameof(Row.State), 56);
+        Col("", nameof(Row.State), 80);
         Col("Kind", nameof(Row.Kind), 140);
         Col("Name", nameof(Row.Name), 190);
         Col("CT", nameof(Row.Ct), 55);
@@ -95,7 +111,8 @@ public sealed class AddOnImportWindow : Window
             rs.Triggers.Add(t);
         }
         Tint("check", Color.FromRgb(0xFF, 0xF4, 0xD6), Color.FromRgb(0x7A, 0x52, 0x00));
-        Tint("not yet", Color.FromRgb(0xF2, 0xF2, 0xF2), Color.FromRgb(0x80, 0x80, 0x80));
+        Tint("not possible", Color.FromRgb(0xF2, 0xF2, 0xF2), Color.FromRgb(0x80, 0x80, 0x80));
+        Tint("own model", Color.FromRgb(0xE6, 0xF0, 0xFB), Color.FromRgb(0x1A, 0x4C, 0x80));
         grid.RowStyle = rs;
         _view = CollectionViewSource.GetDefaultView(_rows);
         _view.Filter = o => o is Row r && (_all.IsChecked == true || r.C.CanImport || r.Pick)
@@ -119,7 +136,7 @@ public sealed class AddOnImportWindow : Window
         save.Click += (_, _) =>
         {
             var keep = AddOnImport.Load(p).Where(c => !string.Equals(c.Source, p.OldTheaterFolder, StringComparison.OrdinalIgnoreCase)).ToList();
-            keep.AddRange(_rows.Where(r => r.Pick).Select(r => new AddOnImport.Choice(p.OldTheaterFolder, r.Ct, r.Name)));
+            keep.AddRange(_rows.Where(r => r.Pick).Select(r => new AddOnImport.Choice(p.OldTheaterFolder, r.Ct, r.Name, r.Own)));
             try
             {
                 AddOnImport.Save(p, keep);
@@ -130,7 +147,18 @@ public sealed class AddOnImportWindow : Window
         };
         var bottom = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
         var btns = new StackPanel { Orientation = Orientation.Horizontal };
-        btns.Children.Add(save); btns.Children.Add(close);
+        var remove = new Button { Content = "Remove imported models from BMS…", Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 0, 18, 0),
+            ToolTip = @"Takes away from BMS's Terrdata\objects the model and texture files that 'Install objects' added for this project (Output\BmsBackup\imported_files.txt). BMS's own files are never touched." };
+        remove.Click += (_, _) =>
+        {
+            int n = AddOnModels.LoadInstalled(p.ProjectFolder).Count;
+            if (n == 0) { _status.Text = "No imported model files are installed in BMS for this project."; return; }
+            if (MessageBox.Show(this, $"Remove the {n} model and texture files this project added to BMS's Terrdata\\objects?\n\nClose BMS first. The aircraft that use them will have no 3D model until you install them again.",
+                    "Remove imported models", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            try { _status.Text = string.Join("\n", AddOnModels.Remove(p.ProjectFolder, System.IO.Path.Combine(bmsData, "Terrdata", "objects"))); }
+            catch (Exception ex) { _status.Text = "Not removed: " + ex.Message; }
+        };
+        btns.Children.Add(remove); btns.Children.Add(save); btns.Children.Add(close);
         DockPanel.SetDock(btns, Dock.Right);
         bottom.Children.Add(btns);
         bottom.Children.Add(_status);

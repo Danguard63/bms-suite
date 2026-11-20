@@ -27,7 +27,9 @@ public static class AddOnImport
         Unit,
     }
 
-    public sealed record Candidate(Interchange.Entity Entity, Fit Fit, bool CanImport, string What, string Note)
+    /// <param name="OwnModelPossible">The add-on's model can be added to BMS's models (own model, or instead of BMS's different one).</param>
+    /// <param name="OwnModelDefault">Use the add-on's model unless the user says otherwise (always for an own model).</param>
+    public sealed record Candidate(Interchange.Entity Entity, Fit Fit, bool CanImport, string What, string Note, bool OwnModelPossible = false, bool OwnModelDefault = false)
     {
         public int Ct => Entity.Ct;
         public string Name => Entity.Name;
@@ -65,7 +67,7 @@ public static class AddOnImport
     }
 
     /// <summary>What the add-on has that BMS has not (by name), and whether it can be brought in now.</summary>
-    public static Analysis Analyze(string addOnFolder, string bmsData)
+    public static Analysis Analyze(string addOnFolder, string bmsData, Dictionary<int, int>? assigned = null, HashSet<string>? installed = null)
     {
         var problems = new List<string>();
         var src = Source(addOnFolder);
@@ -78,6 +80,7 @@ public static class AddOnImport
         var modelUsers = D.All("CT").Where(c => c.Int("GraphicsNormal", 0) > 0).GroupBy(c => c.Int("GraphicsNormal"))
                           .ToDictionary(g => g.Key, g => g.Select(c => D.CtName(c.Num)).First());
         var cache = new Dictionary<int, (Fit, string)>();
+        var models = new AddOnModels(src, bmsObjects, new Dictionary<int, int>(assigned ?? new()), installed ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         (Fit, string) ModelFit(int g)
         {
             if (g <= 0) return (Fit.BmsModel, "no 3D model");
@@ -108,28 +111,34 @@ public static class AddOnImport
                     string vn = S.CtName(v);
                     if (dNames.Contains(("VCD", vn))) continue;
                     var (f, w) = ModelFit(S.Get("CT", v)?.Int("GraphicsNormal", 0) ?? 0);
-                    if (f == Fit.OwnModel) bad.Add($"{vn}: {w}");
+                    int vg = S.Get("CT", v)?.Int("GraphicsNormal", 0) ?? 0;
+                    if (f == Fit.OwnModel && !models.Plan(vg).Ok) bad.Add($"{vn}: {models.Plan(vg).Text}");
                 }
                 res.Add(new Candidate(e, Fit.Unit, bad.Count == 0, e.Detail,
-                    bad.Count == 0 ? "" : "not yet: " + string.Join("; ", bad)));
+                    bad.Count == 0 ? "" : "not possible: " + string.Join("; ", bad)));
                 continue;
             }
             var (fit, what) = ModelFit(e.Model);
+            AddOnModels.ModelPlan? plan = fit is Fit.OwnModel or Fit.OtherModel && e.Model > 0 ? models.Plan(e.Model) : null;
             string note = fit switch
             {
-                Fit.OtherModel => "it will look like BMS's model: right if BMS only updated the same aircraft (e.g. a newer F-15C), wrong if it is another one",
-                Fit.OwnModel => "not yet: its own 3D model would have to be added to BMS's models",
+                Fit.OtherModel => "BMS's model is used unless you tick 'Add-on model': right if BMS only updated the same aircraft (e.g. a newer F-15C), wrong if it is another one" +
+                                  (plan is { Ok: true } ? $"; with 'Add-on model': {plan.Text}" : plan != null ? $"; the add-on's model cannot be added: {plan.Problem}" : ""),
+                Fit.OwnModel => plan is { Ok: true } ? "its model is added to BMS's models (nothing of BMS replaced)" : $"not possible: {plan?.Problem}",
                 _ => "",
             };
+            if (fit == Fit.OwnModel && plan is { Ok: true }) what = plan.Text;
             if (extra > 0) what += $"; {extra} more CT entr{(extra == 1 ? "y" : "ies")} of the same record (liveries) not brought";
-            res.Add(new Candidate(e, fit, fit is Fit.BmsModel or Fit.OtherModel, what, note));
+            bool can = fit is Fit.BmsModel or Fit.OtherModel || plan is { Ok: true };
+            res.Add(new Candidate(e, fit, can, what, note, OwnModelPossible: plan is { Ok: true }, OwnModelDefault: fit == Fit.OwnModel));
         }
         return new Analysis(VersionOf(S), res, problems);
     }
 
     // ───────────────────────── the project's choice (imports.csv)
 
-    public sealed record Choice(string Source, int Ct, string Name);
+    /// <param name="OwnModel">Use the add-on's 3D model (added to BMS's models) instead of BMS's one with the same number.</param>
+    public sealed record Choice(string Source, int Ct, string Name, bool OwnModel = false);
 
     public static string FilePath(Project.TheaterProject p) => Path.Combine(p.ProjectFolder, FileName);
 
@@ -142,15 +151,15 @@ public static class AddOnImport
         {
             var c = raw.Split(';');
             if (c.Length < 3 || !int.TryParse(c[1].Trim(), NumberStyles.Integer, Ci, out int ct)) continue;
-            res.Add(new Choice(c[0].Trim(), ct, c[2].Trim()));
+            res.Add(new Choice(c[0].Trim(), ct, c[2].Trim(), c.Length > 3 && c[3].Trim() == "1"));
         }
         return res;
     }
 
     public static void Save(Project.TheaterProject p, IEnumerable<Choice> choices)
     {
-        var sb = new StringBuilder("Source;Ct;Name\r\n");
-        foreach (var c in choices) sb.Append(c.Source).Append(';').Append(c.Ct.ToString(Ci)).Append(';').Append(c.Name.Replace(';', ',')).Append("\r\n");
+        var sb = new StringBuilder("Source;Ct;Name;OwnModel\r\n");
+        foreach (var c in choices) sb.Append(c.Source).Append(';').Append(c.Ct.ToString(Ci)).Append(';').Append(c.Name.Replace(';', ',')).Append(';').Append(c.OwnModel ? "1" : "0").Append("\r\n");
         File.WriteAllText(FilePath(p), sb.ToString(), new UTF8Encoding(false));
     }
 
@@ -162,15 +171,22 @@ public static class AddOnImport
     {
         var notes = new List<string>();
         var choices = Load(p);
+        string filesList = Path.Combine(p.ProjectFolder, "Output", "Install", AddOnModels.FilesFile);
+        if (File.Exists(filesList)) File.Delete(filesList);
         if (choices.Count == 0) return notes;
         var map = new StringBuilder("Name;Kind;SourceCt;Ct;EntityIdx\r\n");
+        var files = new StringBuilder("Rel;From\r\n");
         string bmsObjects = Path.Combine(bmsData, "Terrdata", "objects");
+        var assigned = AddOnModels.LoadAssigned(p.ProjectFolder);
+        var installed = AddOnModels.LoadInstalled(p.ProjectFolder);
         foreach (var g in choices.GroupBy(c => c.Source, StringComparer.OrdinalIgnoreCase))
         {
             var src = Source(g.Key);
             if (src == null) { notes.Add($"Imports: {g.Key} not found (no Terrdata\\Objects): {g.Count()} entries skipped"); continue; }
             var S = BmsDatabase.Load(src.ObjectDir);
             var cts = new List<int>();
+            var models = new AddOnModels(src, bmsObjects, assigned, installed);
+            var modelMap = new Dictionary<int, int>();
             foreach (var c in g)
             {
                 // the number in the source, checked by name (the add-on could have been updated)
@@ -178,10 +194,26 @@ public static class AddOnImport
                     : S.All("CT").FirstOrDefault(x => S.CtName(x.Num) == c.Name)?.Num ?? -1;
                 if (ct < 0) { notes.Add($"Imports: '{c.Name}' is no longer in {src.Name}: skipped"); continue; }
                 cts.Add(ct);
+                // 3D models: the add-on's own ones (not in BMS) always, and instead of BMS's different one when chosen
+                var withVehicles = new List<int> { ct };
+                if (S.EntityOf(ct) is { } ent && ent.Table == "UCD") withVehicles.AddRange(S.Elements(ent).Where(x => x.Ct > 0 && x.Count > 0).Select(x => x.Ct).Distinct());
+                foreach (int vct in withVehicles)
+                    foreach (var gf in new[] { "GraphicsNormal", "GraphicsRepaired", "GraphicsDamaged", "GraphicsDestroyed", "GraphicsLeftDestroyed", "GraphicsRightDestroyed", "GraphicsBothDestroyed" })
+                    {
+                        int m = S.Get("CT", vct)?.Int(gf, 0) ?? 0;
+                        if (m <= 0 || modelMap.ContainsKey(m) || models.SameAsBms(m)) continue;
+                        bool bmsHas = Directory.Exists(Path.Combine(bmsObjects, "Models", m.ToString(Ci)));
+                        if (bmsHas && !c.OwnModel) continue;     // BMS's (different) model, as chosen
+                        var mp = models.Plan(m);
+                        if (!mp.Ok) { notes.Add($"Imports: {S.CtName(vct)}: {mp.Problem}"); continue; }
+                        modelMap[m] = mp.Target;
+                        foreach (var (rel, from) in models.Files(mp)) files.Append(rel).Append(';').Append(from).Append("\r\n");
+                        notes.Add($"Imports: {S.CtName(vct)}: {mp.Text}");
+                    }
             }
             if (cts.Count == 0) continue;
             var dst = new BmsTheater { Name = p.Theater.Name, DataDir = bmsData, ObjectDir = dbDir, ModelsDir = bmsObjects };
-            var plan = Interchange.MakeEntities(src, dst, bmsData, cts, preferDestination: true);
+            var plan = Interchange.MakeEntities(src, dst, bmsData, cts, preferDestination: true, modelMap: modelMap);
             foreach (var pr in plan.Problems) notes.Add("Imports: problem: " + pr);
             // the tables with the new records, written over the database being built
             if (plan.Records.Count > 0)
@@ -209,6 +241,13 @@ public static class AddOnImport
                 if (dc != null) map.Append(name.Replace(';', ',')).Append(';').Append(BmsDatabase.EntityTable(dc.Int("EntityType"))).Append(';')
                                    .Append(ct.ToString(Ci)).Append(';').Append(dc.Num.ToString(Ci)).Append(';').Append(dc.Int("EntityIdx").ToString(Ci)).Append("\r\n");
             }
+        }
+        AddOnModels.SaveAssigned(p.ProjectFolder, assigned);
+        if (files.Length > "Rel;From\r\n".Length)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(filesList)!);
+            File.WriteAllText(filesList, files.ToString(), new UTF8Encoding(false));
+            notes.Add("Imports: the add-on's own 3D models are added to BMS's models by 'Install objects' (only added, nothing of BMS replaced)");
         }
         // numbers of the previous build: if they changed (a BMS update), campaigns that use them must be updated
         string old = File.Exists(mapFile) ? File.ReadAllText(mapFile) : "";

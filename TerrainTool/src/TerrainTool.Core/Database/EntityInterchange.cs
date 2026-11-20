@@ -79,9 +79,13 @@ public static partial class Interchange
     /// with the same name (weapons, sensors, unit vehicles; the aircraft data with the same flight model) is used as it is in
     /// the destination instead of being added again with the source's values, and fields the destination's tables do not
     /// know are left out. Only the chosen entries themselves are added.</param>
-    public static Plan MakeEntities(BmsTheater src, BmsTheater dst, string dataDir, IList<int> cts, bool preferDestination = false)
+    /// <param name="modelMap">Source model numbers already decided (an old add-on's own models, copied into BMS's models with
+    /// these numbers by the install): used as they are.</param>
+    public static Plan MakeEntities(BmsTheater src, BmsTheater dst, string dataDir, IList<int> cts, bool preferDestination = false,
+                                    IReadOnlyDictionary<int, int>? modelMap = null)
     {
         var p = new Plan { Src = src, Dst = dst, BmsObjects = Path.Combine(dataDir, "Terrdata", "objects") };
+        if (modelMap != null) foreach (var kv in modelMap) p.ModelMap[kv.Key] = kv.Value;
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
         var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination };

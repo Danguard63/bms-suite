@@ -312,6 +312,8 @@ public sealed class BmsInstaller
         lines.Add("");
         lines.Add(Sim ? "Nothing else in BMS is touched (no Korea, no theater.lst, no Data\\Sim; only the simdatadir line of the _NT.tdf)."
                       : "Nothing else in BMS is touched (no Korea, no theater.lst, no .tdf).");
+        if (Objects && File.Exists(Path.Combine(_p.ProjectFolder, "Output", "Install", Database.AddOnModels.FilesFile)))
+            lines.Add(@"The old add-on's own 3D models chosen in Database Interchange are ADDED to BMS's Terrdata\objects (Models, KoreaObj): nothing of BMS is replaced; the list is kept in Output\BmsBackup\" + Database.AddOnModels.ManifestFile + ".");
         if (Objects) lines.Add("If Objects moved bases, install the campaign files too (Campaign Editor) and create a NEW TE scenario.");
         return string.Join("\n", lines);
     }
@@ -320,6 +322,7 @@ public sealed class BmsInstaller
     {
         if (Problems.Count > 0) throw new InvalidOperationException(string.Join("\n", Problems));
         if (Objects) RunObjects(log);
+        if (Objects) foreach (var l in Database.AddOnModels.Install(_p.ProjectFolder, Path.Combine(DataDir, "Terrdata", "objects"))) log(l);
         if (Photoreal) RunPhotoreal(log);
         if (Water) RunWater(log);
         if (Art) RunArt(log);

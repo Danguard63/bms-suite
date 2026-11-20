@@ -57,6 +57,24 @@ public sealed class BmlModel
         return Parse(p, ver, Path.GetDirectoryName(path)!, koreaObjDir, fallbackKoreaObjDir);
     }
 
+    /// <summary>
+    /// The BML version and, for version 1, the KoreaObj texture numbers of its materials (read only: the file is not changed).
+    /// Version 2 names materials whose textures are in the model's own folder: no numbers.
+    /// </summary>
+    public static (int Version, List<int> Textures) TextureIds(string path)
+    {
+        var b = File.ReadAllBytes(path);
+        if (b.Length < 28 || b[0] != 'B' || b[1] != 'M' || b[2] != 'L') throw new InvalidDataException("not a BML file");
+        int ver = BitConverter.ToInt32(b, 4), comp = BitConverter.ToInt32(b, 8);
+        long size = BitConverter.ToInt64(b, 12);
+        byte[] p = comp switch { 0 => b[28..], 2 => Lzma.Decode(b, 28, 33, size), _ => throw new InvalidDataException($"BML compression {comp} not supported") };
+        var ids = new List<int>();
+        if (ver >= 2) return (ver, ids);
+        int nm = BitConverter.ToInt32(p, 4);
+        for (int i = 0; i < nm; i++) { int id = BitConverter.ToInt32(p, 8 + 4 * i); if (id >= 0 && !ids.Contains(id)) ids.Add(id); }
+        return (ver, ids);
+    }
+
     /// <summary>Materiale (nome) → file della texture di colore (slot 0) dal Materials.mtl della cartella del modello.</summary>
     private static Dictionary<string, string> Albedos(string modelDir)
     {
