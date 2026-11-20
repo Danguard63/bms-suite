@@ -15,7 +15,7 @@ public partial class MainWindow
 
     private List<TexRow>? _mapRows;
 
-    private List<TexRow> MapRows => _mapRows ??= TextureJob.All.Where(j => j is CampMapJob)
+    private List<TexRow> MapRows => _mapRows ??= TextureJob.All.Where(IsArtJob)
         .Select(j => new TexRow { Job = j, Run = j.Id == "campmap" }).ToList();
 
     private void RefreshMap()

@@ -452,7 +452,7 @@
                                 <TextBlock x:Name="MapStatus" Margin="0,4,0,0" FontFamily="Consolas" />
                             </StackPanel>
                             <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Foreground="#666" TextWrapping="Wrap"
-                                       Text="The 2D map is the theater map BMS shows in Instant Action, TE and campaign (with the airbases and objectives on it). It is made from the satellite colour map of tab 4, so run it again when the terrain changes. Without it the UI shows the Korea map. The rest of the UI art (flags, backgrounds, campaign pictures, patches, texts, fonts, sounds) is made with the Art Editor: see the 'UI art' tab." />
+                                       Text="The 2D map is the theater map BMS shows in Instant Action, TE and campaign (with the airbases and objectives on it). It is made from the satellite colour map of tab 4, so run it again when the terrain changes. Without it the UI shows the Korea map. 'Theater art' makes the small maps of the UI (campaign, Instant Action, recon) on the theater's grid together with the art of the old add-on: run it too when the grid changes, then Install UI art (tab 9). The rest of the UI art (flags, backgrounds, campaign pictures, patches, texts, fonts, sounds) is made with the Art Editor: see the 'UI art' tab." />
                             <DataGrid x:Name="MapGrid" AutoGenerateColumns="False" HeadersVisibility="Column" CanUserAddRows="False"
                                       GridLinesVisibility="Horizontal" SelectionMode="Single" HorizontalScrollBarVisibility="Auto">
                                 <DataGrid.Columns>
