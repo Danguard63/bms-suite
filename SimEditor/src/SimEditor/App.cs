@@ -19,6 +19,9 @@ public sealed class App : Application
         // as soon as the dialog closes, before the project window is shown
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += OnUnhandled;
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => Log(e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString()));
+        TaskScheduler.UnobservedTaskException += (_, e) => { Log(e.Exception); e.SetObserved(); };
+        Exit += (_, e) => Note($"exit (code {e.ApplicationExitCode})");
         BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
     }
 
@@ -26,6 +29,7 @@ public sealed class App : Application
     {
         Startup += (_, _) =>
         {
+            Note("start " + string.Join(" ", args));
             try
             {
                 string? project = TerrainTool.Core.SuiteArgs.Value(args, "project");
@@ -36,10 +40,13 @@ public sealed class App : Application
                     if (start.ShowDialog() != true || start.ProjectFile == null) { Shutdown(0); return; }
                     project = start.ProjectFile;
                 }
+                Note("project " + project);
                 StartWindow.AddRecent(project);
                 var w = new MainWindow(project);
+                Note("window made");
                 MainWindow = w;
                 w.Show();
+                Note($"window shown at {w.Left:0},{w.Top:0} {w.ActualWidth:0}x{w.ActualHeight:0}, state {w.WindowState}, visible {w.IsVisible}");
                 ShutdownMode = ShutdownMode.OnLastWindowClose;
             }
             catch (Exception ex)
@@ -52,8 +59,16 @@ public sealed class App : Application
         return base.Run();
     }
 
+    /// <summary>A line in start.log (next to the exe): what happened at the start, to find a start that shows nothing.</summary>
+    public static void Note(string s)
+    {
+        try { File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "start.log"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {s}\n"); }
+        catch { /* nulla */ }
+    }
+
     public static void Log(Exception ex)
     {
+        Note("error: " + ex.Message);
         try { File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "errors.log"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {ex}\n\n"); }
         catch { /* nulla */ }
     }
