@@ -52,6 +52,13 @@ public sealed class App : Application
                     tw.Show();
                     return;
                 }
+                // started from the BMS Suite main menu on a theater that a TerrainTool project builds: that project (Run Objects,
+                // imports, real runways…), not the installed copy
+                if (project == null && Arg("textures") == null && TerrainTool.Core.SuiteArgs.Theater(args) is { } built && ProjectOf(built) is { } own)
+                {
+                    Note($"theater {built.Name} is built by the TerrainTool project {own}");
+                    project = own;
+                }
                 // started from the BMS Suite main menu: open its working theater directly (the start window only if it cannot be opened)
                 if (project == null && Arg("textures") == null && TerrainTool.Core.SuiteArgs.Theater(args) is { } chosen
                     && TerrainTool.Core.Campaign.TheaterWorkspace.Problems(chosen).Count == 0)
@@ -85,6 +92,33 @@ public sealed class App : Application
         };
         Exit += (_, e) => Note($"exit (code {e.ApplicationExitCode})");
         return base.Run();
+    }
+
+    /// <summary>
+    /// The TerrainTool project that builds an installed theater: same add-on folder (its old theater folder's name, as Install
+    /// writes it into BMS\Data), among the recent projects and those in TerrainTool\Projects. Null when none does.
+    /// </summary>
+    private static string? ProjectOf(TerrainTool.Core.Campaign.BmsTheater t)
+    {
+        string addOn = t.AddOnFolder;
+        if (addOn == "BMS") return null;
+        var files = new List<string>(ObjectiveStudio.MainWindow.Recent().Where(f => f.EndsWith(".ttproj", StringComparison.OrdinalIgnoreCase)));
+        if (TerrainTool.Core.SuiteLayout.FolderOf("TerrainTool") is { } tt && Directory.Exists(Path.Combine(tt, "Projects")))
+            files.AddRange(Directory.EnumerateFiles(Path.Combine(tt, "Projects"), "*.ttproj", SearchOption.AllDirectories));
+        string theaters = Path.GetFullPath(Path.Combine(ObjectiveStudio.MainWindow.Root(), "Theaters"));
+        foreach (var f in files.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!File.Exists(f) || Path.GetFullPath(f).StartsWith(theaters, StringComparison.OrdinalIgnoreCase)) continue;
+            try
+            {
+                var p = TerrainTool.Core.Project.TheaterProject.Load(f);
+                if (!string.IsNullOrWhiteSpace(p.OldTheaterFolder) && string.Equals(new DirectoryInfo(p.OldTheaterFolder).Name, addOn, StringComparison.OrdinalIgnoreCase)
+                    && Directory.Exists(Path.Combine(p.ProjectFolder, "Output", "Install", addOn)))
+                    return f;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { }
+        }
+        return null;
     }
 
     /// <summary>Chiude il processo se non c'e' piu' nessuna finestra visibile (controllato dopo che la chiusura e' finita).</summary>
