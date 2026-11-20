@@ -161,9 +161,6 @@ public sealed partial class ObjectsJob : TextureJob
         notes.Add($"BMS 4.38 database: {dbFiles} files");
         // modifiche del progetto al database (DbEdits.txt), rifatte a ogni giro sopra la copia della 4.38
         notes.AddRange(TheaterSimData.ApplyDbEdits(dst, TheaterSimData.DbEditsFile(c.Project)));
-        // aircraft, vehicles and unit types chosen from the old add-on (imports.csv), renumbered on this BMS version
-        string bmsData = AssembleJob.FindDataDir(c.Project.KoreaNewTerrain)!;
-        notes.AddRange(Database.AddOnImport.Apply(c.Project, dst, bmsData, Path.Combine(install, "imports_map.csv")));
         p.Report(0.05);
 
         // 2) rimappatura delle strutture
@@ -400,6 +397,12 @@ public sealed partial class ObjectsJob : TextureJob
         WriteBridgeTld(Path.Combine(dst, "TerrainRelatedData"), notes);
         File.WriteAllText(Path.Combine(dst, "Airbases_leveling.csv"), report, new UTF8Encoding(false));
         notes.Add($@"Report: Install\{addOn}\Terrdata\{FolderName}\Airbases_leveling.csv");
+        // aircraft, vehicles and unit types chosen from the old add-on (imports.csv), renumbered on this BMS version.
+        // LAST, after every CT record the objectives get above (copies of shared layouts, swapped bases…): those numbers are
+        // written in the campaign files by 'Apply object changes', so the imports must not push them up (BMS crashed
+        // in ObjectiveClass when an objective's CT number pointed at an imported weapon).
+        string bmsData = AssembleJob.FindDataDir(c.Project.KoreaNewTerrain)!;
+        notes.AddRange(Database.AddOnImport.Apply(c.Project, dst, bmsData, Path.Combine(install, "imports_map.csv")));
         notes.Add("Run 'Build theater' again: the .tdf will use objectdir " + $@"{addOn}\Terrdata\{FolderName}");
         p.Report(1);
         return (null, notes);
