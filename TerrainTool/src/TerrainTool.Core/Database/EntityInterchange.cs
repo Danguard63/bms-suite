@@ -235,11 +235,20 @@ public static partial class Interchange
             var sr = S.Get("SSD", idx);
             if (sr == null) { if (D.Get("SSD", idx) == null) P.Report.Add($"  squadron stores SSD {idx}: not in the source nor in the destination (kept as {idx}, as in the source)"); return _map[("SSD", idx)] = idx; }
             var f = new List<(string, string)>();
+            var left = new List<string>();
             foreach (var (k, v) in sr.Fields)
             {
                 var mm = Regex.Match(k, @"^WpnStores_(\d+)$");
-                f.Add(mm.Success ? ($"WpnStores_{MapWcd(int.Parse(mm.Groups[1].Value, Ci)).ToString(Ci)}", v) : (k, v));
+                if (!mm.Success) { f.Add((k, v)); continue; }
+                int w = int.Parse(mm.Groups[1].Value, Ci);
+                // another version's stores: weapons the destination does not have and the chosen entries do not bring stay out
+                // (a squadron's stock would otherwise add every old weapon it lists)
+                if (PreferDestination && !_map.ContainsKey(("WCD", w)) && S.Get("WCD", w) is { } sw && sw.Name.Length > 0 &&
+                    !D.All("WCD").Any(x => x.Name == sw.Name))
+                { left.Add(sw.Name); continue; }
+                f.Add(($"WpnStores_{MapWcd(w).ToString(Ci)}", v));
             }
+            if (left.Count > 0) P.Report.Add($"  squadron stores SSD {idx}: {left.Count} weapons the destination does not have left out ({string.Join(", ", left.Take(8))}{(left.Count > 8 ? "…" : "")})");
             return Place("SSD", sr, f);
         }
 
@@ -381,6 +390,7 @@ public static partial class Interchange
                 _map[(table, se.Num)] = hit.Int("EntityIdx");
                 return _map[("CT", sct)] = hit.Num;
             }
+            cf = UniqueClass(sct, table, dom, cf, se, name);
             int nct = Next("CT"), ne = Next(table);
             _map[("CT", sct)] = nct;
             _map[(table, se.Num)] = ne;
@@ -392,6 +402,64 @@ public static partial class Interchange
             P.Report.Add($"  {name}: CT {sct} → CT {nct}, {table} {se.Num} → {table} {ne}{what}");
             if (table == "WCD") MapRockets(se.Num);
             return nct;
+        }
+
+        // ───── class numbers (Domain, Class, Type, SubType, Specific): BMS finds aircraft and unit types by them (the TE's
+        // TePlanes/TeUnits lists, a squadron's flights, a flight's aircraft), so a new aircraft or unit must not take numbers
+        // another entry has in the destination (an old add-on's Super Etendard had the Specific of BMS 4.38's A-4SU)
+
+        private HashSet<(int, int, int, int, int)>? _classKeys;
+        /// <summary>Source CT → its new Specific, when it had to change.</summary>
+        private readonly Dictionary<int, int> _respec = new();
+
+        private static int FieldInt(List<(string Field, string Value)> f, string name, int def = -1) =>
+            f.FirstOrDefault(x => x.Field == name).Value is { } v && int.TryParse(v.Trim(), NumberStyles.Integer, Ci, out int n) ? n : def;
+
+        private static (int, int, int, int, int) ClassKey(List<(string Field, string Value)> f) =>
+            (FieldInt(f, "Domain"), FieldInt(f, "Class"), FieldInt(f, "Type"), FieldInt(f, "SubType"), FieldInt(f, "Specific"));
+
+        private HashSet<(int, int, int, int, int)> ClassKeys()
+        {
+            if (_classKeys != null) return _classKeys;
+            _classKeys = new();
+            foreach (var c in D.All("CT"))
+                if (BmsDatabase.EntityTable(c.Int("EntityType")) is "VCD" or "UCD") _classKeys.Add(ClassKey(c.Fields.ToList()));
+            return _classKeys;
+        }
+
+        private List<(string Field, string Value)> UniqueClass(int sct, string table, int dom, List<(string Field, string Value)> cf, DbRecord se, string name)
+        {
+            bool air = table == "VCD" && dom == 2, unit = table == "UCD";
+            if (!air && !unit) return cf;
+            int orig = FieldInt(cf, "Specific");
+            int spec = orig;
+            // a squadron or flight follows its aircraft (they share the Specific in BMS)
+            if (unit)
+            {
+                int v = Enumerable.Range(0, 32).Select(i => se.Int($"VehicleCtIdx_{i}", 0)).FirstOrDefault(x => x > 0);
+                if (v > 0 && _respec.TryGetValue(v, out int vs) && S.Get("CT", v)?.Int("Specific", -1) == orig) spec = vs;
+            }
+            var keys = ClassKeys();
+            var k = ClassKey(cf);
+            var key = (k.Item1, k.Item2, k.Item3, k.Item4, spec);
+            if (keys.Contains(key))
+            {
+                // the lowest free Specific (1-254): for an aircraft, one no air entry uses (its squadrons and flights take it too)
+                bool Free(int x) => air
+                    ? !keys.Any(c => c.Item1 == 2 && (c.Item2 == k.Item2 || c.Item2 == 6) && c.Item5 == x)
+                    : !keys.Contains((k.Item1, k.Item2, k.Item3, k.Item4, x));
+                int x = Enumerable.Range(1, 254).FirstOrDefault(Free, -1);
+                if (x < 0) { P.Problems.Add($"{name}: no free Specific for Domain {k.Item1} Class {k.Item2} Type {k.Item3} SubType {k.Item4}"); return cf; }
+                var other = D.All("CT").FirstOrDefault(c => ClassKey(c.Fields.ToList()) == key);
+                P.Report.Add($"  {name}: Specific {spec} → {x} (Type {k.Item3} SubType {k.Item4} Specific {spec} is " +
+                             (other != null ? $"'{D.CtName(other.Num)}' (CT {other.Num})" : "another imported entry") + " in the destination; BMS finds aircraft and unit types by these numbers)");
+                spec = x;
+            }
+            else if (spec != orig)
+                P.Report.Add($"  {name}: Specific {orig} → {spec}, as its aircraft");
+            keys.Add((k.Item1, k.Item2, k.Item3, k.Item4, spec));
+            if (spec != orig) _respec[sct] = spec;
+            return spec == orig ? cf : DbOps.With(cf, ("Specific", spec.ToString(Ci)));
         }
 
         /// <summary>A rocket pod: its rockets and its RKT record.</summary>

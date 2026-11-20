@@ -194,6 +194,16 @@ public static class AddOnImport
                     : S.All("CT").FirstOrDefault(x => S.CtName(x.Num) == c.Name)?.Num ?? -1;
                 if (ct < 0) { notes.Add($"Imports: '{c.Name}' is no longer in {src.Name}: skipped"); continue; }
                 cts.Add(ct);
+                // an aircraft brings its squadron and flight types (TE and campaigns need them): the add-on's air units made only of it
+                if (S.EntityOf(ct) is { Table: "VCD" } && S.Get("CT", ct)?.Int("Domain") == 2)
+                    foreach (var u in S.All("CT").Where(u => u.Int("Domain") == 2 && BmsDatabase.EntityTable(u.Int("EntityType")) == "UCD"))
+                    {
+                        if (cts.Contains(u.Num) || S.EntityOf(u.Num) is not { } ue) continue;
+                        var el = S.Elements(ue).Where(x => x.Ct > 0 && x.Count > 0).ToList();
+                        if (el.Count == 0 || el.Any(x => x.Ct != ct)) continue;
+                        cts.Add(u.Num);
+                        notes.Add($"Imports: {c.Name}: its {(u.Int("Type") == 3 ? "squadron" : "flight")} type '{ue.Name}' (CT {u.Num}) comes along");
+                    }
                 // 3D models: the add-on's own ones (not in BMS) always, and instead of BMS's different one when chosen
                 var withVehicles = new List<int> { ct };
                 if (S.EntityOf(ct) is { } ent && ent.Table == "UCD") withVehicles.AddRange(S.Elements(ent).Where(x => x.Ct > 0 && x.Count > 0).Select(x => x.Ct).Distinct());
@@ -253,7 +263,9 @@ public static class AddOnImport
             foreach (int ct in cts)
             {
                 string name = S.CtName(ct);
-                var dc = D.All("CT").Where(x => D.CtName(x.Num) == name).OrderByDescending(x => x.Num).FirstOrDefault();
+                var sc = S.Get("CT", ct);
+                var dc = D.All("CT").Where(x => D.CtName(x.Num) == name && x.Int("EntityType") == sc?.Int("EntityType") && x.Int("Type") == sc?.Int("Type"))
+                    .OrderByDescending(x => x.Num).FirstOrDefault();
                 if (dc != null) map.Append(name.Replace(';', ',')).Append(';').Append(BmsDatabase.EntityTable(dc.Int("EntityType"))).Append(';')
                                    .Append(ct.ToString(Ci)).Append(';').Append(dc.Num.ToString(Ci)).Append(';').Append(dc.Int("EntityIdx").ToString(Ci)).Append("\r\n");
             }
