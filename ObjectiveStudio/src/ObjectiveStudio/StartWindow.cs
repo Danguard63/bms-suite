@@ -69,7 +69,9 @@ public sealed class StartWindow : Window
             if (on) _theaters.SelectedItem = null;
         };
         _theaters.SelectionChanged += (_, _) => { if (_theaters.SelectedItem != null) { _recent.SelectedItem = null; _open.IsDefault = true; } };
-        _data.LostFocus += (_, _) => LoadTheaters();
+        // only when the folder was really changed: reloading selects a theater, which clears the recent entry just clicked
+        string loadedData = _data.Text.Trim();
+        _data.LostFocus += (_, _) => { if (_data.Text.Trim() != loadedData) { loadedData = _data.Text.Trim(); LoadTheaters(); } };
 
         foreach (var f in MainWindow.Recent().Where(File.Exists))
             _recent.Items.Add(new ListBoxItem { Content = MainWindow.Describe(f), Tag = f, ToolTip = f + "\nSelect and press Open, or double-click" });
