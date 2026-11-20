@@ -89,8 +89,10 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <li><span class="n">9</span><span class="t">Model Editor</span><span class="d">3D models and the database</span></li>
     <li><span class="n">10</span><span class="t">Database Interchange</span><span class="d">bases from one theater to another</span></li>
     <li><span class="n">11</span><span class="t">Typical workflows</span><span class="d">step by step, from start to BMS</span></li>
-    <li><span class="n">12</span><span class="t">Troubleshooting</span><span class="d">common problems and where to look</span></li>
-    <li><span class="n">13</span><span class="t">Credits and support</span><span class="d"></span></li>
+    <li><span class="n">12</span><span class="t">Step by step: a new theater from scratch</span><span class="d">every button, from the world map to the 2D map</span></li>
+    <li><span class="n">13</span><span class="t">Step by step: converting a 4.37 theater to 4.38</span><span class="d">terrain, objects, campaigns, install, checks</span></li>
+    <li><span class="n">14</span><span class="t">Troubleshooting</span><span class="d">common problems and where to look</span></li>
+    <li><span class="n">15</span><span class="t">Credits and support</span><span class="d"></span></li>
   </ol>
   <div class="note"><b>About this guide</b>The pictures were taken on a real installation with the Korea KTO, Israel, Korea TvT and Mideast 4.38 theaters. Your lists, numbers and paths will be different. The programs' windows are in English; button and field names are written in <b>bold</b> as they appear on screen.</div>
 </section>
@@ -435,11 +437,252 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <li>Objects in <b>Objective Studio</b> (Open TerrainTool project...), art in the <b>Art Editor</b>, campaigns in the <b>Campaign Editor</b>, the 2D map in tab 7.</li>
     <li><b>Build theater</b> (tab 8) and <b>Install everything...</b> (tab 9).</li>
   </ol></div>
+  <p>Every button of these workflows, in order: chapter 12 (a new area) and chapter 13 (converting a 4.37 add-on).</p>
 </section>
 
 <!-- ───────────── 12 ───────────── -->
 <section class="chapter">
-  <h1><span class="num">12</span>Troubleshooting</h1>
+  <h1><span class="num">12</span>Step by step: a new theater from scratch</h1>
+  <p>This chapter makes the terrain of a theater for an area that BMS does not have yet: heights, water, land cover, forests, satellite colours, photoreal tiles and the 2D map. Every button and option is listed in the order you press it.</p>
+  <div class="warn"><b>What is not supported yet</b>For a new area the suite makes the <b>terrain</b> and the <b>2D map</b>. It does not make yet the <b>objectives</b> (airbases, cities, bridges and their links), the <b>campaigns</b> and the <b>theater definition</b> (.tdf) of a new area: these three are taken from an existing add-on, which a new area does not have. So <b>Build theater</b> (tab 8) stops with “Theater definition: Missing” and the theater cannot be installed into BMS and flown yet. What you can do today is everything up to tab 7, and look at the result with <b>Terrain preview...</b>, <b>Photoreal tile editor...</b> and <b>Terrain check</b>. The cities and targets chosen on the world map are kept in the project for when the objectives can be made.</div>
+
+  <div class="keep"><h2>Before you start</h2>
+  <ul>
+    <li>BMS 4.38 installed (the Korea theater is used as reference, only read).</li>
+    <li>Free disk: plan for <b>tens of GB</b> (downloads, intermediate files, photoreal tiles), more for a 2048 km theater and for the Sentinel-2 photoreal. Put the suite on a fast disk.</li>
+    <li>A good internet connection: the downloads are several GB; the Sentinel-2 photoreal of a whole theater takes hours the first time.</li>
+    <li>Terrain Builder is <b>not needed</b>: its Water DEM mode is rebuilt in TerrainTool (step 6). You can still use it if you want to compare.</li>
+  </ul></div>
+
+  <div class="keep"><h2>1 · Create the project</h2>
+  <ol class="steps">
+    <li>Main menu → <b>TerrainTool</b>.</li>
+    <li>Press <b>New project...</b> at the top. In the folder window (“Choose or create an empty folder for the new project”) create a new folder inside <code>TerrainTool\Projects</code>, for example <code>Projects\Balkans</code>, and select it. A folder inside BMS, Korea, Terrain Builder or an old theater is refused.</li>
+    <li>The <b>New project</b> window asks “Which airbases should the new theater start with?”. Choose <b>Choose the area on a world map – airbases from OurAirports:</b> and press <b>Choose area...</b>.</li>
+  </ol></div>
+
+  <div class="keep"><h2>2 · Choose the area on the world map</h2>
+  <ol class="steps">
+    <li><b>Size (km)</b>: <b>1024</b> (like Korea) or <b>2048</b> (like Mideast). BMS supports only these two.</li>
+    <li>Place the square: drag it to move it, drag elsewhere to pan, wheel to zoom, double-click to put the square there. You can also type <b>Centre latitude</b> and <b>Centre longitude</b>. Keep the places you care about well inside: <b>Distance from edge (km)</b> shows the closest airbase to the edge.</li>
+    <li><b>Airbases</b>: tick <b>Military airbases</b> and/or <b>Civil airports</b>; <b>Also small airfields (if the runway is long enough)</b> with the <b>Shortest runway (m)</b> you accept (1830 m = 6000 ft by default); <b>Main airbases (most)</b> sets how many become Main tier, the others Secondary.</li>
+    <li><b>Show country borders and names</b> helps placing the square.</li>
+    <li><b>Cities &amp; targets</b> (kept for later): <b>Cities</b> and <b>Towns</b> with “from (inhabitants)”, then <b>Ports</b>, <b>Power plants (and nuclear)</b> with “smallest plant (MW)”, <b>Refineries</b>, <b>Military bases and barracks (named)</b>. Cities and towns follow the square at once; for the others press <b>Search OpenStreetMap in this area</b> after placing the square (it can take a few minutes).</li>
+    <li>Press <b>Use this area</b>, then <b>Create project</b> in the New project window.</li>
+  </ol></div>
+  <div class="tip"><b>The other two choices</b><b>Empty list – I will add the airbases myself in tab 2</b> starts without airbases (you set the area in tab 1). <b>Import the airbases of a theater installed in BMS</b> takes the airbases of a BMS theater: choose the <b>BMS Data folder</b> (<b>Browse...</b>) and the <b>Theater</b>; with <b>Also use its size, centre and heights (tab 1)</b> the new terrain is laid on that theater's area (this is for conversions, chapter 13).</div>
+
+  <div class="keep"><h2>3 · Tab 1 · Theater &amp; projection</h2>
+  <ol class="steps">
+    <li>Check <b>Project name</b>. It is used in the names of the intermediate files: do not change it once the work has started.</li>
+    <li><b>Size (km)</b> and <b>Map size (pixels)</b>: keep 62.5 m per pixel, the BMS standard: <b>1024</b> with <b>16384</b>, <b>2048</b> with <b>32768</b>.</li>
+    <li><b>Center latitude (°N)</b> / <b>Center longitude (°E)</b>: set by the world map. <b>Fit center to airbases</b> centres the theater on its airbases; use it only for a new theater, before downloading.</li>
+    <li><b>Min height (ft)</b> / <b>Max height (ft)</b>: below the lowest sea floor you need and above the highest mountain of the area (e.g. −1500 / 19000 for the Middle East). Too narrow a range cuts the terrain; too wide wastes precision.</li>
+    <li><b>Name in BMS</b> and <b>Description in BMS</b>: what the BMS Launcher will show.</li>
+    <li><b>Folders</b>: <b>Project folder</b> is already set (<b>Open</b> opens it). <b>Korea NewTerrain (read-only)</b>: press <b>...</b> and choose <code>Data\TerrData\Korea\NewTerrain</code> of your BMS 4.38. <b>Terrain Builder</b>: only if you have it. <b>Old theater (read-only)</b>: leave empty for a new area.</li>
+    <li>Look at <b>Computed values</b> (resolution, corners, airbases near the edge) and press <b>Compare with Korea</b>: every line should be OK or explained.</li>
+    <li>Press <b>Write Theater.txt</b>, then <b>Save</b> (top).</li>
+  </ol></div>
+  <div class="note"><b>Projection</b>A new theater is always made on the standard transverse Mercator centred on the theater, the projection BMS uses for latitude/longitude (DED, DTC, Tacview). <b>Switch to standard projection...</b> is only for old add-ons converted with their own georeference.</div>
+
+  <div class="keep"><h2>4 · Tab 2 · Airbases &amp; check map</h2>
+  <ol class="steps">
+    <li>Look at the list: <b>Name</b>, <b>Country</b>, <b>ICAO</b>, <b>Lat</b>, <b>Lon</b>, <b>Tier</b>, <b>Status</b>. Filter with <b>Tier</b> (All, Main, Secondary, Micro, Server) and <b>Only to verify</b>.</li>
+    <li>For every row with Status <i>to verify</i> type the real <b>Lat</b>/<b>Lon</b> (e.g. from the runway centre on a map) and set Status to <b>ok</b>.</li>
+    <li>Set the <b>Tier</b>: Main first, Secondary, Micro only if needed; at most one <b>Server</b> (the neutral base of the PvP server aircraft). Delete the bases you do not want.</li>
+    <li>On the map check that every dot is on its airport: wheel = zoom, drag = pan, double-click = <b>Fit view</b>.</li>
+    <li><b>Save CSV</b> (writes <code>airbases.csv</code> in the project), then <b>Save</b>.</li>
+  </ol></div>
+
+  <div class="keep"><h2>5 · Tab 3 · Source data</h2>
+  <ol class="steps">
+    <li>Tick the datasets (the <b>Present</b> column says what is already there):
+      <ul>
+        <li><b>Copernicus DEM GLO-30</b> (30 m, best) or <b>GLO-90</b> (90 m, smaller download) – heights.</li>
+        <li><b>OSM water polygons</b> and <b>OSM coastlines</b> – sea and coast.</li>
+        <li><b>Geofabrik OSM extracts</b> – lakes, rivers, roads, bridges.</li>
+        <li><b>GEBCO derived polygons</b> – sea depth.</li>
+        <li><b>ESA WorldCover 10 m</b> – land cover.</li>
+        <li><b>Hansen tree cover 2000</b> – forests.</li>
+        <li><b>NASA Blue Marble NG (July)</b> – satellite colour.</li>
+        <li>Leave <b>SRTM / ALOS</b> unticked: they need a login and are only for Terrain Builder's own DEM mode.</li>
+      </ul></li>
+    <li>Press <b>Download selected</b>. You can <b>Cancel</b> and start again at any time: downloads resume and skip the files already present. Tiles entirely at sea are marked “not available”: this is normal.</li>
+    <li>Press <b>Refresh</b> at the end: every ticked row must be present.</li>
+  </ol></div>
+
+  <div class="keep"><h2>6 · Tab 4 · Processing</h2>
+  <ol class="steps">
+    <li><b>Output size</b> = <b>4096 (quick test)</b>. <b>Select all</b>, then untick the two <b>Sentinel-2</b> rows. Press <b>Run selected</b>. In a few minutes the <b>Preview</b> shows each result: check the coast, the lakes, the mountains.</li>
+    <li>If the test looks right: <b>Output size</b> = <b>Full size (map pixels)</b>, same rows ticked, <b>Run selected</b>. The steps are, in order: <b>Heightmap (DEM)</b>, <b>Watermap</b>, <b>Coastline + coast points</b>, <b>Ocean depth</b>, <b>Tree cover / forest density</b>, <b>Land cover</b>, <b>Roads + bridges</b>, <b>Satellite colour map</b>. Results go to <code>Output\TB_Input</code>.</li>
+    <li><b>Last result</b> must say OK on every row. <b>Open output folder</b> shows the files.</li>
+  </ol>
+  <p>The Sentinel-2 rows are run later, in step 9.</p></div>
+
+  <div class="keep"><h2>7 · Water DEM (tab 5, button Water DEM...)</h2>
+  <ol class="steps">
+    <li>Tab <b>5 · Terrain files</b> → <b>Water DEM...</b>.</li>
+    <li>The inputs are filled from tab 4: <b>DEM (16-bit RAW, feet)</b>, <b>Watermap (8-bit RAW)</b>, <b>Coastline (8-bit RAW)</b>, <b>Coast points (SHP)</b>. <b>Output folder</b> = <code>Output\WaterDem</code>.</li>
+    <li>Parameters (keep the defaults, they are Terrain Builder's): <b>Water depth ft</b> 40, <b>Hidden water ft</b> 300, <b>Culling km</b> 10.5, <b>Threads</b> (all cores but one).</li>
+    <li>Press <b>Check again</b>: the <b>Checks</b> list must be green (disk space, sizes, RAM). Optional: <b>Check coasts and islands</b> / <b>Check islands (OSM)</b>.</li>
+    <li>Press <b>Run Water DEM</b> (a few minutes). The log ends with “DONE”.</li>
+    <li>Tick <b>Use these water maps for the texture jobs (tab 5) instead of Terrain Builder's Water DEM output</b> and close the window.</li>
+  </ol></div>
+
+  <div class="keep"><h2>8 · Tab 5 · Terrain files</h2>
+  <ol class="steps">
+    <li><b>Terrain Builder output folder</b>: leave it as it is (with “Use these water maps” ticked, the water maps come from <code>Output\WaterDem</code>). Press <b>Refresh</b>.</li>
+    <li><b>Select all</b> and <b>Run selected</b>. The jobs are: <b>DepthMap_nsrgb.dds</b>, <b>CullingMap_nsrgb.dds</b>, <b>GlobalAlpha_nsrgb.dds</b>, <b>Copy TB RAW outputs</b>, <b>LandCoverMap.raw</b>, <b>ForestMap.raw</b>, <b>GlobalColorMap.dds</b>, <b>ColorMap.dds (water)</b>, <b>Photoreal 4K tiles</b> (placeholder tiles from the satellite colour map, ~10 GB), <b>SnowMap*.raw</b>, <b>FFTMap.raw (waves)</b>.</li>
+    <li>Every <b>Last result</b> must be OK. The files are in <code>Output\NewTerrain</code> (<b>Open NewTerrain output</b>).</li>
+  </ol></div>
+
+  <div class="keep"><h2>9 · Photoreal from Sentinel-2 (tab 4)</h2>
+  <ol class="steps">
+    <li>Tab 4 → <b>Photoreal imagery</b>: <b>Sentinel-2 cloudless 2016 (CC BY)</b> or <b>2024 (CC BY-NC-SA)</b> (non-commercial, share-alike: fine for a free theater, keep the credit).</li>
+    <li>Tick only <b>Sentinel-2 photoreal 4K (test area)</b> → <b>Run selected</b>. It makes the tiles around the airbase nearest the centre: look at them in tab 5 → <b>Photoreal tile editor...</b>.</li>
+    <li>Then tick only <b>Sentinel-2 photoreal 4K</b> → <b>Run selected</b>. Hours the first time; it resumes where it stopped. It replaces the placeholder tiles of step 8.</li>
+  </ol></div>
+  <div class="warn"><b>Do not run “Photoreal 4K tiles” again</b>after the Sentinel-2 step: it would put the placeholder tiles back. If you do, run the Sentinel-2 step again (the downloaded imagery is kept, so it is quick).</div>
+
+  <div class="keep"><h2>10 · Tab 6 · Terrain check and preview</h2>
+  <ol class="steps">
+    <li>Tab <b>6 · Terrain check</b> → <b>Project output</b> → <b>Check</b>. Every required file must be OK in <b>Status</b>; <b>Actual</b> and <b>Expected</b> show sizes; <b>Korea</b> compares with Korea.</li>
+    <li>Tab 5 → <b>Terrain preview...</b>: pick a point on the map, an airbase or lat/lon and fly the free camera over heights, water and photoreal.</li>
+    <li>Problem areas: write <code>name;lat;lon;radius km</code> lines in <code>probe.txt</code> and press <b>Probe points (diagnostic)...</b>.</li>
+  </ol></div>
+
+  <div class="keep"><h2>11 · Tab 7 · 2D map</h2>
+  <ol class="steps">
+    <li>Tab <b>7 · Theater content</b> → sub-tab <b>2D map</b>.</li>
+    <li>Tick <b>2D map (campmap)</b> only → <b>Run selected</b>. (“2D map + test points” draws test markers over it: use it only to check, then run 2D map again.)</li>
+    <li>Tick <b>Theater art (flags, backgrounds, patches)</b> → <b>Run selected</b>: the small maps of the UI on the theater's grid. <b>Open art output folder</b> shows them.</li>
+    <li>The rest of the art (flags, backgrounds, texts) with the Art Editor (chapter 7) on this project.</li>
+  </ol></div>
+
+  <div class="keep"><h2>12 · Where it stops today</h2>
+  <p>Tab <b>8 · Build theater</b> → <b>Refresh</b> shows the state of every part. Terrain files and 2D map are Ready; Objects, Campaign and Theater definition are Missing, and <b>Build theater</b> says “The theater cannot be built yet”. Keep the project: when objectives and campaigns for a new area are supported, the work continues from here, without making the terrain again.</p></div>
+</section>
+
+<!-- ───────────── 13 ───────────── -->
+<section class="chapter">
+  <h1><span class="num">13</span>Step by step: converting a 4.37 theater to 4.38</h1>
+  <p>This chapter converts an add-on made for BMS 4.37 (classic terrain) into a BMS 4.38 theater with New Terrain: the terrain is made again from real data, the objectives, airbases and campaigns of the old add-on are carried over, and the result is installed as a new theater next to the old one. The Mideast 4.38 was made this way.</p>
+  <div class="warn"><b>Positions of the old add-on</b>A classic 4.37 theater has no geographic reference: its objectives are on its own grid, which is not the real world. The new terrain is the real world. The conversion moves the <b>airbases</b> onto the real runways (step 6), but cities, bridges and the other objectives stay at their old grid positions: check them in the Objective editor and move the ones that matter. TerrainTool has no window to fit a georeference to an old theater; a project that has one (like the Mideast) carries every position over through latitude/longitude.</div>
+
+  <div class="keep"><h2>Before you start</h2>
+  <ul>
+    <li>BMS 4.38 installed and started once. A <b>copy of your BMS Data folder</b> (at least <code>TerrData</code>, <code>Campaign</code>, <code>Art</code> and <code>Add-On</code>) before the first install.</li>
+    <li>The old 4.37 add-on, complete, in a folder of its own (the folder with its <code>Campaign</code>, <code>TerrData</code>, <code>Objects</code>, <code>Art</code>...). The suite only reads it.</li>
+    <li>The disk space and connection of chapter 12.</li>
+  </ul></div>
+
+  <div class="keep"><h2>1 · Create the project</h2>
+  <ol class="steps">
+    <li>Main menu → <b>TerrainTool</b> → <b>New project...</b> → create and select an empty folder in <code>TerrainTool\Projects</code>.</li>
+    <li>If the old theater appears in your BMS theater list: choose <b>Import the airbases of a theater installed in BMS:</b>, <b>Browse...</b> to the <b>BMS Data folder</b>, choose the <b>Theater</b>. If the line under it says “with position”, tick <b>Also use its size, centre and heights (tab 1), so its campaign and objects stay in place</b>; if it says “names only”, the add-on has no reference and you set the area in tab 1.</li>
+    <li>If it is not in the list: choose <b>Choose the area on a world map – airbases from OurAirports:</b> and place the square over the same area as the old theater, same size (chapter 12, step 2).</li>
+    <li><b>Create project</b>.</li>
+  </ol></div>
+
+  <div class="keep"><h2>2 · Tab 1 · Theater &amp; projection</h2>
+  <ol class="steps">
+    <li><b>Size (km)</b> = the size of the old theater (1024 or 2048); <b>Map size (pixels)</b> 16384 or 32768.</li>
+    <li><b>Center latitude / longitude</b>: if imported “with position”, leave them. Otherwise put the centre of the old map; <b>Fit center to airbases</b> helps. Do not change the centre after step 4: the old objectives follow the grid, not the coordinates.</li>
+    <li><b>Min / Max height (ft)</b>, <b>Name in BMS</b> (e.g. “Balkans 4.38”, different from the old theater so both can stay installed), <b>Description in BMS</b>.</li>
+    <li><b>Folders</b>: <b>Korea NewTerrain (read-only)</b> → <b>...</b> → <code>Data\TerrData\Korea\NewTerrain</code>. <b>Old theater (read-only)</b> → <b>...</b> → the folder of the old add-on. This is what makes it a conversion: objects, campaigns, art and the theater definition are read from there.</li>
+    <li><b>Compare with Korea</b>, <b>Write Theater.txt</b>, <b>Save</b>.</li>
+  </ol></div>
+
+  <div class="keep"><h2>3 · Tab 2 · Airbases</h2>
+  <ol class="steps">
+    <li>Tick <b>Show old theater positions (purple)</b>: you see how far each old base is from its real airport (<b>LatOld</b>/<b>LonOld</b> = old position, <b>Lat</b>/<b>Lon</b> = real one).</li>
+    <li><b>Only to verify</b>: for each row type the real Lat/Lon and set Status <b>ok</b>. Set <b>Tier</b> and <b>Server</b> as in chapter 12.</li>
+    <li><b>Save CSV</b>, <b>Save</b>.</li>
+  </ol></div>
+
+  <div class="keep"><h2>4 · The terrain (tabs 3 to 6)</h2>
+  <p>Exactly as in chapter 12, steps 5 to 10: <b>Download selected</b> (tab 3), <b>Run selected</b> at test size then at <b>Full size (map pixels)</b> (tab 4), <b>Water DEM...</b> with <b>Run Water DEM</b> and <b>Use these water maps...</b>, <b>Select all</b> → <b>Run selected</b> in tab 5, Sentinel-2 photoreal (tab 4), <b>Check</b> in tab 6.</p></div>
+
+  <div class="keep"><h2>5 · Tab 7 · Theater content</h2>
+  <ol class="steps">
+    <li><b>2D map</b> sub-tab: run <b>2D map (campmap)</b>, then <b>Theater art (flags, backgrounds, patches)</b>. Theater art starts from the BMS 4.38 art and adds the old add-on's images; it remakes the small maps of the UI on the new grid.</li>
+    <li><b>UI art</b> sub-tab → <b>Open the Art Editor</b> → open this project: <b>Check</b> lists the old images with wrong sizes; replace or <b>Reset to BMS 4.38</b>; <b>Save</b>.</li>
+    <li><b>Sim &amp; SAM</b> sub-tab (only if the add-on changed BMS data): write the database changes in <b>Database changes (DbEdits.txt)</b> → <b>Save</b>; Sim files with <b>Copy a BMS Sim file to SimOverrides...</b> and edit them in <b>Open SimOverrides</b>. Press <b>Check SAM systems &amp; positions</b> (tick <b>Only problems</b>) after the objects are built (step 6).</li>
+  </ol></div>
+  <div class="note"><b>DbEdits.txt and new records</b>A line <code>COPY &lt;table&gt; &lt;from&gt; &lt;to&gt;</code> must use a number that BMS 4.38 does not use yet. If BMS already has that number, the Objects job stops with “this BMS version already has … Use the next free number”: change the number and every line that refers to it.</div>
+
+  <div class="keep"><h2>6 · Objective Studio: the objects</h2>
+  <ol class="steps">
+    <li>TerrainTool top bar → <b>Objective Studio</b> (or main menu → Objective Studio → <b>Open TerrainTool project...</b> → the <code>.ttproj</code>; next time: <b>Recent</b> → the project → <b>Open</b>). The window says “TerrainTool project · theater conversion from the old add-on”. Do not open the old theater installed in BMS instead.</li>
+    <li><b>Real runways from OpenStreetMap</b> (close the objective editor first): asks OpenStreetMap for the runways of the airbases not in OurAirports and writes <code>airbase_targets.csv</code>.</li>
+    <li><b>Run Objects (from the old add-on)</b>: builds the theater's objects in <code>Output\Install</code> – BMS 4.38 database with your DbEdits, the old add-on's layouts, airbases moved and turned onto the real runways, your objective edits, leveling. Read the log: it says what was moved, kept and why.</li>
+    <li><b>Review coastal moves...</b>: objectives that Run Objects moved out of the water; accept or change them.</li>
+    <li><b>Optimize bridges...</b>: moves bridge points where they open river crossings.</li>
+    <li><b>Objective editor...</b>: check every Main airbase on the photo; <b>Align to real runway</b> if needed; move cities and bridges that are off; <b>3D preview</b>; <b>Save edits</b>. A saved edit wins over the automatic move, so only save the bases you really changed.</li>
+    <li>The <b>Next step</b> box now says “Edits saved after the last Run Objects”: press <b>Run Objects (from the old add-on)</b> again.</li>
+  </ol></div>
+
+  <div class="keep"><h2>7 · Campaign Editor: the campaigns</h2>
+  <ol class="steps">
+    <li>TerrainTool top bar → <b>Campaign Editor</b> (it opens on the project). The right list shows the old add-on's <code>.cam</code> and <code>.tac</code> files; orange = units still to convert.</li>
+    <li>Open one file (double-click) → toolbar <b>Convert unit types...</b>. In the window select the files (all of them) → <b>Analyze selected files</b>. Then the three tabs:
+      <ul>
+        <li><b>1 · Vehicles</b>: for each vehicle BMS 4.38 does not have, choose what replaces it. <b>Suggest only equipment of the same producer</b> keeps Western for Western; <b>Hide unit types that stay the same</b>, <b>Show also the vehicles that exist in BMS 4.38</b>.</li>
+        <li><b>2 · Unit types</b>: the BMS 4.38 unit type for each old one (change it if you want).</li>
+        <li><b>3 · Weapons</b>: aircraft weapons BMS 4.38 does not have: replace or remove.</li>
+      </ul>
+      <b>Save choices</b>, then <b>Convert selected files</b>. Done once per file.</li>
+    <li>Start window → <b>Apply object changes</b>: brings every campaign up to date with the objectives of step 6 (units on moved airbases, links).</li>
+    <li>Open each campaign: <b>Validate</b>, fix the errors (double-click a row to see it), <b>Station ILS...</b> to check TACAN and ILS against the new runways, <b>Save</b> (into the project's <code>CampaignEdits</code>, never into BMS).</li>
+  </ol></div>
+
+  <div class="keep"><h2>8 · Tab 8 · Build theater</h2>
+  <ol class="steps">
+    <li>TerrainTool → tab <b>8 · Build theater</b> → <b>Refresh</b>. Every row should be Ready; the button on a row goes where that part is made.</li>
+    <li><b>Theater name in BMS</b>: check it. Tick <b>First re-make the 2D map if it is missing or older than the terrain</b>.</li>
+    <li><b>Build theater</b>. Read <b>Report of the last build</b> and the <b>Theater definition (.tdf) of the build</b>. <b>Open Output\Install</b> shows the result.</li>
+  </ol></div>
+
+  <div class="keep"><h2>9 · Install into BMS</h2>
+  <ol class="steps">
+    <li><b>Close BMS.</b></li>
+    <li>TerrainTool tab <b>9 · Install into BMS</b> → <b>Install everything...</b> → confirm. Terrain and water maps, photoreal tiles, objects and the .tdf, UI art and Sim are copied; every replaced file goes to <code>Output\BmsBackup\&lt;date&gt;</code>.</li>
+    <li>Campaign Editor start window → <b>Install campaign files into BMS...</b> → confirm. This is the only button that copies the campaign files (<code>.cam</code>, <code>.tac</code>, <code>CampObjData.XML</code>, <code>stations+ils.dat</code>).</li>
+    <li>TerrainTool tab 9 → <b>Check the terrain installed in BMS</b>.</li>
+  </ol></div>
+
+  <div class="keep"><h2>10 · First start in BMS and the campaign terrain</h2>
+  <ol class="steps">
+    <li>Start BMS, choose the new theater in the Launcher, enter the UI. The first start rebuilds the terrain caches and takes longer.</li>
+    <li>Start a campaign once (until the map appears), then quit BMS: BMS has now written its campaign terrain cache for the new terrain.</li>
+    <li>Campaign Editor → <b>Campaign terrain (.thr)...</b> → <b>Build from the New Terrain</b> → compare <b>Current .thr</b> and <b>New .thr (from the New Terrain)</b> → <b>Save</b>.</li>
+    <li><b>Check ground links</b>: links blocked by water (bridges missing) are listed and written to <code>ground_links_blocked.csv</code>; fix them in the Objective editor (bridges, links). <b>Ground units in water...</b>: units standing in water, moved to land after you confirm.</li>
+    <li>Objective Studio → <b>Run Objects (from the old add-on)</b> again (the bridge cells now use BMS's cache) → Campaign Editor → <b>Apply object changes</b> → Save.</li>
+    <li>Close BMS, then <b>Install objects...</b> (tab 9 or <b>Install objects into BMS...</b> in Objective Studio) and <b>Install campaign files into BMS...</b>.</li>
+  </ol></div>
+  <div class="warn"><b>Order matters</b>Run <b>Check ground links</b> and <b>Ground units in water...</b> only after BMS has made its campaign terrain cache for the new terrain (step 10.2). On an older cache the results are wrong; the editor ignores a cache older than the theater's grid and says so in the log.</div>
+
+  <div class="keep"><h2>11 · Check in flight</h2>
+  <ol class="steps">
+    <li>Create a <b>new</b> Tactical Engagement (old TE missions made on the 4.37 grid keep the old positions) and take off from a Main airbase.</li>
+    <li>Check the runway on the photoreal, the DED latitude/longitude against the real airport, ILS and TACAN.</li>
+    <li>Record an ACMI and open it in Tacview: the aircraft must be on the real runway.</li>
+    <li>Fly the campaign for a few minutes: ground units move, SAMs are on their sites (<b>Check SAM systems &amp; positions</b> in tab 7 lists the problems).</li>
+  </ol></div>
+
+  <div class="keep"><h2>12 · After a BMS update (e.g. 4.38.1 → 4.38.2)</h2>
+  <ol class="steps">
+    <li>Objective Studio → <b>Run Objects (from the old add-on)</b>: the objects are rebuilt on the new BMS database. If a <code>COPY</code> line of DbEdits now collides, use the next free number as the message says.</li>
+    <li>If BMS changed a Sim file that is also in SimOverrides, merge BMS's new values into your copy.</li>
+    <li>TerrainTool → <b>Build theater</b>; close BMS; tab 9 → <b>Install objects...</b> and <b>Install theater Sim...</b>.</li>
+    <li>Start BMS and check the log and a flight.</li>
+  </ol></div>
+  <div class="tip"><b>Going back</b>Every install can be undone: TerrainTool tab 9 → <b>Restore a backup...</b>, Objective Studio → <b>Restore a backup...</b>, Campaign Editor → <b>Backups...</b>. Restore newest first. <b>Remove from BMS's theater list...</b> hides the theater from the Launcher.</div>
+</section>
+
+<!-- ───────────── 14 ───────────── -->
+<section class="chapter">
+  <h1><span class="num">14</span>Troubleshooting</h1>
   <table>
     <tr><th>Problem</th><th>What to do</th></tr>
     <tr><td>A program does not start</td><td>Install the <b>.NET 8 Desktop Runtime x64</b>. If the suite is inside <code>Program Files</code>, move it to a folder you can write to.</td></tr>
@@ -455,9 +698,9 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <p>Open an issue on the project's GitHub page with: what you did, what you expected, what happened, the theater, and the <code>errors.log</code> or a screenshot.</p></div>
 </section>
 
-<!-- ───────────── 13 ───────────── -->
+<!-- ───────────── 15 ───────────── -->
 <section class="chapter">
-  <h1><span class="num">13</span>Credits and support</h1>
+  <h1><span class="num">15</span>Credits and support</h1>
   <ul>
     <li><b>HelixToolkit</b> and <b>SharpDX</b> – DirectX view of the Model Editor (MIT).</li>
     <li><b>NVorbis</b> – sounds of the Art Editor (MIT).</li>
