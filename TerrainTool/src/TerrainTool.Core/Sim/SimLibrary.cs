@@ -11,9 +11,9 @@ public sealed class SimLibrary
     public string Overrides { get; }
     public string Baseline { get; }
 
-    /// <summary>Folders the editor shows, as in BMS Data\Sim (Acdata comes later).</summary>
-    public static readonly string[] Folders = { "Misdata", "Radar", "Vehdef", "Bombdata" };
-    public static readonly string[] Extensions = { ".dat", ".veh", ".lst", ".txt" };
+    /// <summary>Folders the editor shows, as in BMS Data\Sim.</summary>
+    public static readonly string[] Folders = { "Misdata", "Radar", "Acdata", "Vehdef", "Bombdata" };
+    public static readonly string[] Extensions = { ".dat", ".veh", ".lst", ".txt", ".txtpb" };
 
     public SimLibrary(string bmsSim, string overrides)
     {

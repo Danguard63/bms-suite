@@ -40,7 +40,9 @@ public sealed class SimTextFile
         public string Id => $"{Section}|{Label}|{Occurrence}";
         public string Value => string.Join(" ", Tokens.Select(t => t.Text));
         /// <summary>A numeric table (more numbers than one line holds, or several lines): the number of values cannot change.</summary>
-        public bool FixedCount => Key == null;
+        public bool FixedCount => Key == null || Fixed;
+        /// <summary>A list in brackets (.txtpb): its number of values cannot change.</summary>
+        public bool Fixed { get; init; }
     }
 
     public List<string> Lines { get; } = new();
@@ -52,7 +54,7 @@ public sealed class SimTextFile
     {
         _newline = text.Contains("\r\n") ? "\r\n" : "\n";
         Lines.AddRange(text.Replace("\r\n", "\n").Split('\n'));
-        Parse();
+        if (IsTxtpb()) ParseTxtpb(); else Parse();
     }
 
     public static SimTextFile Load(string path) => new(File.ReadAllText(path, Encoding.Latin1));
@@ -64,6 +66,101 @@ public sealed class SimTextFile
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, Text(), Encoding.Latin1);
+    }
+
+    /// <summary>True for an aircraft file of BMS 4.38 (protobuf text: "name: value" and "name { … }").</summary>
+    public bool IsProto { get; private set; }
+
+    private bool IsTxtpb()
+    {
+        foreach (var l in Lines)
+        {
+            string t = l.Trim();
+            if (t.Length == 0 || t.StartsWith('#')) continue;
+            return Regex.IsMatch(t, @"^[A-Za-z_]\w*\s*(:\s*\S|\{)");
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Protobuf text (Acdata\*.txtpb): every "name: value" line is a value; blocks "name { … }" make the section path
+    /// (repeated blocks numbered, with the comment after "{", e.g. "data 3 (Mach: 0.8)"); a list "[a, b, c]" is one value
+    /// with a fixed number of items.
+    /// </summary>
+    private void ParseTxtpb()
+    {
+        IsProto = true;
+        var stack = new List<string>();
+        var counts = new List<Dictionary<string, int>> { new() };
+        var seen = new Dictionary<string, int>();
+        for (int i = 0; i < Lines.Count; i++)
+        {
+            string raw = Lines[i];
+            string code = StripComment(raw, out string note);
+            string t = code.Trim();
+            if (t.Length == 0) continue;
+            var open = Regex.Match(t, @"^([A-Za-z_]\w*)\s*\{$");
+            if (open.Success)
+            {
+                string name = open.Groups[1].Value;
+                var c = counts[^1];
+                int n = c.TryGetValue(name, out int k) ? k : 0;
+                c[name] = n + 1;
+                stack.Add(n == 0 && !RepeatedLater(i, name) ? name : $"{name} {n + 1}" + (note.Length > 0 ? $" ({note})" : ""));
+                counts.Add(new());
+                continue;
+            }
+            if (t == "}")
+            {
+                if (stack.Count > 0) { stack.RemoveAt(stack.Count - 1); counts.RemoveAt(counts.Count - 1); }
+                continue;
+            }
+            var kv = Regex.Match(code, @"^(\s*)([A-Za-z_]\w*)\s*:\s*(.*?)\s*$");
+            if (!kv.Success) continue;
+            string key = kv.Groups[2].Value;
+            int vStart = kv.Groups[3].Index;
+            string val = kv.Groups[3].Value;
+            var it = new Item { Section = string.Join(" › ", stack), Label = key, Key = key, Note = note, Fixed = val.StartsWith('[') };
+            if (val.StartsWith('['))
+                foreach (Match m in Regex.Matches(val, @"[^\[\],\s]+"))
+                    it.Tokens.Add(new Token { Line = i, Start = vStart + m.Index, Length = m.Length, Text = m.Value });
+            else if (val.Length > 0)
+                it.Tokens.Add(new Token { Line = i, Start = vStart, Length = val.Length, Text = val });
+            string sk = $"{it.Section}|{it.Label}";
+            it.Occurrence = seen.TryGetValue(sk, out int o) ? o : 0;
+            seen[sk] = it.Occurrence + 1;
+            Items.Add(it);
+        }
+    }
+
+    /// <summary>A block met again at the same level before its parent closes (gear, data…): numbered from the first one.</summary>
+    private bool RepeatedLater(int i, string name)
+    {
+        int d = 1;     // inside the block opened on line i
+        for (int j = i + 1; j < Lines.Count; j++)
+        {
+            string t = StripComment(Lines[j], out _).Trim();
+            if (t.EndsWith('{'))
+            {
+                if (d == 0 && Regex.IsMatch(t, $@"^{Regex.Escape(name)}\s*\{{$")) return true;
+                d++;
+            }
+            else if (t == "}") { d--; if (d < 0) return false; }
+        }
+        return false;
+    }
+
+    /// <summary>The line without a "# comment" (a # inside quotes is kept).</summary>
+    private static string StripComment(string line, out string note)
+    {
+        bool q = false;
+        for (int k = 0; k < line.Length; k++)
+        {
+            if (line[k] == '"') q = !q;
+            else if (line[k] == '#' && !q) { note = line[(k + 1)..].Trim(); return line[..k]; }
+        }
+        note = "";
+        return line;
     }
 
     private static bool IsNumber(string s) => double.TryParse(s, NumberStyles.Float, Ci, out _);
@@ -167,6 +264,15 @@ public sealed class SimTextFile
     public string? SetValue(Item it, string text)
     {
         var parts = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (IsProto && !it.Fixed)
+        {
+            // one value after "name:": written as typed (a text keeps its quotes, a word or a number as it is)
+            string v = text.Trim();
+            if (v.Length == 0) return $"{it.Label}: a value is needed";
+            if (it.Tokens.Count == 0) return $"{it.Label}: this line has no value to change";
+            Replace(it.Tokens[0], IsNumber(v) ? Like(it.Tokens[0].Text, v) : v);
+            return null;
+        }
         if (it.FixedCount && parts.Length != it.Tokens.Count)
             return $"{it.Label}: {it.Tokens.Count} values expected, {parts.Length} given";
         if (it.FixedCount && parts.Any(p => !IsNumber(p)))

@@ -55,6 +55,7 @@ public sealed class SimFilesView : DockPanel
     private readonly Button _save = new() { Content = "Save in SimOverrides", FontWeight = FontWeights.SemiBold, Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 6, 0) };
     private readonly Button _reset = new() { Content = "Reset to BMS…", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 6, 0) };
     private readonly CheckBox _onlyChanged = new() { Content = "Only values different from BMS", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 8, 0) };
+    private readonly TextBox _rowFilter = new() { Width = 200, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), ToolTip = "Show only the values whose section or name contains this text (e.g. gear, cl_table, Rmax, Rangeto)" };
     private readonly CheckBox _textView = new() { Content = "Text view", VerticalAlignment = VerticalAlignment.Center, ToolTip = "The file as text, as Notepad shows it (also for the .lst lists)" };
     private readonly DataGrid _grid = new()
     {
@@ -103,7 +104,7 @@ public sealed class SimFilesView : DockPanel
             c.ElementStyle = es;
             _grid.Columns.Add(c);
         }
-        Col("Section", nameof(Row.Section), 150);
+        Col("Section", nameof(Row.Section), 220);
         Col("Parameter", nameof(Row.Parameter), 230);
         Col("Value (edit here)", nameof(Row.Value), 260, edit: true);
         Col("BMS", nameof(Row.Bms), 200);
@@ -123,7 +124,9 @@ public sealed class SimFilesView : DockPanel
         _grid.RowStyle = rs;
 
         var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 6) };
-        bar.Children.Add(_save); bar.Children.Add(_reset); bar.Children.Add(_onlyChanged); bar.Children.Add(_textView);
+        bar.Children.Add(_save); bar.Children.Add(_reset); bar.Children.Add(_onlyChanged);
+        bar.Children.Add(new TextBlock { Text = "Find", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) });
+        bar.Children.Add(_rowFilter); bar.Children.Add(_textView);
         var legend2 = new TextBlock
         {
             Foreground = Brushes.DimGray, FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0),
@@ -148,6 +151,7 @@ public sealed class SimFilesView : DockPanel
         _search.TextChanged += (_, _) => FillList();
         _files.SelectionChanged += (_, _) => { if (!_switching) OpenSelected(); };
         _onlyChanged.Click += (_, _) => FillGrid();
+        _rowFilter.TextChanged += (_, _) => FillGrid();
         _textView.Click += (_, _) => ToggleText();
         _text.TextChanged += (_, _) => { if (!_switching && _textView.IsChecked == true) MarkDirty(); };
         _save.Click += (_, _) => Save();
@@ -155,7 +159,7 @@ public sealed class SimFilesView : DockPanel
         _grid.PreviewKeyDown += (_, e) => { if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control) { _grid.CommitEdit(); Save(); e.Handled = true; } };
         _save.IsEnabled = _reset.IsEnabled = false;
         FillList();
-        Status("Choose a file on the left. Missiles (Misdata) and radars (Radar) first; vehicles and bombs are read the same way.", false);
+        Status("Choose a file on the left: missiles (Misdata), radars (Radar), aircraft (Acdata, flight models), vehicles (Vehdef), bombs (Bombdata).", false);
     }
 
     internal void Status(string s, bool warn) { _status.Text = s; _status.Foreground = warn ? Brushes.Firebrick : Brushes.DimGray; }
@@ -260,7 +264,10 @@ public sealed class SimFilesView : DockPanel
             if (it.Note.Length > 0 && !exp.Contains(it.Note, StringComparison.OrdinalIgnoreCase)) exp = exp.Length > 0 ? exp + " — " + it.Note : it.Note;
             return new Row(this, it, b?.Value ?? "—", exp, when);
         }).ToList();
-        _grid.ItemsSource = _onlyChanged.IsChecked == true ? _rows.Where(r => r.State != "ok").ToList() : _rows;
+        string q = _rowFilter.Text.Trim();
+        _grid.ItemsSource = _rows.Where(r => (_onlyChanged.IsChecked != true || r.State != "ok")
+                                             && (q.Length == 0 || r.Section.Contains(q, StringComparison.OrdinalIgnoreCase) || r.Parameter.Contains(q, StringComparison.OrdinalIgnoreCase)))
+                                 .ToList();
     }
 
     private void ShowView()
