@@ -519,6 +519,7 @@ public sealed class MainWindow : Window
         try
         {
             await Task.Run(() => inst.Run(l => Dispatcher.Invoke(() => { lines.Add(l); _notes.Text = string.Join(Environment.NewLine, lines); })));
+            try { File.WriteAllText(Path.Combine(_p.ProjectFolder, "Output", "Install_log.txt"), $"{DateTime.Now:yyyy-MM-dd HH:mm}\r\n" + string.Join("\r\n", lines)); } catch (IOException) { }
             _status.Text = "✓ Objects installed. If bases changed: Campaign Editor → Apply object changes → Install campaign files into BMS.";
         }
         catch (Exception ex) { _status.Text = "Install: ERROR " + ex.Message; }
