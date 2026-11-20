@@ -71,8 +71,23 @@ def interchange(d):  # due frecce opposte
     poly(d, [(4, 24), (62, 24), (62, 6), (96, 34), (62, 62), (62, 44), (4, 44)], fill=AMBER)
     poly(d, [(96, 56), (38, 56), (38, 38), (4, 66), (38, 94), (38, 76), (96, 76)], fill=LIGHT)
 
+def sim(d):       # missile in salita e onde del radar
+    import math
+    ux, uy = 1 / math.sqrt(2), -1 / math.sqrt(2)      # verso alto-destra
+    nx, ny = -uy, ux                                   # normale
+    def at(t, k): return (12 + ux * t + nx * k, 88 + uy * t + ny * k)
+    hw = 7.5
+    poly(d, [at(0, -hw), at(58, -hw), at(74, 0), at(58, hw), at(0, hw)], fill=AMBER)       # fusoliera con ogiva
+    poly(d, [at(4, hw), at(22, hw), at(6, hw + 14)], fill=LIGHT)                              # alette
+    poly(d, [at(4, -hw), at(22, -hw), at(6, -hw - 14)], fill=LIGHT)
+    poly(d, [at(40, hw), at(50, hw), at(42, hw + 8)], fill=AMBER)
+    poly(d, [at(40, -hw), at(50, -hw), at(42, -hw - 8)], fill=AMBER)
+    for r in (16, 30, 44):                                                                    # onde del radar
+        a2 = P(98 - r, 2 - r); b2 = P(98 + r, 2 + r)
+        d.arc([a2, b2], start=95, end=175, fill=LIGHT, width=int(S * 0.05))
+
 ICONS = {"BMSSuite": suite, "TerrainTool": terrain, "ObjectiveStudio": objective, "ArtEditor": art,
-         "CampaignEditor": campaign, "ModelEditor": model, "DatabaseInterchange": interchange}
+         "CampaignEditor": campaign, "ModelEditor": model, "DatabaseInterchange": interchange, "SimEditor": sim}
 
 sizes = [256, 128, 64, 48, 32, 24, 16]
 out = sys.argv[1] if len(sys.argv) > 1 else "."
