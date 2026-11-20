@@ -42,6 +42,7 @@ public sealed class MainWindow : Window
     private List<SamDb.SamSystem> _systems = new();
     private List<SamPlacement> _places = new();
     private bool _busy;
+    private SimFilesView? _files;
 
     private static DataGrid Grid0(DataGridSelectionMode m) => new()
     {
@@ -149,7 +150,15 @@ public sealed class MainWindow : Window
         var root = new DockPanel();
         DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         DockPanel.SetDock(_log, Dock.Bottom); _log.Margin = new Thickness(10, 0, 10, 10); root.Children.Add(_log);
-        root.Children.Add(body);
+        var tabs = new TabControl { Margin = new Thickness(6, 4, 6, 4) };
+        if (BmsSimDir is { } bmsSim && Directory.Exists(bmsSim))
+        {
+            _files = new SimFilesView(new TerrainTool.Core.Sim.SimLibrary(bmsSim, TheaterSimData.SimOverridesFolder(_p)), s => { Log(s); RefreshSim(); });
+            tabs.Items.Add(new TabItem { Header = "Sim files", Content = _files });
+        }
+        else tabs.Items.Add(new TabItem { Header = "Sim files", Content = new TextBlock { Margin = new Thickness(12), Text = "BMS Data\\Sim not found: set 'Korea NewTerrain' in TerrainTool (tab 1) to the Korea of your BMS 4.38." } });
+        tabs.Items.Add(new TabItem { Header = "SAM check & database changes", Content = body });
+        root.Children.Add(tabs);
         Content = root;
 
         _check.Click += async (_, _) => await SamCheckAsync();
@@ -163,6 +172,7 @@ public sealed class MainWindow : Window
         _samGrid.SelectionChanged += (_, _) => ShowPlaces();
         Closing += (_, e) =>
         {
+            if (_files != null && !_files.AskLeave()) { e.Cancel = true; return; }
             if (DbEditsChanged() && MessageBox.Show(this, "DbEdits.txt has changes that are not saved. Close anyway?", Title, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
                 e.Cancel = true;
         };
