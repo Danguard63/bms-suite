@@ -31,7 +31,8 @@ $programs = @(
     @{ Folder = "ArtEditor";           Project = "ArtEditor\src\ArtEditor\ArtEditor.csproj" },
     @{ Folder = "CampaignEditor";      Project = "CampaignEditor\src\CampaignEditor\CampaignEditor.csproj" },
     @{ Folder = "ModelEditor";         Project = "ModelEditor\src\ModelEditor\ModelEditor.csproj" },
-    @{ Folder = "DatabaseInterchange"; Project = "DatabaseInterchange\src\DatabaseInterchange\DatabaseInterchange.csproj" }
+    @{ Folder = "DatabaseInterchange"; Project = "DatabaseInterchange\src\DatabaseInterchange\DatabaseInterchange.csproj" },
+    @{ Folder = "SimEditor";           Project = "SimEditor\src\SimEditor\SimEditor.csproj" }
 )
 
 foreach ($p in $programs) {

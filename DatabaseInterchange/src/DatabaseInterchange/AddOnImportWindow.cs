@@ -6,12 +6,12 @@ using System.Windows.Media;
 using TerrainTool.Core.Database;
 using TerrainTool.Core.Project;
 
-namespace TerrainTool.App;
+namespace DatabaseInterchange;
 
 /// <summary>
-/// Tab 7 · Sim &amp; SAM → "Aircraft &amp; vehicles from the old add-on…": what the old add-on has and BMS has not, with what can be
-/// brought in now (it uses BMS's 3D models) and what not yet (its own model). The ticks are saved in imports.csv; the Objects
-/// job brings them in at every run.
+/// Aircraft, vehicles &amp; weapons tab → "From an old add-on into a TerrainTool project…": what the project's old add-on has and BMS
+/// has not, with what can be brought in now (it uses BMS's 3D models) and what not yet (its own model). The ticks are saved in the
+/// project's imports.csv; Run Objects (Objective Studio) brings them in at every run.
 /// </summary>
 public sealed class AddOnImportWindow : Window
 {

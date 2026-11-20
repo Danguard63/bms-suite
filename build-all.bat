@@ -1,7 +1,7 @@
 @echo off
 rem Builds every program of the BMS Suite, one after the other (each one writes its own build.log)
 cd /d "%~dp0"
-for %%P in (TerrainTool ObjectiveStudio ArtEditor CampaignEditor ModelEditor DatabaseInterchange BMSSuite) do call :one %%P
+for %%P in (TerrainTool ObjectiveStudio ArtEditor CampaignEditor ModelEditor DatabaseInterchange SimEditor BMSSuite) do call :one %%P
 echo.
 echo Done.
 pause

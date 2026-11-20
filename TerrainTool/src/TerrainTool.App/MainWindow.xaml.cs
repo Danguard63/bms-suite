@@ -717,7 +717,7 @@ public partial class MainWindow : Window
         if (Tabs.SelectedIndex == 2) RefreshData();
         if (Tabs.SelectedIndex == 3) RefreshSteps();
         if (Tabs.SelectedIndex == 4) RefreshTex();
-        if (Tabs.SelectedIndex == 6) { RefreshMap(); RefreshSim(); RefreshContent(); }
+        if (Tabs.SelectedIndex == 6) { RefreshMap(); RefreshContent(); }
         if (Tabs.SelectedIndex == 7) RefreshBuild();
         if (Tabs.SelectedIndex == 8) RefreshInstall();
     }

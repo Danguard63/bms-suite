@@ -61,7 +61,9 @@ public sealed class MainWindow : Window
         new("DATA", 0, "Model Editor", "3D models and the database", "ModelEditor", "ModelEditor", "ModelEditor.exe", "\uE7B8",
             "3D models with PBR materials (DirectX view), DOFs, switches, slots and weapons; the theater database: aircraft, vehicles, weapons, hardpoints, with check, install and restore."),
         new("DATA", 0, "Database Interchange", "From one theater to another", "DatabaseInterchange", "DatabaseInterchange", "DatabaseInterchange.exe", "\uE8AB",
-            "Copies bases and ground objectives (then aircraft and vehicles) from one theater to another, renumbered, with plan, install and restore."),
+            "Copies bases, ground objectives, aircraft, vehicles and weapons from one theater to another, renumbered, with plan, install and restore; brings an old add-on's national variants into a converted theater."),
+        new("DATA", 0, "Sim Editor", "Theater Sim, SAM, database changes", "SimEditor", "SimEditor", "SimEditor.exe", "\uE9D9",
+            "For a theater made with TerrainTool: its own Sim files (SimOverrides), the database changes (DbEdits.txt) and the check of the air defence systems in its campaigns."),
     };
 
     private readonly ListBox _theaters = new() { Background = Brushes.Transparent, BorderThickness = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Stretch };

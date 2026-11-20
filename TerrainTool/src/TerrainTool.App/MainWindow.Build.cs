@@ -203,7 +203,7 @@ public partial class MainWindow
             {
                 Part = "Sim", State = sim ? "Ready" : "Default",
                 Details = sim ? $"The theater's own Sim: BMS Data\\Sim + {ov} SimOverrides file(s)" : "The shared BMS Data\\Sim (no SimOverrides folder)",
-                GoLabel = "Go to Sim & SAM", Go = () => GoTab(6, 3),
+                GoLabel = "Open Sim Editor", Go = () => LaunchTool("SimEditor", "Sim Editor"),
             });
 
             string art = Path.Combine(_project.ProjectFolder, "Output", "Art");
