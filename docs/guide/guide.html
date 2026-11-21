@@ -296,7 +296,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <figure class="half"><img src="shots/33_ae_open.jpg"><figcaption><b>Figure 7.1</b> Open the art of a TerrainTool project, of a theater installed in BMS, art made with this editor, any art folder, or start a <b>New theater art...</b> from the BMS 4.38 art.</figcaption></figure></div>
   <p><b>Reference...</b> opens a second art (another theater, an old add-on) to take images from; it is only read.</p>
   <div class="keep"><h2>Screens (visual editor)</h2>
-  <figure><img src="shots/30_ae_screens.jpg"><figcaption><b>Figure 7.2</b> The main menu of the Israel theater, redrawn as BMS shows it in Full HD. The menu on the left goes to the other screens as in BMS.</figcaption></figure></div>
+  <figure><img src="shots/30_ae_screens.jpg"><figcaption><b>Figure 7.2</b> The main menu of the Mideast 4.38 theater, redrawn as BMS shows it in Full HD. The menu on the left goes to the other screens as in BMS.</figcaption></figure></div>
   <figure><img src="shots/31_ae_edit.jpg"><figcaption><b>Figure 7.3</b> <b>Edit</b> mode: every element has a coloured frame that says where it comes from.</figcaption></figure>
   <table>
     <tr><th>Frame</th><th>Meaning</th></tr>
@@ -308,7 +308,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   </table>
   <p>Click an element to see where it comes from, right-click to change its image or text, <b>Hide in this theater</b> (for example TE Edit or TE Builder in a PvP art) or <b>Change font...</b>.</p>
   <div class="keep"><h2>The other sections</h2>
-  <figure><img src="shots/32_ae_flags_c.jpg"><figcaption><b>Figure 7.4</b> Team flags, with the Israel flag selected: on the right where BMS uses it, the sizes it needs and the buttons to replace it. One horizontal image per flag is enough; the editor makes the small, vertical and dark versions.</figcaption></figure></div>
+  <figure><img src="shots/32_ae_flags_c.jpg"><figcaption><b>Figure 7.4</b> Team flags, with the first flag selected: on the right where BMS uses it, the sizes it needs and the buttons to replace it. One horizontal image per flag is enough; the editor makes the small, vertical and dark versions.</figcaption></figure></div>
   <p><b>Team flags</b>, <b>Theater banner &amp; menu</b>, <b>Campaign pictures</b>, <b>Small maps (from the terrain)</b>, <b>Screen backgrounds</b>, <b>Medals &amp; logos</b>, <b>Squadron patches</b>, <b>Texts (Theater.irc)</b>, <b>Fonts</b>, <b>Sounds</b>. For each image the panel on the right shows where BMS uses it, the sizes it needs, the theater / BMS / reference previews and:</p>
   <ul>
     <li><b>Replace with an image...</b> – any PNG, JPG, BMP, GIF, TIFF, TGA or DDS: choose the part to use (the frame keeps the proportions BMS needs); it is resized and converted for every file that has it.</li>
@@ -344,6 +344,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <figure><img src="shots/47_ce_squadrons_c.jpg"><figcaption><b>Figure 8.4</b> Squadrons by team, with aircraft and base.</figcaption></figure>
   </div>
   <div class="keep"><h2>Toolbar</h2>
+  <p>The file buttons come first; the tools are in two menus: <b>Units</b> (Battalions &amp; brigades, Units list, Deploy divisions, Air defense plan, Convert unit types) and <b>Theater files</b> (Station ILS, Campaign AI, TE lists, Campaign terrain).</p>
   <table>
     <tr><th>Button</th><th>What it does</th></tr>
     <tr><td>Open... / Save / Save As...</td><td>Save writes into the file you opened (in BMS you are asked once per session to back up the Campaign folder); for a project, into its <code>CampaignEdits</code> folder. Every replaced file goes to <code>Backup\&lt;date_time&gt;</code>.</td></tr>
@@ -402,7 +403,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <ol class="steps">
     <li>Choose <b>From</b> (the source theater) and <b>To</b> (the destination). The destination must have its own objects database: the shared objects of BMS (Korea) are never written and are marked as not writable.</li>
     <li>Select one or more layouts on the left (search by name or OCD number; <span class="kbd">Ctrl</span> / <span class="kbd">Shift</span>+click for more).</li>
-    <li><b>Make plan (nothing written)</b>: shows what will be copied and with which numbers – the layout folder with a new OCD number, a new Class Table entry, every kind of piece (reused if the destination has the same one, otherwise new records), the 3D models and textures needed (reused or copied).</li>
+    <li><b>Make plan (nothing written)</b>: a row of numbers on top sums it up (layouts, new records, pieces reused, files, things to check – amber when there are any); below, what will be copied and with which numbers – the layout folder with a new OCD number, a new Class Table entry, every kind of piece (reused if the destination has the same one, otherwise new records), the 3D models and textures needed (reused or copied).</li>
     <li>Close BMS and press <b>Install into the destination...</b>. Everything replaced is first copied to <code>Transfers\Backups\&lt;time&gt;</code> with a list of what was added.</li>
     <li>To use the imported base: Objective Studio → the destination theater → select the airbase → <b>Replace base...</b> → choose the new base (Source "This theater") → <b>Save edits</b>, <b>Build objects</b>, <b>Install into BMS...</b>.</li>
   </ol>
@@ -417,6 +418,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
 <section class="chapter">
   <h1><span class="num">11</span>4.37 Units Converter</h1>
   <p>The 4.37 Units Converter brings aircraft, helicopters, ground vehicles, ships and weapons of an old BMS database (BMS 4.37 or older) into a theater of a BMS 4.38 installation. Everything is done in its window, from start to end, and a backup is made before every installation: <b>Restore...</b> puts the theater back as it was.</p>
+  <figure><img src="shots/70_uc_main.jpg"><figcaption><b>Figure 11.1</b> The old add-on's aircraft the theater does not have: what each one needs, the flight model it will fly with and its name in the TE.</figcaption></figure>
   <ol class="steps">
     <li><b>1 · Old database</b>: a BMS 4.37 installation (one entry per theater), an add-on folder (with <code>Terrdata\Objects</code>) or just an objects folder with <code>Falcon4_CT.xml</code>.</li>
     <li><b>2 · BMS 4.38 theater</b>: the BMS 4.38 installation and the theater to convert into. It must have its own database: BMS's own <code>Terrdata\objects</code> (Korea) is never written.</li>
@@ -433,6 +435,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
 <section class="chapter">
   <h1><span class="num">12</span>Sim Editor</h1>
   <p>The Sim Editor works on a <b>theater installed in BMS</b> (any add-on: it opens on the theater chosen in the main menu, or asks for it) or on a <b>TerrainTool project</b>. BMS is only read while you work: your files stay in the work folder until <b>Install into BMS...</b>, which saves every file it replaces (<b>Restore...</b>). BMS's own <code>Data\Sim</code> and BMS's own theaters are never changed.</p>
+  <figure><img src="shots/80_se_main.jpg"><figcaption><b>Figure 12.1</b> A missile file of the Mideast 4.38 theater: every value next to BMS's, with what it means.</figcaption></figure>
   <div class="keep"><h2>The theater's own Sim</h2>
   <ul>
     <li><b>Sim files</b> tab: the Sim files (missiles, radars, vehicles, bombs, flight models of AI-only aircraft) as tables of values next to the theater's value. The first save makes the theater's copy (<code>SimOverrides</code> of the work folder). <b>Copy a BMS Sim file to SimOverrides...</b> does it for whole files. In <code>Acdata</code> only the flight models of AI-only aircraft are listed; those of the aircraft flyable in BMS (and <code>AcTypes.lst</code>) stay BMS's, as the BMS developers ask.</li>
@@ -676,7 +679,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <div class="keep"><h2>7 · Campaign Editor: the campaigns</h2>
   <ol class="steps">
     <li>TerrainTool top bar → <b>Campaign Editor</b> (it opens on the project). The right list shows the old add-on's <code>.cam</code> and <code>.tac</code> files; orange = units still to convert.</li>
-    <li>Open one file (double-click) → toolbar <b>Convert unit types...</b>. In the window select the files (all of them) → <b>Analyze selected files</b>. Then the three tabs:
+    <li>Open one file (double-click) → menu <b>Units</b> → <b>Convert unit types...</b>. In the window select the files (all of them) → <b>Analyze selected files</b>. Then the three tabs:
       <ul>
         <li><b>1 · Vehicles</b>: for each vehicle BMS 4.38 does not have, choose what replaces it. <b>Suggest only equipment of the same producer</b> keeps Western for Western; <b>Hide unit types that stay the same</b>, <b>Show also the vehicles that exist in BMS 4.38</b>.</li>
         <li><b>2 · Unit types</b>: the BMS 4.38 unit type for each old one (change it if you want).</li>
