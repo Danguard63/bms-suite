@@ -132,7 +132,10 @@ public sealed class TeListsWindow : Window
         public string Korea => InKorea ? "yes" : "";
         public string Db => InDb ? "OK" : "MISSING";
         public int Type => E.Type; public int SubType => E.SubType; public int Specific => E.Specific; public int UnitSubType => E.UnitSubType;
-        public int Id => E.Id; public int TextId => E.Text; public int Icon => E.Icon;
+        // picture, name and icon of the TE list: can be changed in the table (e.g. the icon of another aircraft of the same shape)
+        public int Id { get => E.Id; set { if (E.Id == value) return; E.Id = value; Changed?.Invoke(); On(nameof(Id)); } }
+        public int TextId { get => E.Text; set { if (E.Text == value) return; E.Text = value; Changed?.Invoke(); On(nameof(TextId)); } }
+        public int Icon { get => E.Icon; set { if (E.Icon == value) return; E.Icon = value; Changed?.Invoke(); On(nameof(Icon)); } }
         private bool _in;
         public Action? Changed;
         public bool InList { get => _in; set { if (_in == value) return; _in = value; Changed?.Invoke(); On(nameof(InList)); On(nameof(Back)); } }
@@ -153,7 +156,7 @@ public sealed class TeListsWindow : Window
         Text(_planeGrid, "DB", nameof(PlaneRow.Db), 65);
         Text(_planeGrid, "Type", nameof(PlaneRow.Type), 45); Text(_planeGrid, "SubType", nameof(PlaneRow.SubType), 60);
         Text(_planeGrid, "Specific", nameof(PlaneRow.Specific), 60); Text(_planeGrid, "UnitSubType", nameof(PlaneRow.UnitSubType), 80);
-        Text(_planeGrid, "ID", nameof(PlaneRow.Id), 60); Text(_planeGrid, "text", nameof(PlaneRow.TextId), 50); Text(_planeGrid, "Icon", nameof(PlaneRow.Icon), 0);
+        Text(_planeGrid, "ID", nameof(PlaneRow.Id), 60, false); Text(_planeGrid, "text", nameof(PlaneRow.TextId), 50, false); Text(_planeGrid, "Icon", nameof(PlaneRow.Icon), 0, false);
         _planeGrid.RowStyle = BackStyle();
 
         var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 6) };
@@ -180,7 +183,7 @@ public sealed class TeListsWindow : Window
         {
             TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DimGray, FontSize = 11, Margin = new Thickness(0, 0, 0, 6),
             Text = "Green = in the list (as in the Korea), yellow = different from the Korea list, red = not in this theater's database. " +
-                   "Type/SubType/Specific identify the aircraft in the database, UnitSubType the kind of squadron; ID, text and Icon are interface resources (picture, name, icon).",
+                   "Type/SubType/Specific identify the aircraft in the database, UnitSubType the kind of squadron; ID, text and Icon are interface resources (picture, name, icon): double-click to change them (e.g. the icon of an aircraft of the same shape).",
         };
         var top = new StackPanel();
         top.Children.Add(bar); top.Children.Add(legend);
