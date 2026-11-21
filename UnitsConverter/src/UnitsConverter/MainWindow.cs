@@ -344,9 +344,11 @@ public sealed class MainWindow : Window
                 var fits = air ? UnitsConversion.FlightModelsFor(s, d, S, c.Ct) : new();
                 var proposed = UnitsConversion.Proposed(fits);
                 string Label(UnitsConversion.FlightModelFit f) =>
-                    (f.NoRack.Count == 0 ? "✓ " : "⚠ ") + f.Model.Name + (f.SameName ? " (same name)" : "") + (f == proposed ? " — suggested" : "") +
+                    (f.NoRack.Count == 0 && f.Asymmetric.Count == 0 ? "✓ " : "⚠ ") + f.Model.Name + (f.SameName ? " (same name)" : "") + (f == proposed ? " — suggested" : "") +
                     (f.NoRack.Count > 0 ? $": pylons {string.Join(", ", f.NoRack)} without racks" : ": racks on all pylons") +
-                    (double.IsNaN(f.GearDiff) ? "" : $", wheels {f.GearDiff:0.0} ft off");
+                    (f.Asymmetric.Count > 0 ? ", left ≠ right" : ", left = right") +
+                    (double.IsNaN(f.GearDiff) ? "" : ", " + f.Wheels) +
+                    (f.OtherPylons.Count == 0 ? ", same pylons as before" : "");
                 var items = fits.Take(12).ToList();
                 foreach (var f in fits.Where(f => f.SameName || f == proposed)) if (!items.Contains(f)) items.Insert(0, f);
                 return (c, air, items, proposed, Label: (Func<UnitsConversion.FlightModelFit, string>)Label);

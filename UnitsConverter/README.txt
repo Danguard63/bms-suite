@@ -21,7 +21,7 @@ of a BMS 4.38 installation. Everything is done here, from start to end; a backup
                                             names (its lists are added when they differ);
                          3 Weapons          BMS's ones with the same name; the others are added with their models;
                          4 Aircraft         free class numbers (Specific), first year of service (4.38 needs one), the
-                                            BMS 4.38 flight model of the same name (Sim\Acdata\AcTypes.lst);
+                                            BMS 4.38 flight model chosen in 'Flies like';
                          5 Squadron and flight types of an aircraft come along;
                          6 Tactical Engagement: a line in the theater's TePlanes.lst and, when the theater has its own
                                             interface folder (artdir), the name in its Art\Main\textids.id and units.irc.
@@ -31,6 +31,7 @@ of a BMS 4.38 installation. Everything is done here, from start to end; a backup
 
 What is converted is listed in the theater's objects folder (UnitsConverter.csv, UnitsConverter_picks.csv).
 
-Not converted: flight models (Sim\Acdata) stay BMS 4.38's, as the BMS developers ask. An aircraft flies with the BMS
-flight model of the same name, and its weapons hang where that flight model puts its hardpoints.
+Not converted: flight models (Sim\Acdata) stay BMS 4.38's, as the BMS developers ask. Column 'Flies like' picks the
+BMS 4.38 flight model of each aircraft: racks on every hardpoint used, the same pylons left and right, the aircraft's
+own wheels on the ground come first. If weapons or wheels look wrong in BMS: Restore, pick another one, convert again.
 3D models and textures of an add-on belong to their authors: ask them before you share a theater with them.

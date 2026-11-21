@@ -184,13 +184,14 @@ public static class UnitsConversion
 
     // ───────────────────────── flight models (read only: never copied nor changed)
 
-    /// <summary>A flight model of the list: its hardpoint groups (racks and pylons of each hardpoint, BmsRack.dat) and the
-    /// height of its wheels under the reference point (nose wheel first), read from its .txtpb.</summary>
-    public sealed record FlightModel(int Index, string Name, IReadOnlyList<string> Groups, IReadOnlyList<double> GearZ)
+    /// <summary>A flight model of the list: its hardpoint groups (racks and pylons of each hardpoint, BmsRack.dat) and
+    /// where its wheels touch the ground (x aft, z down from the reference point; nose wheel first), read from its .txtpb.</summary>
+    public sealed record FlightModel(int Index, string Name, IReadOnlyList<string> Groups, IReadOnlyList<(double X, double Z)> Wheels)
     {
         public bool HasGroup(int hp) => hp < Groups.Count && Groups[hp].Length > 0 && Groups[hp] != "0";
         public int Hardpoints => Enumerable.Range(1, Math.Max(0, Groups.Count - 1)).Count(HasGroup);
-        public string Gear => GearZ.Count == 0 ? "?" : string.Join(" / ", GearZ.Take(2).Select(z => z.ToString("0.##", Ci)));
+        public IEnumerable<double> GearZ => Wheels.Select(w => w.Z);
+        public string Gear => Wheels.Count == 0 ? "?" : string.Join(" / ", GearZ.Take(2).Select(z => z.ToString("0.##", Ci)));
         public override string ToString() => Name;
     }
 
@@ -201,7 +202,7 @@ public static class UnitsConversion
         string t;
         try { t = File.ReadAllText(f); } catch (IOException) { return null; }
         var gear = Regex.Matches(t, @"gear \{\s*position_ft \{\s*x: *([-\d.eE]+)\s*y: *([-\d.eE]+)\s*z: *([-\d.eE]+)")
-            .Select(m => double.Parse(m.Groups[3].Value, Ci)).ToList();
+            .Select(m => (double.Parse(m.Groups[1].Value, Ci), double.Parse(m.Groups[3].Value, Ci))).ToList();
         var hp = Regex.Match(t, @"hardpoints \{(.*?)\n  \}", RegexOptions.Singleline);
         var groups = hp.Success ? Regex.Matches(hp.Groups[1].Value, "hardpoint_grp: \"([^\"]*)\"").Select(m => m.Groups[1].Value).ToList() : new List<string>();
         return new FlightModel(index, name, groups, gear);
@@ -250,78 +251,98 @@ public static class UnitsConversion
         int af = acd >= 0 ? S.Get("ACD", acd)?.Int("AirframeDatIdx", -1) ?? -1 : -1;
         if (af < 0 || s.AcTypes == null) return null;
         var names = ReadAcTypes(s.AcTypes);
-        return af < names.Count ? ReadFlightModel(Path.GetDirectoryName(s.AcTypes)!, af, names[af]) ?? new FlightModel(af, names[af], new List<string>(), new List<double>()) : null;
+        return af < names.Count ? ReadFlightModel(Path.GetDirectoryName(s.AcTypes)!, af, names[af]) ?? new FlightModel(af, names[af], new List<string>(), new List<(double, double)>()) : null;
     }
 
-    /// <summary>What a flight model gives an aircraft: hardpoints it uses without racks, wheels against the old ones.</summary>
-    public sealed record FlightModelFit(FlightModel Model, List<int> NoRack, double GearDiff, bool SameName, int Shape = 0)
+    /// <summary>
+    /// What a flight model gives an aircraft: hardpoints it uses without racks, mirrored pylons that differ (left ≠ right),
+    /// where the old wheels end up when the aircraft rests on this flight model's wheels (feet, + above the ground,
+    /// − into it; NaN = unknown), hardpoints whose pylon models are not the old ones.
+    /// </summary>
+    public sealed record FlightModelFit(FlightModel Model, List<int> NoRack, List<int> Asymmetric, double NoseGap, double MainGap, List<int> OtherPylons, bool SameName)
     {
-        public string Text => $"{Model.Name}: {Model.Hardpoints} hardpoints with racks" + (Shape == 0 ? " (same layout as the aircraft's pylons)" : " (a different pylon layout)") +
-            (NoRack.Count > 0 ? $", hardpoint(s) {string.Join(", ", NoRack)} used by the aircraft have NO rack group" : ", all the hardpoints the aircraft uses have racks") +
-            $", wheels {Model.Gear} ft" + (double.IsNaN(GearDiff) ? "" : $" ({GearDiff:0.0} ft from the old database's)");
+        /// <summary>The biggest distance of the old wheels from the ground, feet (NaN = unknown).</summary>
+        public double GearDiff => double.IsNaN(NoseGap) ? double.NaN : Math.Max(Math.Abs(NoseGap), Math.Abs(MainGap));
+        public static string Cm(double ft) => Math.Abs(ft) < 0.07 ? "on the ground" : $"{Math.Abs(ft) * 30.48:0} cm {(ft > 0 ? "above" : "into")} the ground";
+        public string Wheels => double.IsNaN(NoseGap) ? "wheels: no comparison" : $"nose wheel {Cm(NoseGap)}, main wheels {Cm(MainGap)}";
+        public string Text => $"{Model.Name}: " +
+            (NoRack.Count > 0 ? $"hardpoint(s) {string.Join(", ", NoRack)} used by the aircraft have NO rack group" : "racks on all the hardpoints the aircraft uses") +
+            (Asymmetric.Count > 0 ? $", left and right pylons differ on {string.Join(", ", Asymmetric)}" : ", left and right alike") +
+            (OtherPylons.Count > 0 ? $", other pylon models than the old database's on {string.Join(", ", OtherPylons)}" : ", the same pylons as the old database") +
+            ", " + Wheels;
     }
 
-    /// <summary>The BMS 4.38 flight models for an aircraft of the source, best first: every hardpoint it uses with a rack
-    /// group, then wheels as tall as its old flight model's; the one of the same name first among equals.</summary>
+    /// <summary>The BMS 4.38 flight models for an aircraft of the source, best first (see <see cref="Fits"/>).</summary>
     public static List<FlightModelFit> FlightModelsFor(SourceDb s, Destination d, BmsDatabase S, int ct) => Fits(s, d, S, ct);
 
     /// <summary>
-    /// The flight model proposed for an aircraft: the one of the same name, unless it leaves hardpoints the aircraft uses
-    /// without racks (then the best one: racks on all of them, wheels closest to the old height).
+    /// The flight model proposed for an aircraft: the one of the same name when it is as good as the best (racks on every
+    /// hardpoint used, left and right alike, wheels on the ground), else the best.
     /// </summary>
     public static FlightModelFit? Proposed(List<FlightModelFit> fits)
     {
+        var best = fits.FirstOrDefault();
         var same = fits.FirstOrDefault(f => f.SameName);
-        if (same != null && same.NoRack.Count == 0) return same;
-        return fits.FirstOrDefault() ?? same;
+        if (same != null && best != null && same.NoRack.Count == 0 && same.Asymmetric.Count == 0 && WheelStep(same) <= WheelStep(best)) return same;
+        return best ?? same;
     }
 
+    private static double WheelStep(FlightModelFit f) => double.IsNaN(f.GearDiff) ? 0 : Math.Round(f.GearDiff / 0.25);
+
+    /// <summary>
+    /// Ranks the flight models: (1) every hardpoint the aircraft uses has a rack group; (2) the pylons of the left and
+    /// the right wing alike (hardpoint 1 ↔ n, 2 ↔ n−1…); (3) the aircraft's own wheels on the ground (the old flight model's
+    /// wheel points, with the aircraft resting on the new one's), in steps of 7–8 cm; (4) most hardpoints with the old
+    /// pylon models; (5) the one of the same name. Flight models are only read, never changed.
+    /// </summary>
     private static List<FlightModelFit> Fits(SourceDb s, Destination d, BmsDatabase S, int ct)
     {
         var used = UsedHardpoints(S, ct);
         var old = SourceFlightModel(s, S, ct);
-        // the aircraft's pylons: how many (the highest hardpoint with a list), left and right in mirror (1 ↔ n, 2 ↔ n-1…)
         int n = 0;
         if (S.EntityOf(ct) is { Table: "VCD" } v)
             for (int i = 1; i < 16; i++) if (v.Int($"WpnOrHpIdx_{i}", 0) > 0) n = i;
-        static string Side(string g) => Regex.Replace(g.ToLowerInvariant(), @"([-_ ]?(l|r|left|right))$", "");
-        // pylon models: a hardpoint group draws a pylon (BmsRack.dat: pylonct > 0) or not (the pylons are part of the
-        // aircraft's 3D model). The old flight model tells what the old 3D model needs on each hardpoint.
         var dPylon = PylonGroups(Path.Combine(d.Theater.ObjectDir, "BmsRack.dat"));
         var sPylon = PylonGroups(Path.Combine(s.Theater.ObjectDir, "BmsRack.dat"));
-        int Shape(FlightModel m)
+        static string Set(Dictionary<string, SortedSet<int>> p, FlightModel m, int h) =>
+            !m.HasGroup(h) ? "" : p.TryGetValue(m.Groups[h], out var x) ? string.Join(",", x) : "?" + m.Groups[h];
+        List<int> Asym(FlightModel m) => Enumerable.Range(1, n / 2)
+            .Where(i => m.HasGroup(i) != m.HasGroup(n + 1 - i) || Set(dPylon, m, i) != Set(dPylon, m, n + 1 - i))
+            .SelectMany(i => new[] { i, n + 1 - i }).ToList();
+        List<int> Other(FlightModel m) => old == null ? new() : used.Where(h => m.HasGroup(h) && Set(dPylon, m, h) != Set(sPylon, old, h)).ToList();
+        (double, double) Gaps(FlightModel m)
         {
-            int bad = Math.Abs(m.Hardpoints - n);
-            if (old != null)
-                foreach (int h in used)
-                    if (old.HasGroup(h) && m.HasGroup(h) && sPylon.TryGetValue(old.Groups[h], out bool op) && dPylon.TryGetValue(m.Groups[h], out bool np) && op != np) bad++;
-            for (int i = 1; i <= n / 2; i++)
-                if (m.HasGroup(i) && m.HasGroup(n + 1 - i) && Side(m.Groups[i]) != Side(m.Groups[n + 1 - i])) bad++;
-            return bad;
+            if (old == null || old.Wheels.Count < 2 || m.Wheels.Count < 2 || m.Wheels[1].X == m.Wheels[0].X) return (double.NaN, double.NaN);
+            var (xn, zn) = m.Wheels[0]; var (xm, zm) = m.Wheels[1];
+            double Ground(double x) => zn + (x - xn) * (zm - zn) / (xm - xn);   // the ground line, body axes (z down)
+            return (Ground(old.Wheels[0].X) - old.Wheels[0].Z, Ground(old.Wheels[1].X) - old.Wheels[1].Z);
         }
-        double Diff(FlightModel m) => old == null || old.GearZ.Count == 0 || m.GearZ.Count == 0 ? double.NaN
-            : m.GearZ.Zip(old.GearZ).Take(2).Sum(p => Math.Abs(p.First - p.Second));
-        return FlightModels(d).Where(m => m.GearZ.Count > 0)
-            .Select(m => new FlightModelFit(m, used.Where(h => !m.HasGroup(h)).ToList(), Diff(m), old != null && m.Name.Equals(old.Name, StringComparison.OrdinalIgnoreCase), Shape(m)))
-            .OrderBy(f => f.NoRack.Count).ThenBy(f => f.Shape).ThenBy(f => double.IsNaN(f.GearDiff) ? 0 : Math.Round(f.GearDiff * 2) / 2).ThenBy(f => f.SameName ? 0 : 1).ThenBy(f => f.GearDiff)
+        return FlightModels(d).Where(m => m.Wheels.Count > 0)
+            .Select(m =>
+            {
+                var (g0, g1) = Gaps(m);
+                return new FlightModelFit(m, used.Where(h => !m.HasGroup(h)).ToList(), Asym(m), g0, g1, Other(m), old != null && m.Name.Equals(old.Name, StringComparison.OrdinalIgnoreCase));
+            })
+            .OrderBy(f => f.NoRack.Count).ThenBy(f => f.Asymmetric.Count).ThenBy(WheelStep).ThenBy(f => f.OtherPylons.Count)
+            .ThenBy(f => f.SameName ? 0 : 1).ThenBy(f => double.IsNaN(f.GearDiff) ? 0 : f.GearDiff)
             .ToList();
     }
 
-    /// <summary>Hardpoint groups of a BmsRack.dat: name → draws a pylon of its own (some pylonct above 0).</summary>
-    private static Dictionary<string, bool> PylonGroups(string rackFile)
+    /// <summary>Hardpoint groups of a BmsRack.dat: name → the pylon models it draws (pylonct above 0; none = no pylon).</summary>
+    private static Dictionary<string, SortedSet<int>> PylonGroups(string rackFile)
     {
-        var res = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        var res = new Dictionary<string, SortedSet<int>>(StringComparer.OrdinalIgnoreCase);
         if (!File.Exists(rackFile)) return res;
-        string? cur = null;
+        SortedSet<int>? cur = null;
         foreach (var raw in File.ReadLines(rackFile, Encoding.Latin1))
         {
             string l = raw.Split('#')[0].Trim();
             if (l.Length == 0) continue;
             var m = Regex.Match(l, @"^definegroup\s+(\S+)", RegexOptions.IgnoreCase);
-            if (m.Success) { cur = m.Groups[1].Value; res[cur] = false; continue; }
+            if (m.Success) { res[m.Groups[1].Value] = cur = new SortedSet<int>(); continue; }
             if (Regex.IsMatch(l, @"^define", RegexOptions.IgnoreCase)) { cur = null; continue; }
             var p = Regex.Match(l, @"^pylonct\s+(\d+)", RegexOptions.IgnoreCase);
-            if (cur != null && p.Success && int.Parse(p.Groups[1].Value, Ci) > 0) res[cur] = true;
+            if (cur != null && p.Success && int.Parse(p.Groups[1].Value, Ci) is > 0 and var ctn) cur.Add(ctn);
         }
         return res;
     }
@@ -445,6 +466,9 @@ public static class UnitsConversion
                 c.Problems.Add($"{p.Name}: hardpoint(s) {string.Join(", ", fit.NoRack)} have no rack group in the flight model {fit.Model.Name}: weapons there hang without pylon or rack" +
                                (best != null ? $" (e.g. '{best.Model.Name}' has racks on all of them: choose it as flight model)" : ""));
             }
+            if (fit.Asymmetric.Count > 0)
+                c.Problems.Add($"{p.Name}: with the flight model {fit.Model.Name} the left and right pylons differ (hardpoints {string.Join(", ", fit.Asymmetric)})" +
+                               (fits.FirstOrDefault(f => f.NoRack.Count == 0 && f.Asymmetric.Count == 0) is { } sym ? $": '{sym.Model.Name}' has them alike" : ""));
         }
 
         var plan = Interchange.MakeEntities(src, dst, d.DataDir, cts, preferDestination: true, modelMap: modelMap, airframeMap: airframes, acdAirframe: acdAirframe);
