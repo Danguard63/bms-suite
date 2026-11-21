@@ -95,6 +95,7 @@ public sealed class DatabasePanel : DockPanel
             ("Check database", CheckDb, "Checks that every link (slots, lists, weapons, units, sensors, CT) points to something that exists"),
             ("Install into BMS…", Install, "Writes the changed tables into the theater (backup of every file replaced, FALCON4.* removed so BMS builds them again)"),
             ("Restore…", RestoreBackup, "Puts back the tables of an earlier installation"),
+            ("Remove a copy…", RestoreDuplicate, "Removes a copy made with Duplicate… (database records, TE line and name)"),
         })
         {
             var b = new Button { Content = t, Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 6, 0), ToolTip = tip };
@@ -281,6 +282,14 @@ public sealed class DatabasePanel : DockPanel
                                  IsEnabled = Directory.Exists(dir), ToolTip = Directory.Exists(dir) ? dir : $"{dir} not found" };
             b.Click += (_, _) => _open3D(dir);
             _detail.Children.Add(b);
+        }
+        if (r.Table == "VCD" && Editable && ct >= 0)
+        {
+            var dup = new Button { Content = "Duplicate…", Padding = new Thickness(10, 3, 10, 3), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 8),
+                ToolTip = "A copy of this vehicle under another name (e.g. 'F-16CM-50 Red' for the other side of a PvP theater): same 3D model, flight model, sensors and weapons, " +
+                          "its own class number, squadron and flight types, TE list line and name. Installed at once with a backup (Restore… removes it)." };
+            dup.Click += (_, _) => Duplicate(r, ct);
+            _detail.Children.Add(dup);
         }
 
         switch (r.Table)
@@ -785,6 +794,53 @@ public sealed class DatabasePanel : DockPanel
             DbDialogs.Report(Owner, "Installed", string.Join("\n", log) + "\n\nStart BMS: it builds FALCON4.* again from the XML. The changes stay in the work folder (History, Changes).");
         }
         catch (Exception ex) { MessageBox.Show(Owner, "Not installed: " + ex.Message, "Install", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
+    private string DuplicateBackups => Path.Combine(_edits!.Folder, "Output", "BmsBackup_duplicates");
+
+    /// <summary>A copy of a vehicle under another name, planned, shown and installed (backup first).</summary>
+    private void Duplicate(DbRecord vcd, int ct)
+    {
+        if (_edits == null || _db == null || _th == null) return;
+        string? name = DbDialogs.Text(Owner, "Duplicate " + vcd.Name, $"Name of the copy of {vcd.Name} (at most {BmsDatabase.MaxName("VCD")} characters, BMS's limit). " +
+                                       "It flies with the same flight model and carries the same weapons; it gets its own squadrons and its own line in the TE.",
+                                       (vcd.Name + " Red").Length <= BmsDatabase.MaxName("VCD") ? vcd.Name + " Red" : vcd.Name, BmsDatabase.MaxName("VCD"));
+        if (name == null) return;
+        string work = Path.Combine(_edits.Folder, "Output", "Duplicate");
+        Interchange.Plan p;
+        try { p = AircraftDuplicate.Make(_th, ct, name, work, _db); }
+        catch (Exception ex) { MessageBox.Show(Owner, "Not made: " + ex.Message, "Duplicate", MessageBoxButton.OK, MessageBoxImage.Error); return; }
+        if (p.Problems.Count > 0) { MessageBox.Show(Owner, string.Join("\n", p.Problems), "Duplicate", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (DbInstaller.BmsRunning()) { MessageBox.Show(Owner, "Falcon BMS is running: close it first.", "Duplicate", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (MessageBox.Show(Owner, string.Join("\n", p.Report) + $"\n\nInstall it into {_th.Name} now? Every file replaced is saved first; Restore… (copies) removes it again.",
+                "Duplicate", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+        try
+        {
+            var log = AircraftDuplicate.Install(p, work, DuplicateBackups);
+            DbDialogs.Report(Owner, "Duplicated", string.Join("\n", p.Report) + "\n\n" + string.Join("\n", log) +
+                             "\n\nStart BMS: it builds FALCON4.* again. In the TE, create a NEW scenario to choose the copy. Campaigns use it through its squadrons (Campaign Editor).");
+            LoadDb();
+        }
+        catch (Exception ex) { MessageBox.Show(Owner, "Not installed: " + ex.Message, "Duplicate", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
+    private void RestoreDuplicate()
+    {
+        if (_edits == null || _th == null) return;
+        var b = Interchange.Backups(DuplicateBackups).Where(x => !x.Dir.EndsWith("_restored", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (b.Count == 0) { MessageBox.Show(Owner, "No copy made yet.", "Restore copies"); return; }
+        int i = DbDialogs.Choose(Owner, "Remove a copy", "Removes what that copy added (database records, TE line, name) and puts back the files it changed. Newest first if there are more.",
+                                 b.Select(x => $"{x.Time:yyyy-MM-dd HH:mm:ss}   {x.Summary}").ToList(), "Remove");
+        if (i < 0) return;
+        if (DbInstaller.BmsRunning()) { MessageBox.Show(Owner, "Falcon BMS is running: close it first.", "Restore", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        try
+        {
+            var log = Interchange.Restore(b[i].Dir);
+            Directory.Move(b[i].Dir, b[i].Dir + "_restored");
+            DbDialogs.Report(Owner, "Removed", string.Join("\n", log));
+            LoadDb();
+        }
+        catch (Exception ex) { MessageBox.Show(Owner, "Not removed: " + ex.Message, "Restore", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
 
     private void RestoreBackup()

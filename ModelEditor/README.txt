@@ -1,8 +1,7 @@
 BMS Model Editor
 ================
 
-3D models of Falcon BMS 4.38 (Data\Terrdata\objects\Models\<number>): a separate program, independent of the
-Object Editor and of the Campaign Editor (their 3D view and texture windows stay where they are).
+3D models of Falcon BMS 4.38 (Data\Terrdata\objects\Models\<number>), their textures, and the theater's database.
 
   List (left)          aircraft, helicopters, ground vehicles, ships and weapons from the BMS database
                        (Falcon4_CT / VCD / WCD), or every model folder by number. Search by name or model number.
@@ -20,9 +19,16 @@ Object Editor and of the Campaign Editor (their 3D view and texture windows stay
                        and numbered textures are looked for in BMS too. Save in the Parent.dat tab writes in that folder.
   Check all models...  checks every model folder and lists the problems; double-click opens the model;
                        Export... writes a tab separated text file.
+  Textures...          textures of aircraft, helicopters, vehicles and ships with their liveries: replace a texture (the old
+                       one is kept: Backups in that window), 3D preview. Also: run.bat --textures <model number>.
+  Database (tab)       the theater's Falcon4_*.xml as the BMS Editor shows them; changes kept in the work folder until
+                       Install into BMS (backup, Restore). On a vehicle: Duplicate... makes a copy under another name
+                       (e.g. "F-16CM-50 Red" for the other side of a PvP theater): same 3D model, flight model (only
+                       referred to), sensors and weapons; its own class number, squadron and flight types, TE line and
+                       name. Installed at once with a backup; "Remove a copy..." takes it away.
   Backups...           every file changed by the Model Editor, with Restore.
 
-Everything is read only except "Save" in the Parent.dat tab. Before changing files inside BMS make a backup of
+Nothing is written into BMS except by "Save" (Parent.dat tab), Textures (Replace), Database (Install into BMS, Duplicate). Before changing files inside BMS make a backup of
 your BMS Data folder.
 
 Data\DOF.xml and Data\switch.xml (names of DOFs and switches) come from the official BMS Blender exporter

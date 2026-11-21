@@ -112,16 +112,17 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <tr><td>Model Editor</td><td>3D models with a DirectX view (PBR materials, normal maps, shadows), DOFs, switches, weapon slots, <code>Parent.dat</code> checks, and the theater database (aircraft, vehicles, weapons, sensors...).</td></tr>
     <tr><td>Database Interchange</td><td>Copies bases, ground objective layouts, aircraft, vehicles and weapons from one BMS 4.38 theater to another with everything they need, renumbered for the destination.</td></tr>
     <tr><td>4.37 Units Converter</td><td>Converts aircraft, helicopters, vehicles and weapons of an old BMS database (a 4.37 installation, an add-on or just its objects folder) into a theater of BMS 4.38: 3D models, hardpoint lists, weapons, squadron types, the TE list and the names, with backup and restore.</td></tr>
-    <tr><td>Sim Editor</td><td>For a theater made with TerrainTool: its own Sim files (SimOverrides), the database changes (<code>DbEdits.txt</code>) and the check of the air defence systems in its campaigns.</td></tr>
+    <tr><td>Sim Editor</td><td>Any add-on theater installed in BMS, or a TerrainTool project: its own Sim files (missiles, radars, vehicles, AI-only aircraft), the database changes (<code>DbEdits.txt</code>) and the check of the air defence systems in its campaigns.</td></tr>
   </table>
   <div class="keep"><h2>Three rules behind every program</h2>
   <ol>
     <li><b>BMS is read, not changed, while you work.</b> Your edits are kept in the program's own work folder. Only the <b>Install</b> (or <b>Save</b> into BMS) step writes into the BMS folders, and only after you confirm.</li>
     <li><b>Every file that is replaced is saved first.</b> Each program keeps its backups and has a <b>Restore</b> that puts the old files back. The main menu lists all backups.</li>
+    <li><b>Each program finishes its own job.</b> What a program changes, it also installs into BMS, with what depends on it (Objective Studio installs the objects <i>and</i> the campaign files that follow them; the Sim Editor builds the theater's Sim and installs it). You open another program only to do another kind of work.</li>
     <li><b>The Korea originals are never touched.</b> The Korea art (<code>Data\Art</code>) and the shared objects folder of BMS (<code>Data\Terrdata\objects</code>) are only read: they are the master copies every theater falls back on. The only exception is the 4.37 Units Converter, which <i>adds</i> an old add-on's own 3D models and textures there with free numbers (nothing is replaced, and its Restore removes them).</li>
   </ol></div>
   <div class="keep"><h2>How the programs fit together</h2>
-  <p>The four programs of <b>Build a theater</b> follow the order in which a theater is made: the terrain first (TerrainTool), then the objectives on it (Objective Studio), the interface art (Art Editor) and finally the campaigns that use all of them (Campaign Editor). <b>Model Editor</b> and <b>Database Interchange</b> work on any theater at any time; <b>Sim Editor</b> works on a TerrainTool project.</p></div>
+  <p>The four programs of <b>Build a theater</b> follow the order in which a theater is made: the terrain first (TerrainTool), then the objectives on it (Objective Studio), the interface art (Art Editor) and finally the campaigns that use all of them (Campaign Editor). <b>Model Editor</b>, <b>Database Interchange</b> and <b>Sim Editor</b> work on any theater at any time.</p></div>
   <p>You do not have to build a theater from scratch to use the suite: every program also opens a theater that is already installed in BMS (Korea, Israel, any add-on) to change it.</p>
 </section>
 
@@ -242,7 +243,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <p><b>2D map</b> makes the theater map BMS shows in Instant Action, TE and campaign from the satellite colour map; <b>Objects &amp; campaigns</b> converts the objects and campaigns of an old add-on; <b>UI art</b> prepares the art (then refined in the Art Editor). The theater's own Sim files, the database changes and the SAM check are in the <b>Sim Editor</b> (chapter 12, button <b>Sim Editor</b> at the top of TerrainTool).</p>
   <div class="keep"><h2>8 · Build theater</h2>
   <figure><img src="shots/17_tt_build.jpg"><figcaption><b>Figure 5.8</b> The state of every part of the theater and the theater definition (.tdf) of the build.</figcaption></figure></div>
-  <p>The table says which parts are ready and which are missing, with a button to go where each one is made. <b>Build theater</b> puts everything together in <code>Output\Install</code> and writes a new theater definition. Nothing is written into BMS here.</p>
+  <p>The table says which parts are ready and which are missing, with a button to make or edit each one. <b>Build theater</b> puts everything together in <code>Output\Install</code> and writes a new theater definition; when the objects are not made yet it runs <b>Objects</b> first, and the objectives moved, turned, replaced or removed go into the campaign files. Nothing is written into BMS here.</p>
   <div class="keep"><h2>9 · Install into BMS</h2>
   <figure><img src="shots/18_tt_install.jpg"><figcaption><b>Figure 5.9</b> Install, go back, check.</figcaption></figure></div>
   <p><b>Install everything...</b> copies the built theater into BMS (only new or changed files; every replaced file is first saved in <code>Output\BmsBackup</code>). The other buttons install one part at a time: terrain and water maps, photoreal tiles, objects and campaigns, UI art, theater Sim. <b>Restore a backup...</b> puts back the files saved before an installation; <b>Remove from BMS's theater list...</b> hides the theater from BMS; <b>Check the terrain installed in BMS</b> verifies the installed files.</p>
@@ -260,9 +261,9 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <ol class="steps">
     <li><b>Edit objectives</b> – <b>Objective editor...</b> (the map, Figure 6.3), <b>Fly over objectives...</b> (a 3D flight over the objectives one after the other) and <b>Optimize bridges...</b> (moves bridge points where they open the river crossings for ground units). Edits are saved in the work folder.</li>
     <li><b>Build objects</b> – applies your saved edits to a copy of the theater's objects in the work folder. Nothing else is changed.</li>
-    <li><b>Install into BMS</b> – copies into the theater's folders only the built files that changed; every replaced file is saved first. <b>Restore a backup...</b> puts them back. The campaign files are updated to the new objectives at the same time.</li>
+    <li><b>Install into BMS</b> – copies into the theater's folders only the built files that changed; every replaced file is saved first. <b>Restore a backup...</b> puts them back. The campaign files are updated to the new objectives and installed at the same time (also for a TerrainTool project): nothing to finish in the Campaign Editor.</li>
   </ol></div>
-  <p><b>Other tools:</b> <b>Model textures...</b> (the textures of a 3D model) and <b>Open output folder</b>.</p>
+  <p><b>Other tools:</b> <b>Layouts from another theater...</b> (installed theaters: bases and ground objective layouts of another theater copied into this one with their pieces and 3D models, backup and <b>Restore...</b>; then <b>Replace base...</b> / <b>Replace layout</b> offer them), <b>Campaign Editor</b> (projects, to edit the campaign itself) and <b>Open output folder</b>. The textures of 3D models are in the Model Editor.</p>
   <div class="keep"><h2>Objective editor</h2>
   <figure><img src="shots/22_os_editor.jpg"><figcaption><b>Figure 6.3</b> Kuwait International selected: its layout, the runway protractor and the extended runway axis on the satellite photo.</figcaption></figure></div>
   <p>On the left, the list of objectives (filter by type, search by name, <b>Only edited</b>); below, the data of the selected objective and the editing buttons. On the right, the map with the pieces of every layout drawn over the ground photo. The checkboxes at the top show or hide buildings, taxiways, parking and defence points, names, links, hierarchy, BMS water and the protractor.</p>
@@ -279,7 +280,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <p>Other buttons: <b>Convert to junction</b>, <b>Replace base...</b> (below), <b>Replace layout...</b>, <b>Turn 180°</b> (puts the buildings on the other side of the runway), <b>Back to its own base</b>, <b>Pieces...</b> (every piece of the layout, with the piece inspector), <b>Runways, points &amp; areas...</b> (runway, taxi, parking and defence point lists), <b>Fly over...</b>.</p>
   <div class="keep"><h2>Replace base</h2>
   <figure><img src="shots/23_os_replacebase.jpg"><figcaption><b>Figure 6.4</b> The bases that can replace the selected airbase, most similar first. Click a column header to sort.</figcaption></figure></div>
-  <p>Puts a complete base on the airbase: one of the BMS 4.38 Korea bases (with its taxiway asphalt model) or a base of this theater, including those imported with Database Interchange. <b>Distance</b> says how far its runways are from the current ones (centres, angle, length). Filter by <b>Source</b> (All, Korea 4.38, This theater), <b>Find</b> by name or OCD number (an exact OCD number shows the base even if the filters would hide it), <b>Military bases only</b>, <b>Also bases with a different number of runways</b>, <b>Only bases that keep their original runway</b>. The selected base appears on the map right away: check it on the photo, then <b>OK</b>.</p>
+  <p>Puts a complete base on the airbase: one of the BMS 4.38 Korea bases (with its taxiway asphalt model) or a base of this theater, including those brought with <b>Layouts from another theater...</b>. <b>Distance</b> says how far its runways are from the current ones (centres, angle, length). Filter by <b>Source</b> (All, Korea 4.38, This theater), <b>Find</b> by name or OCD number (an exact OCD number shows the base even if the filters would hide it), <b>Military bases only</b>, <b>Also bases with a different number of runways</b>, <b>Only bases that keep their original runway</b>. The selected base appears on the map right away: check it on the photo, then <b>OK</b>.</p>
   <div class="keep"><h2>3D preview</h2>
   <figure><img src="shots/24_os_3d.jpg"><figcaption><b>Figure 6.5</b> The airbase in 3D on the ground photo, with the leveled area as in BMS.</figcaption></figure></div>
   <p>Move with <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span>, <span class="kbd">R</span>/<span class="kbd">F</span> up and down, arrows to turn, wheel or <span class="kbd">+</span>/<span class="kbd">−</span> to get closer; left drag orbits, right drag pans; <span class="kbd">Home</span> goes back to the objective. Options: <b>Area</b>, <b>Relief ×3</b>, <b>Ground photo</b>, <b>Night</b>, <b>Water (BMS)</b>, <b>Edit pieces</b> (select a piece and move it with the arrows).</p>
@@ -327,7 +328,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <h1><span class="num">8</span>Campaign Editor</h1>
   <p>The Campaign Editor opens the campaigns (<code>.cam</code>) and Tactical Engagements (<code>.tac</code>) of any installed theater, or of a TerrainTool project.</p>
   <figure><img src="shots/40_ce_start.jpg"><figcaption><b>Figure 8.1</b> The start window: TerrainTool projects and BMS theaters on the left, their campaign and TE files on the right. Green = saved by the editor, orange = units still to convert.</figcaption></figure>
-  <p>Double-click a file (or <b>Open in the campaign editor</b>). <b>Empty editor</b> opens without a file. For a project: <b>Apply object changes</b> brings the campaign up to date with the objectives edited in Objective Studio, <b>Install campaign files into BMS...</b> copies them into the add-on, <b>Campaign terrain (.thr)...</b> opens the terrain window (Figure 8.6).</p>
+  <p>Double-click a file (or <b>Open in the campaign editor</b>). <b>Empty editor</b> opens without a file. <b>Install campaign files into BMS...</b> copies the saved files into the theater's Campaign folder (every replaced file kept in Backup; for a TerrainTool project, the object changes of Run Objects are written in first; BMS's own <code>Data\Campaign</code> is never written). For a project <b>Apply object changes</b> does only that step. <b>Campaign terrain (.thr)...</b> opens the terrain window (Figure 8.6).</p>
   <div class="keep"><h2>The editor window</h2>
   <figure><img src="shots/41_ce_main.jpg"><figcaption><b>Figure 8.2</b> <code>save0.cam</code> of the Mideast: lists on the left, map in the centre, properties and map legend on the right, validation at the bottom.</figcaption></figure></div>
   <ul>
@@ -383,6 +384,10 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <div class="keep"><h2>Database</h2>
   <figure><img src="shots/53_me_db.jpg"><figcaption><b>Figure 9.4</b> The theater's database: categories on the left, records in the centre, the selected record on the right with links to the records it uses.</figcaption></figure></div>
   <p>Categories: aircraft &amp; helicopters, ground vehicles, ships, submarines, weapons, hardpoint lists, weapon sim data, rocket pods, units, squadron stores, aircraft data, radars, IR sensors, RWR, visual sensors, features, objective types, class table, DDP. Blue names are links to the record they point to (<b>Back</b> returns). Changes are kept in the work folder (<b>Changes...</b>, <b>History...</b>) until <b>Install into BMS...</b>; <b>Check database</b> looks for broken references, <b>Restore...</b> undoes an installation.</p>
+  <div class="keep"><h2>Duplicate an aircraft or vehicle</h2>
+  <p>On a vehicle record, <b>Duplicate...</b> makes a copy under another name, for example <b>F-16CM-50 Red</b> next to the F-16CM-50 of the other side of a PvP theater: same 3D model, same flight model (only referred to, never copied), same sensors and weapons; its own class number (BMS tells aircraft apart by it), a copy of its squadron and flight types, a line in the theater's TE list and its name in the theater's interface files. It is installed at once with a backup; <b>Remove a copy...</b> takes it away again. When TerrainTool installs the theater's objects again, the copies are made again. Not for theaters that use BMS's own database.</p></div>
+  <div class="keep"><h2>Textures</h2>
+  <p><b>Textures...</b> shows the textures of aircraft, helicopters, vehicles and ships with their liveries; a texture can be replaced (the old one is kept: <b>Backups...</b>) and checked in 3D. The Campaign Editor's 3D view opens it on the model shown.</p></div>
   <div class="keep"><h2>Check all models</h2>
   <p>Checks every model folder (LOD files, DOF and switch numbers, slots, liveries, textures, radius) and lists the problems; double-click opens the model; <b>Export...</b> writes a tab-separated file.</p></div>
 </section>
@@ -423,15 +428,14 @@ td:first-child { white-space: nowrap; font-weight: 600; }
 <!-- ───────────── 12 ───────────── -->
 <section class="chapter">
   <h1><span class="num">12</span>Sim Editor</h1>
-  <p>The Sim Editor works on a TerrainTool project (it opens on the project from the <b>Sim Editor</b> button of TerrainTool, or asks for it: <b>Recent projects</b> → <b>Open</b>, or <b>Browse project...</b>). Everything it changes goes into the theater with <b>Run Objects</b> (Objective Studio) and <b>Build theater</b> (TerrainTool), then the install: BMS's own files are never changed.</p>
+  <p>The Sim Editor works on a <b>theater installed in BMS</b> (any add-on: it opens on the theater chosen in the main menu, or asks for it) or on a <b>TerrainTool project</b>. BMS is only read while you work: your files stay in the work folder until <b>Install into BMS...</b>, which saves every file it replaces (<b>Restore...</b>). BMS's own <code>Data\Sim</code> and BMS's own theaters are never changed.</p>
   <div class="keep"><h2>The theater's own Sim</h2>
   <ul>
-    <li><b>Copy a BMS Sim file to SimOverrides...</b>: pick files of BMS <code>Data\Sim</code> (for example <code>Misdata\SA-2F.dat</code>); they are copied into the project's <code>SimOverrides</code> folder with the same path. Edit them there (<b>Open SimOverrides</b>). In <code>Acdata</code> only the flight models of AI-only aircraft can be copied and edited; those of the aircraft flyable in BMS (and <code>AcTypes.lst</code>) are not listed: they stay BMS's, as the BMS developers ask.</li>
-    <li>The line under the buttons says whether the theater has its own Sim and which files it changes. <b>Build theater</b> makes <code>NT\Sim</code> = a full copy of BMS <code>Data\Sim</code> plus your files.</li>
-    <li><b>Install theater Sim into BMS...</b> (BMS closed) copies it into the theater's folder and sets <code>simdatadir</code> in its <code>.tdf</code>; replaced files are saved in <code>Output\BmsBackup</code>. The same button is in TerrainTool, tab 9.</li>
+    <li><b>Sim files</b> tab: the Sim files (missiles, radars, vehicles, bombs, flight models of AI-only aircraft) as tables of values next to the theater's value. The first save makes the theater's copy (<code>SimOverrides</code> of the work folder). <b>Copy a BMS Sim file to SimOverrides...</b> does it for whole files. In <code>Acdata</code> only the flight models of AI-only aircraft are listed; those of the aircraft flyable in BMS (and <code>AcTypes.lst</code>) stay BMS's, as the BMS developers ask.</li>
+    <li><b>Install into BMS...</b> (BMS closed): an installed theater gets the changed files in its own Sim folder (the first time a copy of BMS <code>Data\Sim</code> is made for it and <code>simdatadir</code> is set in its <code>.tdf</code>); a TerrainTool project gets its Sim made again (BMS <code>Data\Sim</code> + your files) and installed. <b>Restore...</b> (installed theater) puts the theater back.</li>
   </ul></div>
   <div class="keep"><h2>Database changes (DbEdits.txt)</h2>
-  <p>On the right, one change per line: <code>TABLE Num Field Value  # comment</code> (for example <code>UCD 161 ElementCount_1 3</code>), or <code>COPY TABLE From To</code> for a new record with the next free number. <b>Save</b> checks the format first; <b>Reload</b> reads the file again. They are applied by Run Objects on top of BMS's database, so they survive BMS updates. A <code>COPY</code> onto a number that a newer BMS uses stops Run Objects with the next free number to use.</p></div>
+  <p>On the right, one change per line: <code>TABLE Num Field Value  # comment</code> (for example <code>UCD 161 ElementCount_1 3</code>), or <code>COPY TABLE From To</code> for a new record with the next free number. <b>Save</b> checks the format first; <b>Reload</b> reads the file again. <b>Install into BMS...</b> puts them into the theater's database: an installed theater gets them directly (a record already copied is not copied twice); for a TerrainTool project the objects are built again with them (as Run Objects) and installed with the campaign files, so they survive BMS updates.</p></div>
   <div class="keep"><h2>Check SAM systems &amp; positions</h2>
   <p>Reads the theater database (with DbEdits.txt, also the changes not saved yet), the Sim radar data and every campaign and TE of the project. The upper list shows each air defence battalion type: launchers, missiles each, missile, radars, rate of fire, the points it needs and how many battalions the campaigns have. Select a row to see its battalions below, with the point list BMS gives each one on its objective and whether all vehicles fit. <b>All SAM types</b> shows also the types not used; <b>Only problems</b> keeps the battalions with vehicles off the base points.</p></div>
 </section>
@@ -449,8 +453,8 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   </ol></div>
   <div class="keep"><h2>B. Bring a base from another theater</h2>
   <ol class="steps">
-    <li><b>Database Interchange</b>: From the source theater, To yours; select the layout; <b>Make plan</b>; read it; <b>Install into the destination...</b>.</li>
-    <li><b>Objective Studio</b> on your theater: <b>Replace base...</b> on the airbase, Source <b>This theater</b>, choose the imported base, <b>OK</b>, <b>Save edits</b>.</li>
+    <li><b>Objective Studio</b> on your theater: <b>Layouts from another theater...</b>, choose the theater and the layout, <b>Check</b>, <b>Bring them into this theater...</b>.</li>
+    <li><b>Objective editor...</b>: <b>Replace base...</b> on the airbase, Source <b>This theater</b>, choose the base brought in, <b>OK</b>, <b>Save edits</b>.</li>
     <li><b>Build objects</b>, <b>Install into BMS...</b>.</li>
   </ol></div>
   <div class="keep"><h2>C. New art for a theater</h2>
@@ -471,8 +475,14 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <li><b>TerrainTool</b> → <b>New project...</b>: choose the area on the world map, size and name (tab 1); check the airbases (tab 2).</li>
     <li>Download the data (tab 3) and process it, first at a test size (tab 4).</li>
     <li>Run Terrain Builder on <code>Output\TB_Input</code>, then make the terrain files (tab 5) and check them (tab 6).</li>
-    <li>Objects in <b>Objective Studio</b> (Open TerrainTool project...), art in the <b>Art Editor</b>, campaigns in the <b>Campaign Editor</b>, the 2D map in tab 7.</li>
+    <li>Objects in <b>Objective Studio</b> (Open TerrainTool project...; <b>Build theater</b> also runs Objects if they are not made yet), art in the <b>Art Editor</b>, campaigns in the <b>Campaign Editor</b>, the 2D map in tab 7.</li>
     <li><b>Build theater</b> (tab 8) and <b>Install everything...</b> (tab 9).</li>
+  </ol></div>
+  <div class="keep"><h2>F. The same aircraft for both sides (PvP)</h2>
+  <ol class="steps">
+    <li><b>Model Editor</b> → <b>Database</b> tab, the PvP theater → Aircraft → the F-16CM-50 → <b>Duplicate...</b> → name <b>F-16CM-50 Red</b> → read the plan → OK (BMS closed).</li>
+    <li>Do the same for the other blocks you need (F-16 Block 30, 40, 52…).</li>
+    <li><b>Campaign Editor</b>: give the red squadrons the copies (Squadrons), the blue ones the originals. In the TE the copies are in the aircraft list under their new names (create a NEW scenario).</li>
   </ol></div>
   <p>Every button of these workflows, in order: chapter 14 (a new area) and chapter 15 (converting a 4.37 add-on).</p>
 </section>

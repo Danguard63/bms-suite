@@ -388,6 +388,14 @@ public sealed class BmsInstaller
             }
             catch (Exception ex) when (ex is IOException or InvalidOperationException or InvalidDataException or System.Xml.XmlException)
             { log("  4.37 Units Converter: the converted aircraft and vehicles were NOT converted again: " + ex.Message + " (open the Units Converter and convert them again)"); }
+            // the copies of aircraft made in the Model Editor (Duplicate…)
+            try
+            {
+                foreach (var l in Database.AircraftDuplicate.Reapply(DataDir, ObjectsTarget, Path.Combine(_p.ProjectFolder, "Output", "Duplicates"),
+                                                                       Path.Combine(_p.ProjectFolder, "Output", "BmsBackup", "Duplicates"))) log("  " + l);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or InvalidDataException or System.Xml.XmlException)
+            { log("  Copies of aircraft NOT made again: " + ex.Message); }
         }
         if (Campaign)
         {
@@ -427,7 +435,8 @@ public sealed class BmsInstaller
         }
         // the 4.37 Units Converter's lists (what was converted into the theater) stay: Run converts it again from them
         var converter = Directory.Exists(ObjectsTarget)
-            ? Directory.EnumerateFiles(ObjectsTarget, "UnitsConverter*.csv").ToDictionary(f => Path.GetFileName(f), File.ReadAllBytes)
+            ? Directory.EnumerateFiles(ObjectsTarget, "UnitsConverter*.csv").Append(Path.Combine(ObjectsTarget, Database.AircraftDuplicate.StateFile)).Where(File.Exists)
+                .ToDictionary(f => Path.GetFileName(f), File.ReadAllBytes)
             : new Dictionary<string, byte[]>();
         if (Directory.Exists(ObjectsTarget)) { Delete(ObjectsTarget); log($"  Deleted {ObjectsTarget}"); }
         int no = CopyTree(Path.Combine(Source, "Terrdata", ObjectsJob.FolderName), ObjectsTarget);

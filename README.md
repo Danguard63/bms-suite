@@ -13,7 +13,7 @@ One main menu (`BMSSuite.exe`) starts every program on the theater you are worki
 | **Objective Studio** | Objectives of a theater: airbases and layouts, pieces, parking, bridges, coastal moves; builds and installs the objects with a backup. |
 | **Art Editor** | User interface art: flags, menu backgrounds, banners, campaign pictures, small maps, patches, fonts, sounds, texts. |
 | **Campaign Editor** | Campaigns (.cam) and Tactical Engagements (.tac): units, squadrons, objectives, priorities, stations, theater cells. |
-| **Model Editor** | 3D models: DirectX view with PBR materials, DOFs, switches, slots, Parent.dat checks. |
+| **Model Editor** | 3D models: DirectX view with PBR materials, DOFs, switches, slots, Parent.dat checks; textures; the theater's database, with Duplicate for a copy of an aircraft under another name (PvP sides). |
 | **Database Interchange** | Copies bases and objective layouts, aircraft, helicopters, vehicles, ships, weapons and unit types from one theater to another, renumbered for the destination. |
 
 ## Download and install

@@ -146,7 +146,7 @@ public static class UnitsConversion
     private static string BmsObjects(Destination d) => Path.Combine(d.DataDir, "Terrdata", "objects");
 
     /// <summary>The interface art the theater has of its own (artdir of its .tdf), or null when it uses BMS's (Data\Art).</summary>
-    private static string? OwnArtRoot(Destination d)
+    internal static string? OwnArtRoot(Destination d)
     {
         string a = d.Theater.ArtDir;
         if (a.Length == 0 || Same(a, d.DataDir) || Same(a, Path.Combine(d.DataDir, "Art"))) return null;
@@ -717,7 +717,7 @@ public static class UnitsConversion
     /// Names of the TE list in the theater's own interface files (artdir\Art\Main\textids.id and units.irc): BMS's files
     /// with the new names added. Only for a theater with its own artdir; BMS's Data\Art is never changed.
     /// </summary>
-    private sealed class UiNames
+    internal sealed class UiNames
     {
         private readonly string _ids, _irc;
         private string _idsText, _ircText;

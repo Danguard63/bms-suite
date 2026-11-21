@@ -205,6 +205,24 @@ public static class DbDialogs
         w.ShowDialog();
     }
 
+    /// <summary>Ask a text (a name); null = cancelled.</summary>
+    public static string? Text(Window? owner, string title, string prompt, string value, int maxLength)
+    {
+        var w = Win(owner, title, 480, 200);
+        var tb = new TextBox { Text = value, MaxLength = maxLength, Margin = new Thickness(0, 6, 0, 0) };
+        var ok = Btn("OK", true); var cancel = Btn("Cancel"); cancel.IsCancel = true;
+        string? res = null;
+        ok.Click += (_, _) => { if (tb.Text.Trim().Length > 0) { res = tb.Text.Trim(); w.DialogResult = true; } };
+        var bar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 10, 0, 0) };
+        bar.Children.Add(ok); bar.Children.Add(cancel);
+        var sp = new StackPanel { Margin = new Thickness(12) };
+        sp.Children.Add(new TextBlock { Text = prompt, TextWrapping = TextWrapping.Wrap });
+        sp.Children.Add(tb); sp.Children.Add(bar);
+        w.Content = sp;
+        w.Loaded += (_, _) => { tb.Focus(); tb.SelectAll(); };
+        return w.ShowDialog() == true ? res : null;
+    }
+
     /// <summary>Choose an item of a list of texts (history versions, backups); returns its index or -1.</summary>
     public static int Choose(Window? owner, string title, string note, IList<string> items, string okText)
     {
