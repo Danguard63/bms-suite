@@ -82,7 +82,12 @@ internal static class SuiteTheme
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((s, e) =>
             {
                 if (s is not Window w || !ReferenceEquals(e.OriginalSource, w)) return;
-                if (w.Owner == null && w is not SuiteMessageBox.Dialog) SetHeader(w, true);
+                if (w.Owner == null && w is not SuiteMessageBox.Dialog)
+                {
+                    // the strip shows the window's icon: a window without one of its own takes the program's
+                    if (w.Icon == null && ProgramIcon() is { } icon) w.Icon = icon;
+                    SetHeader(w, true);
+                }
                 if (w is not SuiteMessageBox.Dialog && (w.SizeToContent & SizeToContent.Width) == 0) FoldHelp(w, 0);
             }));
         }
@@ -146,6 +151,28 @@ internal static class SuiteTheme
         }
         foreach (var child in LogicalTreeHelper.GetChildren(o))
             if (child is DependencyObject d) FoldHelp(d, depth + 1);
+    }
+
+    private static ImageSource? _icon;
+    private static bool _iconRead;
+
+    /// <summary>The icon of the program's exe (the one Windows shows in the title bar), or null.</summary>
+    private static ImageSource? ProgramIcon()
+    {
+        if (_iconRead) return _icon;
+        _iconRead = true;
+        try
+        {
+            if (Environment.ProcessPath is { } exe && System.Drawing.Icon.ExtractAssociatedIcon(exe) is { } ico)
+                using (ico)
+                {
+                    var bmp = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(ico.Handle, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+                    bmp.Freeze();
+                    _icon = bmp;
+                }
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or ArgumentException or System.Runtime.InteropServices.ExternalException or InvalidOperationException) { }
+        return _icon;
     }
 
     private static Style Simple(Type t, params (DependencyProperty P, object V)[] setters)
