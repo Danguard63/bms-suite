@@ -154,7 +154,12 @@ public sealed class MainWindow : Window
         _grid.SelectionChanged += (_, _) => Invalidate();
         _plan.Click += (_, _) => MakePlan();
         _install.Click += (_, _) => Install();
-        Loaded += (_, _) => LoadTheaters();
+        // the window shows at once; the theaters (and their databases) are read right after, not before it appears
+        Loaded += (_, _) =>
+        {
+            _status.Text = "Reading the theaters of BMS…";
+            Dispatcher.BeginInvoke(new Action(LoadTheaters), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        };
     }
 
     private static void Save(string name, string? value)
@@ -247,6 +252,9 @@ public sealed class MainWindow : Window
         }
     }
 
+    /// <summary>What to look at before installing: the problems, and the pieces that keep the destination's own 3D model.</summary>
+    private static int ToCheck(Interchange.Plan p) => p.Problems.Count + p.Report.Count(l => l.Contains("may look different", StringComparison.Ordinal));
+
     private void Invalidate()
     {
         _sum.Children.Clear();
@@ -286,7 +294,7 @@ public sealed class MainWindow : Window
             }
             Summary(_sum, ($"{p.OcdMap.Count}", "layout(s)", false), ($"{p.Records.Count}", "new records", false),
                     ($"{p.FeatureCtMap.Count(kv => kv.Key == kv.Value)}", "pieces reused", false), ($"{p.Files.Count}", "files", false),
-                    ($"{p.Problems.Count}", "to check", p.Problems.Count > 0));
+                    ($"{ToCheck(p)}", "to check", ToCheck(p) > 0));
             _report.Text = string.Join("\n", lines);
             _install.IsEnabled = _current != null && p.OcdMap.Count > 0;
             _status.Text = _install.IsEnabled ? "Plan ready: read it, then Install." : "Nothing to install.";
@@ -457,7 +465,7 @@ public sealed class MainWindow : Window
             _eReport.Text = string.Join("\n", lines);
             Summary(_eSum, ($"{cts.Count}", "item(s)", false), ($"{added.Count}", "new records", false), ($"{replaced.Count}", "replaced", replaced.Count > 0),
                     ($"{p.Conflicts.Count}", "same name, other values", p.Conflicts.Count > 0), ($"{p.Files.Count}", "files", false),
-                    ($"{p.Problems.Count}", "to check", p.Problems.Count > 0));
+                    ($"{ToCheck(p)}", "to check", ToCheck(p) > 0));
             _eInstall.IsEnabled = _eCurrent != null && (p.Records.Count > 0 || p.Files.Count > 0);
             _eChoices.IsEnabled = _eCurrent != null && p.Conflicts.Count > 0;
             _status.Text = _eInstall.IsEnabled ? "Plan ready: read it, then Install." : "Nothing to install.";

@@ -87,6 +87,7 @@ internal static class SuiteTheme
                     // the strip shows the window's icon: a window without one of its own takes the program's
                     if (w.Icon == null && ProgramIcon() is { } icon) w.Icon = icon;
                     SetHeader(w, true);
+                    FitWideScreen(w);
                 }
                 if (w is not SuiteMessageBox.Dialog && (w.SizeToContent & SizeToContent.Width) == 0) FoldHelp(w, 0);
             }));
@@ -158,6 +159,22 @@ internal static class SuiteTheme
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool DestroyIcon(IntPtr icon);
 
+    /// <summary>
+    /// A window that opens maximized on a very wide screen (21:9 and wider) is hard to read from side to side: there it
+    /// opens as tall as the screen and 16:9 wide, in the middle. The person can still maximize it.
+    /// </summary>
+    private static void FitWideScreen(Window w)
+    {
+        var area = SystemParameters.WorkArea;
+        if (w.WindowState != WindowState.Maximized || area.Height < 1 || area.Width < area.Height * 2.1) return;
+        double width = Math.Round(Math.Min(area.Width, area.Height * 16 / 9));
+        w.WindowState = WindowState.Normal;
+        w.Width = Math.Max(w.MinWidth, width);
+        w.Height = Math.Max(w.MinHeight, area.Height);
+        w.Left = area.Left + (area.Width - w.Width) / 2;
+        w.Top = area.Top;
+    }
+
     private static ImageSource? _icon;
     private static bool _iconRead;
 
@@ -200,7 +217,7 @@ internal static class SuiteTheme
     {
         private static readonly string[] Words = { "Install", "Restore", "Remove", "Delete" };
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-            value is string s && Words.Any(w => s.StartsWith(w, StringComparison.Ordinal));
+            value is string s && Words.Any(w => s.StartsWith(w, StringComparison.Ordinal)) && !s.Contains("from the list", StringComparison.Ordinal);
         public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => Binding.DoNothing;
     }
 
