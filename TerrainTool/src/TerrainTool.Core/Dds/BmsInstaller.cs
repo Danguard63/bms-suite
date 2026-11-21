@@ -342,8 +342,8 @@ public sealed class BmsInstaller
         lines.Add("");
         lines.Add(Sim ? "Nothing else in BMS is touched (no Korea, no theater.lst, no Data\\Sim; only the simdatadir line of the _NT.tdf)."
                       : "Nothing else in BMS is touched (no Korea, no theater.lst, no .tdf).");
-        if (Objects && File.Exists(Path.Combine(_p.ProjectFolder, "Output", "Install", Database.AddOnModels.FilesFile)))
-            lines.Add(@"The old add-on's own 3D models chosen in Database Interchange are ADDED to BMS's Terrdata\objects (Models, KoreaObj): nothing of BMS is replaced; the list is kept in Output\BmsBackup\" + Database.AddOnModels.ManifestFile + ".");
+        if (Objects && File.Exists(Path.Combine(ObjectsTarget, Database.UnitsConversion.PicksFile)))
+            lines.Add("The aircraft and vehicles converted into this theater with the 4.37 Units Converter are converted again after the new database is installed (its own backup first).");
         if (Objects) lines.Add("If Objects moved bases, install the campaign files too (Campaign Editor) and create a NEW TE scenario.");
         return string.Join("\n", lines);
     }
@@ -352,7 +352,17 @@ public sealed class BmsInstaller
     {
         if (Problems.Count > 0) throw new InvalidOperationException(string.Join("\n", Problems));
         if (Objects) RunObjects(log);
-        if (Objects) foreach (var l in Database.AddOnModels.Install(_p.ProjectFolder, Path.Combine(DataDir, "Terrdata", "objects"))) log(l);
+        if (Objects)
+        {
+            // the 4.37 Units Converter's conversions (the theater's picks file, kept from the database just replaced)
+            try
+            {
+                foreach (var l in Database.UnitsConversion.Reapply(DataDir, ObjectsTarget, Path.Combine(_p.ProjectFolder, "Output", "UnitsConverter"),
+                                                                       Path.Combine(_p.ProjectFolder, "Output", "BmsBackup", "UnitsConverter"))) log("  " + l);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or InvalidDataException or System.Xml.XmlException)
+            { log("  4.37 Units Converter: the converted aircraft and vehicles were NOT converted again: " + ex.Message + " (open the Units Converter and convert them again)"); }
+        }
         if (Photoreal) RunPhotoreal(log);
         if (Water) RunWater(log);
         if (Art) RunArt(log);
@@ -385,9 +395,14 @@ public sealed class BmsInstaller
             log("  Only weapon / vehicle / unit / radar data changed: terrain caches and SPD_*.SPB kept");
             return;
         }
+        // the 4.37 Units Converter's lists (what was converted into the theater) stay: Run converts it again from them
+        var converter = Directory.Exists(ObjectsTarget)
+            ? Directory.EnumerateFiles(ObjectsTarget, "UnitsConverter*.csv").ToDictionary(f => Path.GetFileName(f), File.ReadAllBytes)
+            : new Dictionary<string, byte[]>();
         if (Directory.Exists(ObjectsTarget)) { Delete(ObjectsTarget); log($"  Deleted {ObjectsTarget}"); }
         int no = CopyTree(Path.Combine(Source, "Terrdata", ObjectsJob.FolderName), ObjectsTarget);
         log($"  Copied {no} files → {ObjectsTarget}");
+        foreach (var (name, bytes) in converter) File.WriteAllBytes(Path.Combine(ObjectsTarget, name), bytes);
 
         // 2) cache che BMS ricostruisce all'avvio di una campagna o di un TE (con gli oggetti nuovi)
         KeepTerrainCache(log);

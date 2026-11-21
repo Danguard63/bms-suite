@@ -397,12 +397,11 @@ public sealed partial class ObjectsJob : TextureJob
         WriteBridgeTld(Path.Combine(dst, "TerrainRelatedData"), notes);
         File.WriteAllText(Path.Combine(dst, "Airbases_leveling.csv"), report, new UTF8Encoding(false));
         notes.Add($@"Report: Install\{addOn}\Terrdata\{FolderName}\Airbases_leveling.csv");
-        // aircraft, vehicles and unit types chosen from the old add-on (imports.csv), renumbered on this BMS version.
-        // LAST, after every CT record the objectives get above (copies of shared layouts, swapped bases…): those numbers are
-        // written in the campaign files by 'Apply object changes', so the imports must not push them up (BMS crashed
-        // in ObjectiveClass when an objective's CT number pointed at an imported weapon).
-        string bmsData = AssembleJob.FindDataDir(c.Project.KoreaNewTerrain)!;
-        notes.AddRange(Database.AddOnImport.Apply(c.Project, dst, bmsData, Path.Combine(install, "imports_map.csv")));
+        // aircraft and vehicles of the old add-on: the 4.37 Units Converter (its conversions are made again by Install objects,
+        // after the objectives' CT records, so the numbers the campaigns use do not move)
+        if (File.Exists(Path.Combine(c.Project.ProjectFolder, Database.AddOnImport.FileName)))
+            notes.Add($"Note: {Database.AddOnImport.FileName} of the project is no longer used: aircraft and vehicles of the old add-on are converted with the 4.37 Units Converter " +
+                      "(into the installed theater; Install objects converts them again after it rebuilds the theater's database).");
         notes.Add("Run 'Build theater' again: the .tdf will use objectdir " + $@"{addOn}\Terrdata\{FolderName}");
         p.Report(1);
         return (null, notes);

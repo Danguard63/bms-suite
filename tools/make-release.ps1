@@ -32,6 +32,7 @@ $programs = @(
     @{ Folder = "CampaignEditor";      Project = "CampaignEditor\src\CampaignEditor\CampaignEditor.csproj" },
     @{ Folder = "ModelEditor";         Project = "ModelEditor\src\ModelEditor\ModelEditor.csproj" },
     @{ Folder = "DatabaseInterchange"; Project = "DatabaseInterchange\src\DatabaseInterchange\DatabaseInterchange.csproj" },
+    @{ Folder = "UnitsConverter";      Project = "UnitsConverter\src\UnitsConverter\UnitsConverter.csproj" },
     @{ Folder = "SimEditor";           Project = "SimEditor\src\SimEditor\SimEditor.csproj" }
 )
 

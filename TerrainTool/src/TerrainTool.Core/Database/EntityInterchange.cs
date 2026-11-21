@@ -82,18 +82,19 @@ public static partial class Interchange
     /// <param name="modelMap">Source model numbers already decided (an old add-on's own models, copied into BMS's models with
     /// these numbers by the install): used as they are.</param>
     public static Plan MakeEntities(BmsTheater src, BmsTheater dst, string dataDir, IList<int> cts, bool preferDestination = false,
-                                    IReadOnlyDictionary<int, int>? modelMap = null)
+                                    IReadOnlyDictionary<int, int>? modelMap = null, IReadOnlyDictionary<int, int>? airframeMap = null)
     {
         var p = new Plan { Src = src, Dst = dst, BmsObjects = Path.Combine(dataDir, "Terrdata", "objects") };
         if (modelMap != null) foreach (var kv in modelMap) p.ModelMap[kv.Key] = kv.Value;
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
-        var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination };
+        var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination, AirframeMap = airframeMap };
         foreach (int ct in cts) x.Selected.Add(ct);
         foreach (int ct in cts)
         {
             int before = p.Records.Count;
             int n = x.MapCt(ct);
+            p.CtMap[ct] = n;
             var sc = x.S.Get("CT", ct);
             string name = sc != null ? x.S.CtName(ct) : $"CT {ct}";
             p.Report.Add(p.Records.Count == before && x.D.Get("CT", n) != null
@@ -123,6 +124,8 @@ public static partial class Interchange
         public bool AnyAircraft;
         /// <summary>See MakeEntities(preferDestination).</summary>
         public bool PreferDestination;
+        /// <summary>Source AirframeDatIdx → destination one (the flight model of the same name in the two AcTypes.lst), or null.</summary>
+        public IReadOnlyDictionary<int, int>? AirframeMap;
         /// <summary>The CT entries chosen by the user (always added when the destination has no identical one).</summary>
         public readonly HashSet<int> Selected = new();
         private readonly Dictionary<(string, int), int> _map = new();
@@ -154,6 +157,14 @@ public static partial class Interchange
 
         private static bool Same(IEnumerable<(string, string)> a, IEnumerable<(string, string)> b) => Key(a) == Key(b);
 
+        /// <summary>The weapons of a hardpoint list (number × count), in a comparable form.</summary>
+        private static string Weapons(IEnumerable<(string Field, string Value)> f)
+        {
+            var d = f.ToDictionary(x => x.Field, x => x.Value.Trim());
+            return string.Join(",", d.Where(kv => kv.Key.StartsWith("WpnIdx_", StringComparison.Ordinal) && kv.Value != "0" && kv.Value != "-1")
+                .Select(kv => kv.Value + "x" + d.GetValueOrDefault("WpnCount_" + kv.Key[7..], "")).OrderBy(x => x, StringComparer.Ordinal));
+        }
+
         private string Label(string table, DbRecord r) => r.Name.Length > 0 ? $"{table} {r.Num} '{r.Name}'" : $"{table} {r.Num}";
 
         /// <summary>
@@ -171,9 +182,14 @@ public static partial class Interchange
             if (PreferDestination)
             {
                 // the destination's own version: same name, or (aircraft data, no name) the same number with the same flight model
-                var keep = sr.Name.Length > 0
+                string? airframe = fields.FirstOrDefault(x => x.Field == "AirframeDatIdx").Value?.Trim();
+                var keep = table == "WLD"
+                    // a hardpoint list: the destination's one only with the same weapons (an old add-on often changed BMS's
+                    // lists keeping their names: the Super Etendard's "A-4SU 1/5" had French weapons, BMS's has Sidewinders)
+                    ? D.All(table).FirstOrDefault(r => r.Name == sr.Name && Weapons(r.Fields) == Weapons(fields))
+                    : sr.Name.Length > 0
                     ? (dSame != null && dSame.Name == sr.Name ? dSame : D.All(table).FirstOrDefault(r => r.Name == sr.Name))
-                    : table == "ACD" && dSame != null && dSame.Get("AirframeDatIdx") == sr.Get("AirframeDatIdx") ? dSame : null;
+                    : table == "ACD" && dSame != null && dSame.Get("AirframeDatIdx")?.Trim() == airframe ? dSame : null;
                 if (keep != null)
                 {
                     Reused++;
@@ -260,6 +276,16 @@ public static partial class Interchange
             var sr = S.Get("ACD", idx);
             if (sr == null) { P.Problems.Add($"aircraft data ACD {idx}: not in the source"); return idx; }
             var f = sr.Fields.ToList();
+            int af = sr.Int("AirframeDatIdx", -1);
+            if (AirframeMap != null && af >= 0)
+            {
+                if (AirframeMap.TryGetValue(af, out int naf))
+                {
+                    if (naf != af) P.Report.Add($"  aircraft data ACD {idx}: flight model {af} of the source is {naf} in the destination (same name in AcTypes.lst)");
+                    f = DbOps.With(f, ("AirframeDatIdx", naf.ToString(Ci)));
+                }
+                else P.Problems.Add($"aircraft data ACD {idx}: flight model {af} of the source has no flight model of the same name in the destination");
+            }
             for (int i = 0; i < 8; i++)
             {
                 int type = sr.Int($"SensorType_{i}", -1), si = sr.Int($"SensorIdx_{i}", -1);

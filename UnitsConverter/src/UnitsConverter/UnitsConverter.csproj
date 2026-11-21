@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>UnitsConverter</AssemblyName>
+    <ApplicationIcon>UnitsConverter.ico</ApplicationIcon>
+    <RootNamespace>UnitsConverter</RootNamespace>
+    <StartupObject>UnitsConverter.App</StartupObject>
+    <Version>0.1.0</Version>
+    <Product>BMS 4.37 Units Converter</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- libreria comune (per ora dentro TerrainTool; nel repo GitHub sara' la cartella Shared) -->
+    <ProjectReference Include="..\..\..\TerrainTool\src\TerrainTool.Core\TerrainTool.Core.csproj" />
+  </ItemGroup>
+
+</Project>

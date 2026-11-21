@@ -396,8 +396,16 @@ public sealed class StartWindow : Window
             foreach (var f in todo)
             {
                 string dst = Path.Combine(target, Path.GetFileName(f));
+                string from = f;
+                // aircraft the 4.37 Units Converter added to the installed TE list stay in it
+                if (Path.GetFileName(f).Equals("TePlanes.lst", StringComparison.OrdinalIgnoreCase) && Directory.GetParent(target) is { } addOn)
+                {
+                    string merged = Path.Combine(Path.GetTempPath(), "TePlanes_merged.lst");
+                    int kept = TerrainTool.Core.Database.UnitsConversion.KeepConvertedTeLines(f, dst, Path.Combine(addOn.FullName, "Terrdata", ObjectsJob.FolderName), merged);
+                    if (kept > 0) from = merged;
+                }
                 BackupStore.Save(dst);
-                File.Copy(f, dst, true); n++;
+                File.Copy(from, dst, true); n++;
             }
             MessageBox.Show(this, $"Installed {n} file(s) into {target}.\nCreate a NEW TE scenario if bases were moved.", Title);
         }

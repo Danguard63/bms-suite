@@ -69,12 +69,20 @@ public static class AddOnImport
     /// <summary>What the add-on has that BMS has not (by name), and whether it can be brought in now.</summary>
     public static Analysis Analyze(string addOnFolder, string bmsData, Dictionary<int, int>? assigned = null, HashSet<string>? installed = null)
     {
-        var problems = new List<string>();
         var src = Source(addOnFolder);
         if (src == null) return new Analysis("", new(), new() { $"{addOnFolder}: no Terrdata\\Objects with Falcon4_CT.xml" });
         string bmsObjects = Path.Combine(bmsData, "Terrdata", "objects");
+        return Analyze(src, bmsObjects, bmsObjects, assigned, installed);
+    }
+
+    /// <summary>What the source has that the destination database (dstObjects) has not (by name); modelsRoot: where the
+    /// destination's 3D models are (Models\N, KoreaObj).</summary>
+    public static Analysis Analyze(BmsTheater src, string dstObjects, string modelsRoot, Dictionary<int, int>? assigned = null, HashSet<string>? installed = null)
+    {
+        var problems = new List<string>();
+        string bmsObjects = modelsRoot;
         var S = BmsDatabase.Load(src.ObjectDir);
-        var D = BmsDatabase.Load(bmsObjects);
+        var D = BmsDatabase.Load(dstObjects);
         var dNames = new HashSet<(string, string)>(D.All("VCD").Select(r => ("VCD", r.Name)).Concat(D.All("WCD").Select(r => ("WCD", r.Name)))
                                                    .Concat(D.All("UCD").Select(r => ("UCD", r.Name))));
         var modelUsers = D.All("CT").Where(c => c.Int("GraphicsNormal", 0) > 0).GroupBy(c => c.Int("GraphicsNormal"))

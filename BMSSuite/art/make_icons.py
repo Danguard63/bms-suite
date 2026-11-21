@@ -86,8 +86,16 @@ def sim(d):       # missile in salita e onde del radar
         a2 = P(98 - r, 2 - r); b2 = P(98 + r, 2 + r)
         d.arc([a2, b2], start=95, end=175, fill=LIGHT, width=int(S * 0.05))
 
+def converter(d):  # vecchio aereo (grigio) che diventa nuovo (ambra), con la freccia
+    def jet(ox, oy, k, fill):
+        pts = [(50, 2), (57, 30), (96, 66), (96, 76), (58, 64), (56, 82), (70, 94), (50, 90), (30, 94), (44, 82), (42, 64), (4, 76), (4, 66), (43, 30)]
+        poly(d, [(ox + x * k, oy + y * k) for x, y in pts], fill=fill)
+    jet(-4, 30, 0.46, (150, 150, 150, 255))
+    jet(50, 2, 0.54, AMBER)
+    poly(d, [(8, 18), (40, 18), (40, 8), (58, 24), (40, 40), (40, 30), (8, 30)], fill=LIGHT)
+
 ICONS = {"BMSSuite": suite, "TerrainTool": terrain, "ObjectiveStudio": objective, "ArtEditor": art,
-         "CampaignEditor": campaign, "ModelEditor": model, "DatabaseInterchange": interchange, "SimEditor": sim}
+         "CampaignEditor": campaign, "ModelEditor": model, "DatabaseInterchange": interchange, "SimEditor": sim, "UnitsConverter": converter}
 
 sizes = [256, 128, 64, 48, 32, 24, 16]
 out = sys.argv[1] if len(sys.argv) > 1 else "."

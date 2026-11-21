@@ -312,11 +312,6 @@ public sealed class MainWindow : Window
         var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 6) };
         bar.Children.Add(_ePlan); bar.Children.Add(_eInstall);
         var restore = Btn("Restore…"); restore.Click += (_, _) => Restore(); bar.Children.Add(restore);
-        var fromAddOn = Btn("From an old add-on into a TerrainTool project…");
-        fromAddOn.ToolTip = "For a theater converted with TerrainTool: aircraft, helicopters, vehicles, ships, weapons and unit types that its old add-on (e.g. a 4.37 theater) has and BMS has not, such as national variants. " +
-                            "The choice is saved in the project (imports.csv) and brought in by every Run Objects, renumbered on the BMS version in use; what BMS has with the same name stays BMS's.";
-        fromAddOn.Click += (_, _) => FromAddOn();
-        bar.Children.Add(fromAddOn);
         var help = new TextBlock
         {
             Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6), FontSize = 11.5,
@@ -423,25 +418,6 @@ public sealed class MainWindow : Window
     }
 
     private static string Safe(string s) => string.Concat(s.Select(c => Path.GetInvalidFileNameChars().Contains(c) || c == ' ' ? '_' : c));
-
-    /// <summary>Old add-on → TerrainTool project (imports.csv): choose the project, then what to bring in.</summary>
-    private void FromAddOn()
-    {
-        var dlg = new Microsoft.Win32.OpenFileDialog { Title = "TerrainTool project of the converted theater", Filter = "TerrainTool project (*.ttproj)|*.ttproj" };
-        string? last = Read("last_project.txt");
-        string? projects = global::TerrainTool.Core.SuiteLayout.FolderOf("TerrainTool") is { } tt ? Path.Combine(tt, "Projects") : null;
-        string? start = last != null && File.Exists(last) ? Path.GetDirectoryName(Path.GetDirectoryName(last)) : projects;
-        if (start != null && Directory.Exists(start)) dlg.InitialDirectory = start;
-        if (dlg.ShowDialog(this) != true) return;
-        Save("last_project.txt", dlg.FileName);
-        var p = global::TerrainTool.Core.Project.TheaterProject.Load(dlg.FileName);
-        if (string.IsNullOrWhiteSpace(p.OldTheaterFolder) || !Directory.Exists(p.OldTheaterFolder))
-        { MessageBox.Show(this, "This project has no old add-on folder (TerrainTool, tab 1: Old theater).", "Old add-on", MessageBoxButton.OK, MessageBoxImage.Information); return; }
-        string? data = global::TerrainTool.Core.Dds.AssembleJob.FindDataDir(p.KoreaNewTerrain)
-                       ?? (Directory.Exists(Path.Combine(_data.Text.Trim(), "Terrdata")) ? _data.Text.Trim() : null);
-        if (data == null) { MessageBox.Show(this, "BMS 4.38 not found: set the BMS Data folder at the top, or 'Korea NewTerrain' in TerrainTool (tab 1).", "Old add-on"); return; }
-        new AddOnImportWindow(p, data) { Owner = this }.ShowDialog();
-    }
 
     private void Restore()
     {

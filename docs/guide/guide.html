@@ -88,12 +88,13 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <li><span class="n">8</span><span class="t">Campaign Editor</span><span class="d">campaigns and Tactical Engagements</span></li>
     <li><span class="n">9</span><span class="t">Model Editor</span><span class="d">3D models and the database</span></li>
     <li><span class="n">10</span><span class="t">Database Interchange</span><span class="d">bases, aircraft and vehicles from one theater to another</span></li>
-    <li><span class="n">11</span><span class="t">Sim Editor</span><span class="d">theater Sim, database changes, SAM check</span></li>
-    <li><span class="n">12</span><span class="t">Typical workflows</span><span class="d">step by step, from start to BMS</span></li>
-    <li><span class="n">13</span><span class="t">Step by step: a new theater from scratch</span><span class="d">every button, from the world map to the 2D map</span></li>
-    <li><span class="n">14</span><span class="t">Step by step: converting a 4.37 theater to 4.38</span><span class="d">terrain, objects, campaigns, install, checks</span></li>
-    <li><span class="n">15</span><span class="t">Troubleshooting</span><span class="d">common problems and where to look</span></li>
-    <li><span class="n">16</span><span class="t">Credits and support</span><span class="d"></span></li>
+    <li><span class="n">11</span><span class="t">4.37 Units Converter</span><span class="d">aircraft and vehicles of an old database into a 4.38 theater</span></li>
+    <li><span class="n">12</span><span class="t">Sim Editor</span><span class="d">theater Sim, database changes, SAM check</span></li>
+    <li><span class="n">13</span><span class="t">Typical workflows</span><span class="d">step by step, from start to BMS</span></li>
+    <li><span class="n">14</span><span class="t">Step by step: a new theater from scratch</span><span class="d">every button, from the world map to the 2D map</span></li>
+    <li><span class="n">15</span><span class="t">Step by step: converting a 4.37 theater to 4.38</span><span class="d">terrain, objects, campaigns, install, checks</span></li>
+    <li><span class="n">16</span><span class="t">Troubleshooting</span><span class="d">common problems and where to look</span></li>
+    <li><span class="n">17</span><span class="t">Credits and support</span><span class="d"></span></li>
   </ol>
   <div class="note"><b>About this guide</b>The pictures were taken on a real installation with the Korea KTO, Israel, Korea TvT and Mideast 4.38 theaters. Your lists, numbers and paths will be different. The programs' windows are in English; button and field names are written in <b>bold</b> as they appear on screen.</div>
 </section>
@@ -109,14 +110,15 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <tr><td>Art Editor</td><td>The user interface art: the BMS screens as the theater shows them, team flags, banners and menu backgrounds, campaign pictures, small maps, squadron patches, medals, texts of <code>Theater.irc</code>, fonts and sounds.</td></tr>
     <tr><td>Campaign Editor</td><td>Campaigns (<code>.cam</code>) and Tactical Engagements (<code>.tac</code>): objectives, owners and links, units, squadrons, air defense, stations and ILS, campaign AI, TE lists, campaign terrain.</td></tr>
     <tr><td>Model Editor</td><td>3D models with a DirectX view (PBR materials, normal maps, shadows), DOFs, switches, weapon slots, <code>Parent.dat</code> checks, and the theater database (aircraft, vehicles, weapons, sensors...).</td></tr>
-    <tr><td>Database Interchange</td><td>Copies bases, ground objective layouts, aircraft, vehicles and weapons from one theater to another with everything they need, renumbered for the destination; brings an old add-on's national variants into a converted theater.</td></tr>
+    <tr><td>Database Interchange</td><td>Copies bases, ground objective layouts, aircraft, vehicles and weapons from one BMS 4.38 theater to another with everything they need, renumbered for the destination.</td></tr>
+    <tr><td>4.37 Units Converter</td><td>Converts aircraft, helicopters, vehicles and weapons of an old BMS database (a 4.37 installation, an add-on or just its objects folder) into a theater of BMS 4.38: 3D models, hardpoint lists, weapons, squadron types, the TE list and the names, with backup and restore.</td></tr>
     <tr><td>Sim Editor</td><td>For a theater made with TerrainTool: its own Sim files (SimOverrides), the database changes (<code>DbEdits.txt</code>) and the check of the air defence systems in its campaigns.</td></tr>
   </table>
   <div class="keep"><h2>Three rules behind every program</h2>
   <ol>
     <li><b>BMS is read, not changed, while you work.</b> Your edits are kept in the program's own work folder. Only the <b>Install</b> (or <b>Save</b> into BMS) step writes into the BMS folders, and only after you confirm.</li>
     <li><b>Every file that is replaced is saved first.</b> Each program keeps its backups and has a <b>Restore</b> that puts the old files back. The main menu lists all backups.</li>
-    <li><b>The Korea originals are never touched.</b> The Korea art (<code>Data\Art</code>) and the shared objects folder of BMS (<code>Data\Terrdata\objects</code>) are only read: they are the master copies every theater falls back on.</li>
+    <li><b>The Korea originals are never touched.</b> The Korea art (<code>Data\Art</code>) and the shared objects folder of BMS (<code>Data\Terrdata\objects</code>) are only read: they are the master copies every theater falls back on. The only exception is the 4.37 Units Converter, which <i>adds</i> an old add-on's own 3D models and textures there with free numbers (nothing is replaced, and its Restore removes them).</li>
   </ol></div>
   <div class="keep"><h2>How the programs fit together</h2>
   <p>The four programs of <b>Build a theater</b> follow the order in which a theater is made: the terrain first (TerrainTool), then the objectives on it (Objective Studio), the interface art (Art Editor) and finally the campaigns that use all of them (Campaign Editor). <b>Model Editor</b> and <b>Database Interchange</b> work on any theater at any time; <b>Sim Editor</b> works on a TerrainTool project.</p></div>
@@ -170,7 +172,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <p>The list on the left shows the theaters installed in BMS (<b>BMS</b> = Korea, the base theater; <b>ADD-ON</b> = any other). The selected theater is the one every program opens on. Below the list you see where its campaign and objects folders are.</p></div>
   <p><b>Continue</b> shows the last program you opened and its theater: click it to open it again.</p>
   <div class="keep"><h2>Program tiles</h2>
-  <p><b>Build a theater</b> shows the four steps in order (01 TerrainTool, 02 Objective Studio, 03 Art Editor, 04 Campaign Editor). <b>Models &amp; data</b> holds the Model Editor, Database Interchange and Sim Editor. Click a tile to start the program. The state under each name tells you:</p></div>
+  <p><b>Build a theater</b> shows the four steps in order (01 TerrainTool, 02 Objective Studio, 03 Art Editor, 04 Campaign Editor). <b>Models &amp; data</b> holds the Model Editor, Database Interchange, 4.37 Units Converter and Sim Editor. Click a tile to start the program. The state under each name tells you:</p></div>
   <table>
     <tr><th>State</th><th>Meaning</th></tr>
     <tr><td>READY</td><td>The program is there and can be started.</td></tr>
@@ -237,7 +239,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <figure><img src="shots/15_tt_check_c.jpg"><figcaption><b>Figure 5.6</b> Read-only check of a NewTerrain folder against the Korea structure: status, size, the program that produces each file.</figcaption></figure></div>
   <div class="keep"><h2>7 · Theater content</h2>
   <figure><img src="shots/16_tt_content.jpg"><figcaption><b>Figure 5.7</b> The 2D map and the other content of the theater, in four sub-tabs.</figcaption></figure></div>
-  <p><b>2D map</b> makes the theater map BMS shows in Instant Action, TE and campaign from the satellite colour map; <b>Objects &amp; campaigns</b> converts the objects and campaigns of an old add-on; <b>UI art</b> prepares the art (then refined in the Art Editor). The theater's own Sim files, the database changes and the SAM check are in the <b>Sim Editor</b> (chapter 11, button <b>Sim Editor</b> at the top of TerrainTool).</p>
+  <p><b>2D map</b> makes the theater map BMS shows in Instant Action, TE and campaign from the satellite colour map; <b>Objects &amp; campaigns</b> converts the objects and campaigns of an old add-on; <b>UI art</b> prepares the art (then refined in the Art Editor). The theater's own Sim files, the database changes and the SAM check are in the <b>Sim Editor</b> (chapter 12, button <b>Sim Editor</b> at the top of TerrainTool).</p>
   <div class="keep"><h2>8 · Build theater</h2>
   <figure><img src="shots/17_tt_build.jpg"><figcaption><b>Figure 5.8</b> The state of every part of the theater and the theater definition (.tdf) of the build.</figcaption></figure></div>
   <p>The table says which parts are ready and which are missing, with a button to go where each one is made. <b>Build theater</b> puts everything together in <code>Output\Install</code> and writes a new theater definition. Nothing is written into BMS here.</p>
@@ -399,19 +401,28 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   </ol>
   <p><b>Restore...</b> undoes an installation: it removes what it added and puts back what it replaced.</p>
   <div class="note"><b>Shared 3D models</b>When the destination takes its models from the shared BMS objects folder (as most add-ons do), no model or texture is copied: the plan tells you which pieces would look different and which models are missing.</div>
-  <div class="keep"><h2>From an old add-on into a converted theater</h2>
-  <p>For a theater converted with TerrainTool (chapter 14), tab <b>Aircraft, vehicles &amp; weapons</b> → <b>From an old add-on into a TerrainTool project...</b> → choose the project (<code>.ttproj</code>). The window lists what the project's old add-on (for example a 4.37 theater) has and BMS has not, by name: national variants such as an F-15C of another air force, vehicles, weapons, squadron and battalion types.</p>
-  <ul>
-    <li><b>ok</b>: it uses a 3D model that BMS has the same. <b>check</b> (yellow): BMS has a different model with that number, so it will look like BMS's (right if BMS only updated the same aircraft, wrong if it is another one; the column says which BMS entry uses it). <b>not yet</b> (grey, with <b>Show also what cannot be brought in yet</b>): it has its own 3D model, which cannot be added to BMS's shared models.</li>
-    <li>Tick <b>Bring</b> (or select rows and <b>Tick selected</b>), then <b>Save choice</b>: it is saved in the project's <code>imports.csv</code>. Tick the squadron type too to use an aircraft in a campaign.</li>
-    <li>Objective Studio → <b>Run Objects</b> brings them in at every run, on top of the fresh BMS database, renumbered on the BMS version in use. What BMS has with the same name (weapons, radars, sensors, hardpoint lists, aircraft data with the same flight model) stays BMS's. The log lists every record added (lines starting with "Imports:").</li>
-    <li>Then <b>Build theater</b>, <b>Install objects...</b>, and in the Campaign Editor <b>Convert unit types...</b> to use the new squadron types. Flyable aircraft stay BMS's: a variant flies like the BMS aircraft whose flight data it uses.</li>
-  </ul></div>
+  <div class="note"><b>Old add-ons</b>Aircraft and vehicles of an old BMS database (4.37 or older) are converted with the <b>4.37 Units Converter</b> (chapter 11): Database Interchange is for 4.38 → 4.38.</div>
 </section>
 
 <!-- ───────────── 11 ───────────── -->
 <section class="chapter">
-  <h1><span class="num">11</span>Sim Editor</h1>
+  <h1><span class="num">11</span>4.37 Units Converter</h1>
+  <p>The 4.37 Units Converter brings aircraft, helicopters, ground vehicles, ships and weapons of an old BMS database (BMS 4.37 or older) into a theater of a BMS 4.38 installation. Everything is done in its window, from start to end, and a backup is made before every installation: <b>Restore...</b> puts the theater back as it was.</p>
+  <ol class="steps">
+    <li><b>1 · Old database</b>: a BMS 4.37 installation (one entry per theater), an add-on folder (with <code>Terrdata\Objects</code>) or just an objects folder with <code>Falcon4_CT.xml</code>.</li>
+    <li><b>2 · BMS 4.38 theater</b>: the BMS 4.38 installation and the theater to convert into. It must have its own database: BMS's own <code>Terrdata\objects</code> (Korea) is never written.</li>
+    <li><b>Find what can be converted</b> lists what the old database has and the theater has not, by name. Tick <b>Convert</b>. For aircraft and helicopters set the <b>Name in the TE</b> and the aircraft whose picture and icon the TE list shows (<b>TE picture and icon like</b>). <b>Source model</b>: BMS 4.38 has a different 3D model with the same number; tick it to bring the old one.</li>
+    <li><b>Check the conversion (nothing written)</b> shows the plan step by step: <b>1</b> 3D models and textures (added with a free number when BMS has another one with theirs, never replaced); <b>2</b> hardpoint lists, compared by their weapons (an old add-on often changed BMS's lists keeping their names); <b>3</b> weapons (BMS's ones with the same name, the others added); <b>4</b> aircraft (free class numbers, first year of service, the BMS 4.38 flight model of the same name); <b>5</b> squadron and flight types; <b>6</b> the line in the theater's <code>TePlanes.lst</code> and the name in its interface files.</li>
+    <li>Close BMS and press <b>Convert and install...</b>. Then start BMS: Tactical Engagement → New, the aircraft are in the squadron list.</li>
+  </ol>
+  <div class="note"><b>Flight models</b>Flight models (<code>Sim\Acdata</code>) stay BMS 4.38's: they are never copied nor changed, as the BMS developers ask. An aircraft flies with the BMS flight model of the same name, and its weapons hang where that flight model puts its hardpoints: choose an old aircraft that used a similar airframe.</div>
+  <div class="note"><b>Authors</b>3D models and textures of an add-on belong to their authors: convert them for yourself, ask them before you share a theater with them.</div>
+  <p>What was converted is listed in the theater's objects folder (<code>UnitsConverter.csv</code>, <code>UnitsConverter_picks.csv</code>). For a theater built with TerrainTool, <b>Install objects...</b> rebuilds the theater's database and converts these again by itself.</p>
+</section>
+
+<!-- ───────────── 12 ───────────── -->
+<section class="chapter">
+  <h1><span class="num">12</span>Sim Editor</h1>
   <p>The Sim Editor works on a TerrainTool project (it opens on the project from the <b>Sim Editor</b> button of TerrainTool, or asks for it: <b>Recent projects</b> → <b>Open</b>, or <b>Browse project...</b>). Everything it changes goes into the theater with <b>Run Objects</b> (Objective Studio) and <b>Build theater</b> (TerrainTool), then the install: BMS's own files are never changed.</p>
   <div class="keep"><h2>The theater's own Sim</h2>
   <ul>
@@ -425,9 +436,9 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <p>Reads the theater database (with DbEdits.txt, also the changes not saved yet), the Sim radar data and every campaign and TE of the project. The upper list shows each air defence battalion type: launchers, missiles each, missile, radars, rate of fire, the points it needs and how many battalions the campaigns have. Select a row to see its battalions below, with the point list BMS gives each one on its objective and whether all vehicles fit. <b>All SAM types</b> shows also the types not used; <b>Only problems</b> keeps the battalions with vehicles off the base points.</p></div>
 </section>
 
-<!-- ───────────── 12 ───────────── -->
+<!-- ───────────── 13 ───────────── -->
 <section class="chapter">
-  <h1><span class="num">12</span>Typical workflows</h1>
+  <h1><span class="num">13</span>Typical workflows</h1>
   <div class="keep"><h2>A. Change an airbase of an installed theater</h2>
   <ol class="steps">
     <li>Main menu: select the theater, open <b>Objective Studio</b> (it opens on that theater).</li>
@@ -463,12 +474,12 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <li>Objects in <b>Objective Studio</b> (Open TerrainTool project...), art in the <b>Art Editor</b>, campaigns in the <b>Campaign Editor</b>, the 2D map in tab 7.</li>
     <li><b>Build theater</b> (tab 8) and <b>Install everything...</b> (tab 9).</li>
   </ol></div>
-  <p>Every button of these workflows, in order: chapter 13 (a new area) and chapter 14 (converting a 4.37 add-on).</p>
+  <p>Every button of these workflows, in order: chapter 14 (a new area) and chapter 15 (converting a 4.37 add-on).</p>
 </section>
 
-<!-- ───────────── 13 ───────────── -->
+<!-- ───────────── 14 ───────────── -->
 <section class="chapter">
-  <h1><span class="num">13</span>Step by step: a new theater from scratch</h1>
+  <h1><span class="num">14</span>Step by step: a new theater from scratch</h1>
   <p>This chapter makes the terrain of a theater for an area that BMS does not have yet: heights, water, land cover, forests, satellite colours, photoreal tiles and the 2D map. Every button and option is listed in the order you press it.</p>
   <div class="warn"><b>What is not supported yet</b>For a new area the suite makes the <b>terrain</b> and the <b>2D map</b>. It does not make yet the <b>objectives</b> (airbases, cities, bridges and their links), the <b>campaigns</b> and the <b>theater definition</b> (.tdf) of a new area: these three are taken from an existing add-on, which a new area does not have. So <b>Build theater</b> (tab 8) stops with “Theater definition: Missing” and the theater cannot be installed into BMS and flown yet. What you can do today is everything up to tab 7, and look at the result with <b>Terrain preview...</b>, <b>Photoreal tile editor...</b> and <b>Terrain check</b>. The cities and targets chosen on the world map are kept in the project for when the objectives can be made.</div>
 
@@ -496,7 +507,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <li><b>Cities &amp; targets</b> (kept for later): <b>Cities</b> and <b>Towns</b> with “from (inhabitants)”, then <b>Ports</b>, <b>Power plants (and nuclear)</b> with “smallest plant (MW)”, <b>Refineries</b>, <b>Military bases and barracks (named)</b>. Cities and towns follow the square at once; for the others press <b>Search OpenStreetMap in this area</b> after placing the square (it can take a few minutes).</li>
     <li>Press <b>Use this area</b>, then <b>Create project</b> in the New project window.</li>
   </ol></div>
-  <div class="tip"><b>The other two choices</b><b>Empty list – I will add the airbases myself in tab 2</b> starts without airbases (you set the area in tab 1). <b>Import the airbases of a theater installed in BMS</b> takes the airbases of a BMS theater: choose the <b>BMS Data folder</b> (<b>Browse...</b>) and the <b>Theater</b>; with <b>Also use its size, centre and heights (tab 1)</b> the new terrain is laid on that theater's area (this is for conversions, chapter 14).</div>
+  <div class="tip"><b>The other two choices</b><b>Empty list – I will add the airbases myself in tab 2</b> starts without airbases (you set the area in tab 1). <b>Import the airbases of a theater installed in BMS</b> takes the airbases of a BMS theater: choose the <b>BMS Data folder</b> (<b>Browse...</b>) and the <b>Theater</b>; with <b>Also use its size, centre and heights (tab 1)</b> the new terrain is laid on that theater's area (this is for conversions, chapter 15).</div>
 
   <div class="keep"><h2>3 · Tab 1 · Theater &amp; projection</h2>
   <ol class="steps">
@@ -589,9 +600,9 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <p>Tab <b>8 · Build theater</b> → <b>Refresh</b> shows the state of every part. Terrain files and 2D map are Ready; Objects, Campaign and Theater definition are Missing, and <b>Build theater</b> says “The theater cannot be built yet”. Keep the project: when objectives and campaigns for a new area are supported, the work continues from here, without making the terrain again.</p></div>
 </section>
 
-<!-- ───────────── 14 ───────────── -->
+<!-- ───────────── 15 ───────────── -->
 <section class="chapter">
-  <h1><span class="num">14</span>Step by step: converting a 4.37 theater to 4.38</h1>
+  <h1><span class="num">15</span>Step by step: converting a 4.37 theater to 4.38</h1>
   <p>This chapter converts an add-on made for BMS 4.37 (classic terrain) into a BMS 4.38 theater with New Terrain: the terrain is made again from real data, the objectives, airbases and campaigns of the old add-on are carried over, and the result is installed as a new theater next to the old one. The Mideast 4.38 was made this way.</p>
   <div class="warn"><b>Positions of the old add-on</b>A classic 4.37 theater has no geographic reference: its objectives are on its own grid, which is not the real world. The new terrain is the real world. The conversion moves the <b>airbases</b> onto the real runways (step 6), but cities, bridges and the other objectives stay at their old grid positions: check them in the Objective editor and move the ones that matter. TerrainTool has no window to fit a georeference to an old theater; a project that has one (like the Mideast) carries every position over through latitude/longitude.</div>
 
@@ -599,14 +610,14 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <ul>
     <li>BMS 4.38 installed and started once. A <b>copy of your BMS Data folder</b> (at least <code>TerrData</code>, <code>Campaign</code>, <code>Art</code> and <code>Add-On</code>) before the first install.</li>
     <li>The old 4.37 add-on, complete, in a folder of its own (the folder with its <code>Campaign</code>, <code>TerrData</code>, <code>Objects</code>, <code>Art</code>...). The suite only reads it.</li>
-    <li>The disk space and connection of chapter 13.</li>
+    <li>The disk space and connection of chapter 14.</li>
   </ul></div>
 
   <div class="keep"><h2>1 · Create the project</h2>
   <ol class="steps">
     <li>Main menu → <b>TerrainTool</b> → <b>New project...</b> → create and select an empty folder in <code>TerrainTool\Projects</code>.</li>
     <li>If the old theater appears in your BMS theater list: choose <b>Import the airbases of a theater installed in BMS:</b>, <b>Browse...</b> to the <b>BMS Data folder</b>, choose the <b>Theater</b>. If the line under it says “with position”, tick <b>Also use its size, centre and heights (tab 1), so its campaign and objects stay in place</b>; if it says “names only”, the add-on has no reference and you set the area in tab 1.</li>
-    <li>If it is not in the list: choose <b>Choose the area on a world map – airbases from OurAirports:</b> and place the square over the same area as the old theater, same size (chapter 13, step 2).</li>
+    <li>If it is not in the list: choose <b>Choose the area on a world map – airbases from OurAirports:</b> and place the square over the same area as the old theater, same size (chapter 14, step 2).</li>
     <li><b>Create project</b>.</li>
   </ol></div>
 
@@ -622,18 +633,18 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <div class="keep"><h2>3 · Tab 2 · Airbases</h2>
   <ol class="steps">
     <li>Tick <b>Show old theater positions (purple)</b>: you see how far each old base is from its real airport (<b>LatOld</b>/<b>LonOld</b> = old position, <b>Lat</b>/<b>Lon</b> = real one).</li>
-    <li><b>Only to verify</b>: for each row type the real Lat/Lon and set Status <b>ok</b>. Set <b>Tier</b> and <b>Server</b> as in chapter 13.</li>
+    <li><b>Only to verify</b>: for each row type the real Lat/Lon and set Status <b>ok</b>. Set <b>Tier</b> and <b>Server</b> as in chapter 14.</li>
     <li><b>Save CSV</b>, <b>Save</b>.</li>
   </ol></div>
 
   <div class="keep"><h2>4 · The terrain (tabs 3 to 6)</h2>
-  <p>Exactly as in chapter 13, steps 5 to 10: <b>Download selected</b> (tab 3), <b>Run selected</b> at test size then at <b>Full size (map pixels)</b> (tab 4), <b>Water DEM...</b> with <b>Run Water DEM</b> and <b>Use these water maps...</b>, <b>Select all</b> → <b>Run selected</b> in tab 5, Sentinel-2 photoreal (tab 4), <b>Check</b> in tab 6.</p></div>
+  <p>Exactly as in chapter 14, steps 5 to 10: <b>Download selected</b> (tab 3), <b>Run selected</b> at test size then at <b>Full size (map pixels)</b> (tab 4), <b>Water DEM...</b> with <b>Run Water DEM</b> and <b>Use these water maps...</b>, <b>Select all</b> → <b>Run selected</b> in tab 5, Sentinel-2 photoreal (tab 4), <b>Check</b> in tab 6.</p></div>
 
   <div class="keep"><h2>5 · Tab 7 · Theater content</h2>
   <ol class="steps">
     <li><b>2D map</b> sub-tab: run <b>2D map (campmap)</b>, then <b>Theater art (flags, backgrounds, patches)</b>. Theater art starts from the BMS 4.38 art and adds the old add-on's images; it remakes the small maps of the UI on the new grid.</li>
     <li><b>UI art</b> sub-tab → <b>Open the Art Editor</b> → open this project: <b>Check</b> lists the old images with wrong sizes; replace or <b>Reset to BMS 4.38</b>; <b>Save</b>.</li>
-    <li><b>Sim Editor</b> (button at the top of TerrainTool; only if the add-on changed BMS data): write the database changes in <b>Database changes (DbEdits.txt)</b> → <b>Save</b>; Sim files with <b>Copy a BMS Sim file to SimOverrides...</b> and edit them in <b>Open SimOverrides</b>. Press <b>Check SAM systems &amp; positions</b> (tick <b>Only problems</b>) after the objects are built (step 6). National variants of the old add-on (aircraft, vehicles, squadron types): Database Interchange → <b>From an old add-on into a TerrainTool project...</b> (chapter 10).</li>
+    <li><b>Sim Editor</b> (button at the top of TerrainTool; only if the add-on changed BMS data): write the database changes in <b>Database changes (DbEdits.txt)</b> → <b>Save</b>; Sim files with <b>Copy a BMS Sim file to SimOverrides...</b> and edit them in <b>Open SimOverrides</b>. Press <b>Check SAM systems &amp; positions</b> (tick <b>Only problems</b>) after the objects are built (step 6). Aircraft and vehicles of the old add-on: the <b>4.37 Units Converter</b> after the install (chapter 11).</li>
   </ol></div>
   <div class="note"><b>DbEdits.txt and new records</b>A line <code>COPY &lt;table&gt; &lt;from&gt; &lt;to&gt;</code> must use a number that BMS 4.38 does not use yet. If BMS already has that number, the Objects job stops with “this BMS version already has … Use the next free number”: change the number and every line that refers to it.</div>
 
@@ -706,9 +717,9 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <div class="tip"><b>Going back</b>Every install can be undone: TerrainTool tab 9 → <b>Restore a backup...</b>, Objective Studio → <b>Restore a backup...</b>, Campaign Editor → <b>Backups...</b>. Restore newest first. <b>Remove from BMS's theater list...</b> hides the theater from the Launcher.</div>
 </section>
 
-<!-- ───────────── 15 ───────────── -->
+<!-- ───────────── 16 ───────────── -->
 <section class="chapter">
-  <h1><span class="num">15</span>Troubleshooting</h1>
+  <h1><span class="num">16</span>Troubleshooting</h1>
   <table>
     <tr><th>Problem</th><th>What to do</th></tr>
     <tr><td>A program does not start</td><td>Install the <b>.NET 8 Desktop Runtime x64</b>. If the suite is inside <code>Program Files</code>, move it to a folder you can write to.</td></tr>
@@ -724,9 +735,9 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <p>Open an issue on the project's GitHub page with: what you did, what you expected, what happened, the theater, and the <code>errors.log</code> or a screenshot.</p></div>
 </section>
 
-<!-- ───────────── 16 ───────────── -->
+<!-- ───────────── 17 ───────────── -->
 <section class="chapter">
-  <h1><span class="num">16</span>Credits and support</h1>
+  <h1><span class="num">17</span>Credits and support</h1>
   <ul>
     <li><b>HelixToolkit</b> and <b>SharpDX</b> – DirectX view of the Model Editor (MIT).</li>
     <li><b>NVorbis</b> – sounds of the Art Editor (MIT).</li>

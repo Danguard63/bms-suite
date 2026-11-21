@@ -31,6 +31,8 @@ public static partial class Interchange
         public Dictionary<int, int> OcdMap { get; } = new();
         public Dictionary<int, int> FeatureCtMap { get; } = new();
         public Dictionary<int, int> ModelMap { get; } = new();
+        /// <summary>Entities plan (MakeEntities): the chosen CT entries → their number in the destination.</summary>
+        public Dictionary<int, int> CtMap { get; } = new();
         public int ReusedFeatures, AddedFeatures, ReusedModels, CopiedModels, KeptModels;
     }
 
@@ -313,11 +315,20 @@ public static partial class Interchange
     /// are copied first to backupDir; manifest.txt lists what was added (Restore deletes it) and what was replaced. FALCON4.*
     /// of the destination are removed (BMS builds them again).
     /// </summary>
-    public static List<string> Install(Plan p, string outDir, string backupRoot)
+    /// <param name="addNewModelsToShared">An old version's own 3D models and textures (4.37 Units Converter): new files may be
+    /// ADDED to BMS's shared Models and KoreaObj folders (never one that is there: the plan gives them free numbers).</param>
+    public static List<string> Install(Plan p, string outDir, string backupRoot, bool addNewModelsToShared = false)
     {
         // sicurezza: niente si scrive nel Terrdata\objects condiviso di BMS (le cartelle dei teatri Add-On ne sono fuori)
         string shared = Norm(p.BmsObjects) + Path.DirectorySeparatorChar;
-        var bad = File.ReadAllLines(Path.Combine(outDir, "targets.txt")).Append(p.Dst.ObjectDir + Path.DirectorySeparatorChar)
+        bool NewModelFile(string t)
+        {
+            if (!addNewModelsToShared || File.Exists(t)) return false;
+            string rel = Path.GetRelativePath(Norm(p.BmsObjects), Norm(t));
+            string first = rel.Split('\\', '/')[0];
+            return first.Equals("Models", StringComparison.OrdinalIgnoreCase) || first.StartsWith("KoreaObj", StringComparison.OrdinalIgnoreCase);
+        }
+        var bad = File.ReadAllLines(Path.Combine(outDir, "targets.txt")).Where(t => !NewModelFile(t)).Append(p.Dst.ObjectDir + Path.DirectorySeparatorChar)
             .Where(t => (Norm(t) + Path.DirectorySeparatorChar).StartsWith(shared, StringComparison.OrdinalIgnoreCase)).ToList();
         if (bad.Count > 0) throw new InvalidOperationException($"{bad.Count} file(s) would go into BMS's shared Terrdata\\objects (e.g. {bad[0]}): nothing installed.");
         var log = new List<string>();

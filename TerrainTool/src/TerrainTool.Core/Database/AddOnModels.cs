@@ -68,11 +68,20 @@ public sealed class AddOnModels
         else
         {
             target = -1;
+            // already brought by an earlier conversion with a free number (the same files): that one
+            for (int n = FirstNew; n <= LastNew && target < 0; n++)
+            {
+                string bd = BmsModel(n);
+                if (!Directory.Exists(bd)) { if (n > FirstNew + 200) break; continue; }
+                if (!_taken.Contains(n) && HasModel(bd) && Interchange.SameFolder(sdir, bd)) { target = n; there = true; }
+            }
+            if (target >= 0) { _taken.Add(target); _assigned[g] = target; goto textures; }
             for (int n = FirstNew; n <= LastNew; n++) if (!_taken.Contains(n) && !Directory.Exists(BmsModel(n))) { target = n; break; }
             if (target < 0) return _plans[g] = new ModelPlan(g, g, sdir, 0, new(), "no free model number", false);
         }
         _taken.Add(target);
         _assigned[g] = target;
+        textures:
         // textures named by number (version 1)
         int ver = 0;
         var ids = new List<int>();
