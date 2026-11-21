@@ -11,7 +11,7 @@ using TerrainTool.Core.Dds;
 using TerrainTool.Core.Models;
 using TerrainTool.Core.Project;
 
-namespace ObjectiveStudio;
+namespace ModelEditor;
 
 /// <summary>
 /// Texture dei modelli 3D di aerei, elicotteri, mezzi e navi: griglia delle texture del modello scelto (tutte le livree e
@@ -48,8 +48,10 @@ public sealed class ModelTexturesWindow : Window
     private bool _busy, _warned;
     private CancellationTokenSource? _cts;
 
-    private static string DataSetting => Path.Combine(MainWindow.Root(), "Settings", "bms_data_folder.txt");
-    private static string UsageCache => Path.Combine(MainWindow.Root(), "Cache", "texture_usage.txt");
+    /// <summary>&lt;Model Editor folder&gt; (the one with build.bat), else Documents\BMS Model Editor.</summary>
+    public static string ProgramRoot() => TerrainTool.Core.SuiteLayout.ProgramFolder() ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "BMS Model Editor");
+    private static string DataSetting => Path.Combine(ModelTexturesWindow.ProgramRoot(), "Settings", "bms_data_folder.txt");
+    private static string UsageCache => Path.Combine(ModelTexturesWindow.ProgramRoot(), "Cache", "texture_usage.txt");
 
     /// <summary>Modello da aprire subito (numero della cartella Models), es. dal Campaign Editor.</summary>
     public int? StartModel { get; init; }
@@ -461,7 +463,9 @@ public static class TextureBackupStore
         public string SizeKb => (Size / 1024.0).ToString("N0", CultureInfo.InvariantCulture) + " KB";
     }
 
-    public static string Root => Path.Combine(MainWindow.Root(), "Backup");
+    public static string Root => Path.Combine(ModelTexturesWindow.ProgramRoot(), "Backup", "Textures");
+    /// <summary>Texture backups made when this window was in Objective Studio (still listed, restorable).</summary>
+    private static string? Legacy => TerrainTool.Core.SuiteLayout.FolderOf("ObjectiveStudio") is { } os ? Path.Combine(os, "Backup") : null;
     private const string Index = "origin.txt";
 
     public static string? Save(string file)
@@ -479,8 +483,8 @@ public static class TextureBackupStore
     public static List<Entry> List()
     {
         var res = new List<Entry>();
-        if (!Directory.Exists(Root)) return res;
-        foreach (var dir in Directory.EnumerateDirectories(Root))
+        var roots = new[] { Root, Legacy }.Where(r => r != null && Directory.Exists(r)).Select(r => r!).ToList();
+        foreach (var dir in roots.SelectMany(Directory.EnumerateDirectories))
         {
             string idx = Path.Combine(dir, Index);
             if (!System.IO.File.Exists(idx)) continue;

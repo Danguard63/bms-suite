@@ -985,11 +985,11 @@ public partial class MainWindow : Window
         await InstallAsync(false, false, (Button)sender, water: true);
     }
 
-    private async Task InstallAsync(bool objects, bool photo, Button button, bool water = false, bool art = false, bool sim = false)
+    private async Task InstallAsync(bool objects, bool photo, Button button, bool water = false, bool art = false, bool sim = false, bool campaign = false)
     {
         ReadForm();
         SaveProject();
-        var inst = new BmsInstaller(_project, objects, photo, water, art, sim);
+        var inst = new BmsInstaller(_project, objects, photo, water, art, sim, campaign);
         if (inst.Problems.Count > 0)
         {
             foreach (var pr in inst.Problems) Log("Install into BMS: " + pr);

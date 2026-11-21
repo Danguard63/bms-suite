@@ -33,6 +33,14 @@ public sealed class App : Application
                     int i = Array.FindIndex(args, a => a.Equals("--" + name, StringComparison.OrdinalIgnoreCase) || a.Equals("/" + name, StringComparison.OrdinalIgnoreCase));
                     return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
                 }
+                // --textures <model> (from the Campaign Editor): only the texture window of that model
+                if (int.TryParse(Arg("textures"), out int tex))
+                {
+                    var tw = new ModelTexturesWindow(null) { StartModel = tex };
+                    MainWindow = tw;
+                    tw.Show();
+                    return;
+                }
                 // --data/--model (from other programs), or --bms-data/--theater (from the BMS Suite main menu)
                 var w = new MainWindow(Arg("data") ?? TerrainTool.Core.SuiteArgs.BmsData(args), int.TryParse(Arg("model"), out int m) ? m : null, TerrainTool.Core.SuiteArgs.TheaterName(args));
                 MainWindow = w;

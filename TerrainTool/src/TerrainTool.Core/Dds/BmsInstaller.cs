@@ -81,7 +81,7 @@ public sealed class BmsInstaller
                              "Usually 'Run Objects' ran without BMS's campaign terrain cache: start a campaign of the theater once in BMS, then Run Objects again.");
         }
         if (art && !Directory.Exists(ArtSource)) Problems.Add($"{ArtSource} missing: run '2D map (campmap)' and/or 'Theater art' first");
-        if (sim && !Directory.Exists(SimSource)) Problems.Add($"{SimSource} missing: create the project folder SimOverrides and run 'Build theater' first");
+        if (sim && !Directory.Exists(SimSource)) Problems.Add($"{SimSource} missing: the theater's Sim is not made yet (Sim Editor: Install into BMS makes it)");
         if (sim && Directory.Exists(Target) && InstalledTdf() == null) Problems.Add($"No *_NT.tdf in {Target}\\Terrdata\\theaterdefinition: install the theater first (INSTALL.txt)");
         if (IsBmsRunning()) Problems.Add("Falcon BMS is running: close it first");
 
@@ -368,7 +368,7 @@ public sealed class BmsInstaller
                       : "Nothing else in BMS is touched (no Korea, no theater.lst, no .tdf).");
         if (Objects && File.Exists(Path.Combine(ObjectsTarget, Database.UnitsConversion.PicksFile)))
             lines.Add("The aircraft and vehicles converted into this theater with the 4.37 Units Converter are converted again after the new database is installed (its own backup first).");
-        if (Objects) lines.Add("If Objects moved bases, install the campaign files too (Campaign Editor) and create a NEW TE scenario.");
+        if (Objects) lines.Add(Campaign ? "If Objects moved bases, create a NEW TE scenario." : "If Objects moved bases, install the campaign files too and create a NEW TE scenario.");
         return string.Join("\n", lines);
     }
 
@@ -397,7 +397,7 @@ public sealed class BmsInstaller
         if (Photoreal) RunPhotoreal(log);
         if (Water) RunWater(log);
         if (Art) RunArt(log);
-        log("  Done." + (Objects ? " Install the campaign files from the Campaign Editor if Objects changed them, then start BMS." : ""));
+        log("  Done." + (Objects && !Campaign ? " If Objects changed the campaign files, install them too, then start BMS." : ""));
     }
 
     private void RunObjects(Action<string> log)

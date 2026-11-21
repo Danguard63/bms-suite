@@ -6,7 +6,7 @@ namespace ObjectiveStudio;
 
 /// <summary>
 /// Objective Studio for Falcon BMS: what is inside the objectives of any installed theater (or of a TerrainTool project).
-/// Without arguments it asks which theater to open. Arguments: --project &lt;file.ttproj&gt; [--textures &lt;model number&gt;],
+/// Without arguments it asks which theater to open. Arguments: --project &lt;file.ttproj&gt;,
 /// or --theater &lt;name&gt; --bms-data &lt;folder&gt; (from the BMS Suite main menu: opens that installed theater directly).
 /// </summary>
 public sealed class App : Application
@@ -44,14 +44,6 @@ public sealed class App : Application
                 }
                 string? project = Arg("project");
                 if (project != null && !File.Exists(project)) { MessageBox.Show("Project not found: " + project, "Objective Studio"); project = null; }
-                // --textures <model> without a project (from the Campaign Editor): only the texture window
-                if (project == null && int.TryParse(Arg("textures"), out int only))
-                {
-                    var tw = new ModelTexturesWindow(null) { StartModel = only };
-                    MainWindow = tw;
-                    tw.Show();
-                    return;
-                }
                 // started from the BMS Suite main menu on a theater that a TerrainTool project builds: that project (Run Objects,
                 // imports, real runways…), not the installed copy
                 if (project == null && Arg("textures") == null && TerrainTool.Core.SuiteArgs.Theater(args) is { } built && ProjectOf(built) is { } own)
@@ -79,9 +71,6 @@ public sealed class App : Application
                 var w = new ObjectiveStudio.MainWindow(project);
                 MainWindow = w;
                 w.Show();
-                // --textures <numero del modello>: apre subito le texture di quel modello (dal Campaign Editor)
-                if (int.TryParse(Arg("textures"), out int model))
-                    new ModelTexturesWindow(project != null ? TerrainTool.Core.Project.TheaterProject.Load(project) : null) { Owner = w, StartModel = model }.Show();
             }
             catch (Exception ex)
             {

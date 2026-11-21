@@ -65,7 +65,7 @@ public sealed class MainWindow : Window
         new("DATA", 0, "4.37 Units Converter", "Old aircraft and vehicles into 4.38", "UnitsConverter", "UnitsConverter", "UnitsConverter.exe", "\uE8AB",
             "Converts aircraft, helicopters, vehicles and weapons of a BMS 4.37 database (installation, add-on or objects folder) into a BMS 4.38 theater: models, hardpoints, weapons, squadrons, TE list and names, with backup and restore."),
         new("DATA", 0, "Sim Editor", "Theater Sim, SAM, database changes", "SimEditor", "SimEditor", "SimEditor.exe", "\uE9D9",
-            "For a theater made with TerrainTool: its own Sim files (SimOverrides), the database changes (DbEdits.txt) and the check of the air defence systems in its campaigns."),
+            "Any add-on theater (or a TerrainTool project): its own Sim files (missiles, radars, vehicles, AI-only aircraft), the database changes (DbEdits.txt) and the check of the air defence systems in its campaigns; install with backup and restore."),
     };
 
     private readonly ListBox _theaters = new() { Background = Brushes.Transparent, BorderThickness = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Stretch };

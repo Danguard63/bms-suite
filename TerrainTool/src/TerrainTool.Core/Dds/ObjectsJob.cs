@@ -381,7 +381,7 @@ public sealed partial class ObjectsJob : TextureJob
             catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException) { }
             changes.Save(chPath);
             notes.Add($"Objective changes for the campaign: {changes.Objectives.Count} objectives ({changes.RemovedBases.Count} removed bases) → {chPath}");
-            notes.Add("   Apply them in the Campaign Editor (project, 'Apply object changes'): CampObjData.XML, *.cam, Te_New_Nt.tac, stations+ils.dat.");
+            notes.Add("   Install into BMS writes them into CampObjData.XML, *.cam, Te_New_Nt.tac and stations+ils.dat and installs those files too.");
             File.WriteAllText(Path.Combine(dst, "Airbases_relocation.csv"), relRep, new UTF8Encoding(false));
             notes.Add($@"Airbases moved to their real runways: {moved} (Campaign\CampObjData.XML, report Terrdata\{FolderName}\Airbases_relocation.csv)");
         }

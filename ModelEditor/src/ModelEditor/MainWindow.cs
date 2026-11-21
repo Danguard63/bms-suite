@@ -71,6 +71,11 @@ public sealed class MainWindow : Window
         L("   Search"); top.Children.Add(_search);
         L("Show"); top.Children.Add(_cat);
         top.Children.Add(Btn("Open folder…", OpenExternal, "Open a model folder outside BMS (for example a Blender export with Parent.dat, Model_N.bml, Materials.mtl). You can also drag the folder onto the window."));
+        top.Children.Add(Btn("Textures…", () =>
+        {
+            var tw = new ModelTexturesWindow(null) { Owner = this, StartModel = _current is { Category: not "External" } c && c.ModelId > 0 ? c.ModelId : null };
+            tw.Show();
+        }, "Textures of aircraft, helicopters, vehicles and ships: liveries, replace a texture (the old one is kept: Backups), 3D preview"));
         top.Children.Add(Btn("Check all models…", CheckAll, "Checks every model folder (Parent.dat, LOD files, DOF / switch numbers, textures)"));
         top.Children.Add(Btn("Backups…", () =>
         {

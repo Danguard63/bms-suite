@@ -37,6 +37,7 @@ public sealed class MainWindow : Window
 
     private readonly Button _install = Big("Install into BMS…", "Copies the built objects into BMS (asks first), writes the objectives moved, turned, replaced or removed into the campaign and TE files and installs them too; deletes the caches BMS rebuilds when a campaign or TE starts. Every file replaced is saved first.");
     private readonly Button _restore = Small("Restore a backup…", "Puts back the BMS files replaced by an earlier install");
+    private readonly Button _import = Small("Layouts from another theater…", "Copies bases and ground objective layouts of another theater installed in BMS into this one (with their pieces and 3D models), ready for 'Replace layout' / 'Replace airbase'. Backup first, Restore.");
     private readonly Button _campaign = Small("Campaign Editor", "To edit the campaign itself (squadrons, units, teams…). Not needed to install: Install into BMS already brings the campaign files up to date with the objectives.");
 
     private readonly TextBlock _status = new() { FontFamily = new FontFamily("Consolas"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
@@ -82,9 +83,7 @@ public sealed class MainWindow : Window
 
         var other = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         other.Children.Add(new TextBlock { Text = "Other tools: ", VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.DimGray });
-        var tex = Small("Model textures…", "Textures of aircraft, helicopters, vehicles and ships (will move to the Model Editor)");
-        tex.Click += (_, _) => new ModelTexturesWindow(_p) { Owner = this }.Show();
-        other.Children.Add(tex);
+        other.Children.Add(_import);
         other.Children.Add(_campaign);
         var outBtn = Small("Open output folder", "Where Build objects writes");
         outBtn.Click += (_, _) => { if (_p != null) Explore(Path.Combine(_p.ProjectFolder, "Output")); };
@@ -107,6 +106,7 @@ public sealed class MainWindow : Window
         _install.Click += async (_, _) => await InstallAsync();
         _restore.Click += (_, _) => RestoreBackup();
         _campaign.Click += (_, _) => OpenCampaignEditor();
+        _import.Click += (_, _) => OpenImport();
         _cancel.IsEnabled = false;
         Activated += (_, _) => { if (_p != null && _cts == null) Refresh(); };
 
@@ -246,6 +246,8 @@ public sealed class MainWindow : Window
         _restore.IsEnabled = idle && Installed;
         _restore.Visibility = Installed ? Visibility.Visible : Visibility.Collapsed;
         _campaign.Visibility = Installed ? Visibility.Collapsed : Visibility.Visible;
+        _import.Visibility = Installed ? Visibility.Visible : Visibility.Collapsed;
+        _import.IsEnabled = idle;
     }
 
     // ───────────────────────── state and next step ─────────────────────────
@@ -477,6 +479,20 @@ public sealed class MainWindow : Window
         try { new CoastalWindow(_p) { Owner = this, RunObjects = async () => { await RunObjectsAsync(); } }.Show(); }
         catch (Exception ex) { MessageBox.Show(this, "Review coastal moves not opened: " + ex.Message, Title); }
         finally { Cursor = null; }
+    }
+
+    /// <summary>Layouts of another installed theater into this one (Database Interchange's engine), without leaving Objective Studio.</summary>
+    private void OpenImport()
+    {
+        if (_p == null || !Installed) return;
+        if (OwnedWindows.OfType<ObjectiveEditorWindow>().Any()) { MessageBox.Show(this, "Close the objective editor first (the theater's database changes).", Title); return; }
+        if (global::TerrainTool.Core.Sim.TheaterSim.TheaterOf(_p) is not { } t) { MessageBox.Show(this, "The theater is not in BMS's theater list any more.", Title); return; }
+        if (global::TerrainTool.Core.Database.DbInstaller.IsShared(t.DataDir, t.ObjectDir))
+        { MessageBox.Show(this, "This theater uses BMS's own database (Terrdata\\objects), which is not changed.", Title); return; }
+        var w = new ImportLayoutsWindow(_p, t) { Owner = this };
+        w.ShowDialog();
+        if (w.Changed) _status.Text = "Layouts brought in: the objective editor offers them in 'Replace layout' / 'Replace airbase'.";
+        Refresh();
     }
 
     private void OpenFlyOver()

@@ -34,7 +34,7 @@ public sealed class ObjectiveEditorWindow : Window
     private Preview3DWindow? _preview3d;
     private readonly Button _fly = new() { Content = "Fly over…", Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(8, 3, 8, 3), ToolTip = "Free camera over all the objectives, starting from the selected one: BMS models, textures and runway numbers on the real terrain, with the edits made here (also before saving)" };
     private FlyOverWindow? _flyOver;
-    private readonly Button _korea = new() { Content = "Replace base…", Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(8, 3, 8, 3), ToolTip = "Replace this airbase with a complete base, placed on its runway: a BMS 4.38 Korean base, or a base of this theater (also one imported with Database Interchange)" };
+    private readonly Button _korea = new() { Content = "Replace base…", Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(8, 3, 8, 3), ToolTip = "Replace this airbase with a complete base, placed on its runway: a BMS 4.38 Korean base, or a base of this theater (also one brought with 'Layouts from another theater…')" };
     private readonly Button _replace = new() { Content = "Replace layout…", Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(8, 3, 8, 3),
         ToolTip = "Put another layout (OCD) of the add-on or of BMS 4.38 on this objective: a longer bridge for a wide river, a port inland that becomes a town… (only this objective changes)" };
     private ReplaceLayoutWindow? _replaceWin;
@@ -1311,7 +1311,7 @@ public sealed class KoreaBaseDialog : Window
         {
             TextWrapping = TextWrapping.Wrap,
             Text = $"Bases to put on this airbase, most similar first: complete BMS 4.38 Korean bases (with their taxiway asphalt model) and the bases of this theater " +
-                   $"(also the ones imported with Database Interchange). {runways} runway(s) here. " +
+                   $"(also the ones brought with 'Layouts from another theater…'). {runways} runway(s) here. " +
                    "The number on the left is how far the runways are from these ones (centres, angle, length). " +
                    "The selected base is shown on the map right away: check it on the photo, then OK. Only the main Korean objective " +
                    "is used (extra parts of big Korean bases are other objectives and are not imported)."

@@ -110,7 +110,7 @@ public static class GeorefMigration
 
         p.Save(projectFile);
         notes.Add($"Copies of the files before the change: {backup}");
-        notes.Add("Next: rebuild the terrain (all GIS steps, Terrain Builder, textures), then Run Objects and, in the Campaign Editor, Apply object changes.");
+        notes.Add("Next: rebuild the terrain (all GIS steps, Terrain Builder, textures), then Run Objects and Install into BMS (objects and campaign files).");
         return notes;
     }
 

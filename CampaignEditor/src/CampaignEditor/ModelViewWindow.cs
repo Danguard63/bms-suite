@@ -164,12 +164,12 @@ public sealed class ModelViewWindow : Window
         };
     }
 
-    /// <summary>Object Editor sulle texture del modello scelto (--textures numero del modello).</summary>
+    /// <summary>Le texture del modello scelto nel Model Editor (--textures numero del modello).</summary>
     private void OpenTextures()
     {
         if (Current?.ModelDir is not string md || !int.TryParse(System.IO.Path.GetFileName(md), out int id)) { MessageBox.Show(this, "This vehicle has no model.", Title); return; }
-        string? exe = global::TerrainTool.Core.SuiteLayout.ExeOf("ObjectiveStudio");
-        if (exe == null) { MessageBox.Show(this, "Objective Studio was not found: build it with build.bat in the ObjectiveStudio folder (next to CampaignEditor).", Title); return; }
+        string? exe = global::TerrainTool.Core.SuiteLayout.ExeOf("ModelEditor");
+        if (exe == null) { MessageBox.Show(this, "The Model Editor (where the textures are edited) was not found next to the Campaign Editor.", Title); return; }
         var psi = new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = false, WorkingDirectory = System.IO.Path.GetDirectoryName(exe)! };
         psi.ArgumentList.Add("--textures"); psi.ArgumentList.Add(id.ToString(System.Globalization.CultureInfo.InvariantCulture));
         System.Diagnostics.Process.Start(psi);

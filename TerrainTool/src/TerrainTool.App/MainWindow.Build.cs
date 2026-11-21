@@ -97,7 +97,7 @@ public partial class MainWindow
         {
             var lines = new List<string>();
             string obj = Path.Combine(InstallRoot, "Terrdata", ObjectsJob.FolderName);
-            lines.Add(Directory.Exists(obj) ? $"Objects: made ({Directory.GetLastWriteTime(obj):g}) → {obj}" : "Objects: not made yet (Objective Studio → Run Objects): BMS would use the Korean airbase layouts");
+            lines.Add(Directory.Exists(obj) ? $"Objects: made ({Directory.GetLastWriteTime(obj):g}) → {obj}" : "Objects: not made yet ('Build theater' runs Objects first): BMS would use the Korean airbase layouts");
             string edits = ObjectsJob.CampaignEditsFolder(_project);
             int ed = Directory.Exists(edits) ? Directory.EnumerateFiles(edits).Count() : 0;
             lines.Add($"Campaigns: {CampaignFiles().Count} files of the old add-on" + (ed > 0 ? $", {ed} saved by the Campaign Editor ({edits})" : ""));
@@ -176,8 +176,8 @@ public partial class MainWindow
             rows.Add(new BuildRow
             {
                 Part = "Objects", State = Directory.Exists(obj) ? "Ready" : "Missing",
-                Details = Directory.Exists(obj) ? $"Airbase and objective layouts of the theater ({Directory.GetLastWriteTime(obj):g})" : "Not made: BMS would use the Korean airbase layouts (Objective Studio → Run Objects)",
-                GoLabel = "Open Objective Studio", Go = () => LaunchTool("ObjectiveStudio", "Objective Studio"),
+                Details = Directory.Exists(obj) ? $"Airbase and objective layouts of the theater ({Directory.GetLastWriteTime(obj):g})" : "Not made: 'Build theater' runs Objects first (to edit the objectives: Objective Studio)",
+                GoLabel = "Run Objects", Go = () => _ = RunObjectsHereAsync(),
             });
 
             var camps = CampaignFiles();
@@ -281,17 +281,25 @@ public partial class MainWindow
             MessageBox.Show(this, "The theater cannot be built yet:\n\n" + string.Join("\n", stop.Select(r => $"• {r.Part}: {r.Details}")), "Build theater", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        var warn = rows.Where(r => r.State == "Missing" && r.Part is "Objects" or "Campaigns & TE").ToList();
+        var warn = rows.Where(r => r.State == "Missing" && r.Part is "Campaigns & TE").ToList();
         if (warn.Count > 0 && MessageBox.Show(this, "Some parts are missing:\n\n" + string.Join("\n", warn.Select(r => $"• {r.Part}: {r.Details}")) + "\n\nBuild anyway?",
                 "Build theater", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         var todo = new List<TexRow>();
         var mapRow = rows.FirstOrDefault(r => r.Part == "2D map");
         if (BuildRemake.IsChecked == true && mapRow != null && mapRow.State != "Ready")
             todo.Add(new TexRow { Job = TextureJob.All.OfType<CampMapJob>().First(j => j.Id == "campmap") });
+        // the objects of the theater: made here when they are not there yet (Run Objects)
+        if (rows.FirstOrDefault(r => r.Part == "Objects") is { State: "Missing" }) todo.Add(new TexRow { Job = TextureJob.All.OfType<ObjectsJob>().First() });
         todo.Add(new TexRow { Job = TextureJob.All.OfType<AssembleJob>().First() });
         var t0 = DateTime.Now;
         BuildReport.Text = $"Building the theater ({t0:g})…";
         var notes = await RunJobsAsync(todo, BuildProgressBar, BuildStatus, BuildButton, CancelBuildButton);
+        // the objectives moved, turned, replaced or removed by Run Objects: into the campaign files too
+        if (notes != null && TerrainTool.Core.Campaign.ProjectCampaign.HasPending(_project))
+        {
+            try { notes.AddRange(TerrainTool.Core.Campaign.ProjectCampaign.ApplyPending(_project, Path.Combine(_project.ProjectFolder, "Output", "BmsBackup", DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_campaign"))); }
+            catch (Exception ex) { notes.Add("Campaign: object changes NOT written: " + ex.Message); }
+        }
         BuildReport.Text = notes == null ? "Build cancelled." :
             $"Theater \"{AssembleTheaterName()}\" built in {DateTime.Now - t0:mm\\:ss} → {InstallRoot}\r\n\r\n" + string.Join("\r\n", notes) +
             "\r\n\r\nNext: tab 9 'Install into BMS'.";
@@ -343,10 +351,20 @@ public partial class MainWindow
         finally { _texCts.Dispose(); _texCts = null; InstallAllButton.IsEnabled = true; RefreshInstall(); }
     }
 
+    /// <summary>Run Objects from here (the same job as Objective Studio's): the theater's objects from the old add-on.</summary>
+    private async Task RunObjectsHereAsync()
+    {
+        var t0 = DateTime.Now;
+        var notes = await RunJobsAsync(new[] { new TexRow { Job = TextureJob.All.OfType<ObjectsJob>().First() } }, BuildProgressBar, BuildStatus, BuildButton, CancelBuildButton);
+        if (notes != null)
+            try { File.WriteAllText(Path.Combine(_project.ProjectFolder, "Output", "RunObjects_log.txt"), $"Run Objects {t0:yyyy-MM-dd HH:mm} (TerrainTool)\r\n" + string.Join("\r\n", notes)); } catch (IOException) { }
+        RefreshBuild();
+    }
+
     private async void OnInstallObjects(object sender, RoutedEventArgs e)
     {
         if (_texCts != null || _procCts != null) return;
-        await InstallAsync(true, false, (Button)sender);
+        await InstallAsync(true, false, (Button)sender, campaign: true);
         RefreshInstall();
     }
 
