@@ -12,7 +12,8 @@ namespace DatabaseInterchange;
 /// <summary>
 /// Database Interchange: choose a source and a destination theater, the layouts (bases, ground objectives) to copy, make the
 /// plan (nothing written, every number shown), install with backup, restore; the same for aircraft, helicopters, ground vehicles,
-/// ships, weapons and unit types (database only: the Sim files are BMS's).
+/// ships, weapons and unit types, with a choice for each record the destination has under the same name but different, and
+/// optionally the Sim files they need (missile, bomb and radar data, flight models of AI-only aircraft).
 /// </summary>
 public sealed class MainWindow : Window
 {
@@ -52,6 +53,15 @@ public sealed class MainWindow : Window
     };
     private readonly Button _ePlan = Btn("Make plan (nothing written)");
     private readonly Button _eInstall = Btn("Install into the destination…");
+    private readonly Button _eChoices = Btn("Same-name records…");
+    private readonly CheckBox _eSim = new()
+    {
+        Content = "Copy the Sim files they need", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 8, 0),
+        ToolTip = "Missile, bomb and radar data and the flight models of AI-only aircraft (never those of the aircraft flyable in BMS).\n" +
+                  "A destination using BMS's own Data\\Sim first gets a Sim folder of its own (a copy of BMS's).",
+    };
+    /// <summary>The choices for the records the destination has with the same name but other values (table|name).</summary>
+    private readonly Dictionary<string, Interchange.ConflictChoice> _eResolve = new(StringComparer.Ordinal);
     private List<EntityRow> _eRows = new();
     private Interchange.Plan? _eCurrent;
     private List<int> _eCurrentCts = new();
@@ -135,8 +145,8 @@ public sealed class MainWindow : Window
 
         _install.IsEnabled = false;
         _eInstall.IsEnabled = false;
-        _from.SelectionChanged += (_, _) => { Save("from.txt", From?.Name); LoadLayouts(); Invalidate(); };
-        _to.SelectionChanged += (_, _) => { Save("to.txt", To?.Name); Invalidate(); MarkInDest(); };
+        _from.SelectionChanged += (_, _) => { Save("from.txt", From?.Name); LoadLayouts(); Invalidate(); _eResolve.Clear(); };
+        _to.SelectionChanged += (_, _) => { Save("to.txt", To?.Name); Invalidate(); _eResolve.Clear(); MarkInDest(); };
         _search.TextChanged += (_, _) => FillGrid();
         _grid.SelectionChanged += (_, _) => Invalidate();
         _plan.Click += (_, _) => MakePlan();
@@ -222,6 +232,7 @@ public sealed class MainWindow : Window
         _install.IsEnabled = false;
         _eCurrent = null;
         _eInstall.IsEnabled = false;
+        _eChoices.IsEnabled = false;
     }
 
     private void MakePlan()
@@ -310,15 +321,18 @@ public sealed class MainWindow : Window
         left.Children.Add(_eGrid);
 
         var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 6) };
-        bar.Children.Add(_ePlan); bar.Children.Add(_eInstall);
+        bar.Children.Add(_ePlan); bar.Children.Add(_eInstall); bar.Children.Add(_eChoices); bar.Children.Add(_eSim);
         var restore = Btn("Restore…"); restore.Click += (_, _) => Restore(); bar.Children.Add(restore);
+        _eChoices.IsEnabled = false;
         var help = new TextBlock
         {
             Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6), FontSize = 11.5,
             Text = "Copies the database records and everything they use: aircraft data and sensors, radars, weapons, hardpoint lists, " +
                    "rocket pods, the vehicles of a unit type, squadron stores, 3D models. What the destination already has the same is reused; " +
                    "the rest is added at the end of the tables, and new weapon numbers are added to the same racks in BmsRack.dat. " +
-                   "Flight models and the other Sim files are not copied (both theaters use BMS's). Back up your BMS folder first.",
+                   "When the destination has a record with the same name but other values, you choose: add the source's as a new one, " +
+                   "replace the destination's, or keep the destination's. 'Copy the Sim files they need' brings the missile, bomb and radar " +
+                   "data and the flight models of AI-only aircraft too (flyable aircraft keep BMS's). Everything is saved first (Restore…).",
         };
         var right = new DockPanel { Margin = new Thickness(0, 0, 6, 6) };
         DockPanel.SetDock(bar, Dock.Top); right.Children.Add(bar);
@@ -331,8 +345,10 @@ public sealed class MainWindow : Window
 
         _kind.SelectionChanged += (_, _) => FillEntities();
         _eSearch.TextChanged += (_, _) => FillEntities();
-        _eGrid.SelectionChanged += (_, _) => { _eCurrent = null; _eInstall.IsEnabled = false; };
+        _eGrid.SelectionChanged += (_, _) => { _eCurrent = null; _eInstall.IsEnabled = false; _eChoices.IsEnabled = false; };
+        _eSim.Click += (_, _) => { _eCurrent = null; _eInstall.IsEnabled = false; };
         _ePlan.Click += (_, _) => MakeEntityPlan();
+        _eChoices.Click += (_, _) => { if (_eCurrent != null) MakeEntityPlan(ask: true); };
         _eInstall.Click += (_, _) => InstallEntities();
         return body;
     }
@@ -359,41 +375,154 @@ public sealed class MainWindow : Window
             (q.Length == 0 || r.Ct.ToString(Ci) == q || r.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || r.Detail.Contains(q, StringComparison.OrdinalIgnoreCase))).ToList();
     }
 
-    private void MakeEntityPlan()
+    private void MakeEntityPlan(bool ask = false)
     {
         var sel = _eGrid.SelectedItems.OfType<EntityRow>().ToList();
         if (From is not { } s || To is not { } d) { _status.Text = "Choose the two theaters."; return; }
-        if (sel.Count == 0) { _status.Text = "Choose one or more items on the left."; return; }
+        List<int> cts;
+        if (ask && _eCurrent != null) cts = _eCurrentCts;
+        else
+        {
+            if (sel.Count == 0) { _status.Text = "Choose one or more items on the left."; return; }
+            cts = sel.Select(r => r.Ct).ToList();
+            if (!cts.OrderBy(x => x).SequenceEqual(_eCurrentCts.OrderBy(x => x))) _eResolve.Clear();
+        }
         Cursor = System.Windows.Input.Cursors.Wait;
         try
         {
-            var cts = sel.Select(r => r.Ct).ToList();
-            var p = Interchange.MakeEntities(s, d, _data.Text.Trim(), cts);
+            bool sim = _eSim.IsChecked == true;
+            var p = Interchange.MakeEntities(s, d, _data.Text.Trim(), cts, resolve: _eResolve, copySim: sim);
+            // same name, other values: the user chooses; a choice can bring other records into the plan, so it is asked again
+            // until every record of the plan has its choice (at most a few rounds)
+            for (int round = 0; round < 6 && p.Conflicts.Count > 0 && (ask || p.Conflicts.Any(c => !_eResolve.ContainsKey(Interchange.ConflictKey(c.Table, c.Name)))); round++)
+            {
+                Cursor = null;
+                if (!AskConflicts(p)) { _status.Text = "Plan not made: the choices for the same-name records were not confirmed."; _eReport.Text = ""; _eCurrent = null; _eInstall.IsEnabled = false; return; }
+                Cursor = System.Windows.Input.Cursors.Wait;
+                ask = false;
+                p = Interchange.MakeEntities(s, d, _data.Text.Trim(), cts, resolve: _eResolve, copySim: sim);
+            }
             bool blocked = p.Problems.Any(x => x.StartsWith("Source and destination", StringComparison.Ordinal) || x.StartsWith("The destination uses", StringComparison.Ordinal));
             _eCurrent = blocked ? null : p;
             _eCurrentCts = cts;
             var lines = new List<string> { $"PLAN – nothing written yet ({DateTime.Now:HH:mm:ss})", "" };
             lines.AddRange(p.Report);
+            if (p.Conflicts.Count > 0)
+            {
+                lines.Add(""); lines.Add($"Same name in {d.Name}, other values ({p.Conflicts.Count}) – 'Same-name records…' changes the choice:");
+                foreach (var c in p.Conflicts.OrderBy(c => c.Table).ThenBy(c => c.Name))
+                    lines.Add($"  {c.Table} '{c.Name}': source {c.SrcNum}, destination {c.DstNum} → {ChoiceText(c.Choice)}");
+            }
             if (p.Problems.Count > 0) { lines.Add(""); lines.Add($"To check ({p.Problems.Count}):"); lines.AddRange(p.Problems.Select(x => "  ! " + x)); }
             lines.Add("");
-            lines.Add($"New records in {d.Name}: " + (p.Records.Count == 0 ? "none" :
-                string.Join(", ", p.Records.GroupBy(r => r.Table).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key} ({g.Min(r => r.Num)}–{g.Max(r => r.Num)})"))));
-            lines.Add($"Files: {p.Files.Count} (models, textures, BmsRack.dat)");
+            var dstDb = BmsDatabase.Load(d.ObjectDir);
+            var replaced = p.Records.Where(r => dstDb.Get(r.Table, r.Num) != null).Select(r => (r.Table, r.Num)).ToHashSet();
+            var added = p.Records.Where(r => !replaced.Contains((r.Table, r.Num))).ToList();
+            lines.Add($"New records in {d.Name}: " + (added.Count == 0 ? "none" :
+                string.Join(", ", added.GroupBy(r => r.Table).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key} ({g.Min(r => r.Num)}–{g.Max(r => r.Num)})"))));
+            if (replaced.Count > 0) lines.Add($"Records replaced in {d.Name}: " + string.Join(", ", replaced.OrderBy(r => r.Table).ThenBy(r => r.Num).Select(r => $"{r.Table} {r.Num}")));
+            lines.Add($"Files: {p.Files.Count} (models, textures, BmsRack.dat{(sim ? ", Sim files" : "")})");
             foreach (var f in p.Files.Keys.OrderBy(x => x).Take(400)) lines.Add("  " + f);
             if (p.Files.Count > 400) lines.Add($"  … {p.Files.Count - 400} more");
             _eReport.Text = string.Join("\n", lines);
             _eInstall.IsEnabled = _eCurrent != null && (p.Records.Count > 0 || p.Files.Count > 0);
+            _eChoices.IsEnabled = _eCurrent != null && p.Conflicts.Count > 0;
             _status.Text = _eInstall.IsEnabled ? "Plan ready: read it, then Install." : "Nothing to install.";
         }
         catch (Exception ex) { _eReport.Text = "Plan not made: " + ex; }
         finally { Cursor = null; }
     }
 
+    private static string ChoiceText(Interchange.ConflictChoice c) => c switch
+    {
+        Interchange.ConflictChoice.Replace => "replace the destination's",
+        Interchange.ConflictChoice.Keep => "keep the destination's",
+        _ => "add the source's as a new record",
+    };
+
+    private static string TableText(string t) => t switch
+    {
+        "CT" => "class entry", "ACD" => "aircraft data", "VCD" => "vehicle", "WCD" => "weapon", "SWD" => "weapon data", "RCD" => "radar",
+        "ICD" => "infrared sensor", "VSD" => "visual sensor", "RWD" => "RWR", "WLD" => "weapon list", "UCD" => "unit type", "FCD" => "feature",
+        "PD" => "point", "PHD" => "point header", "OCD" => "objective", "SSD" => "squadron stores", "DDP" => "damage", "FED" => "feature entry",
+        _ => t,
+    };
+
+    /// <summary>One row per record with the same name and other values: add as new / replace / keep, "apply to all". false = cancelled.</summary>
+    private bool AskConflicts(Interchange.Plan p)
+    {
+        var w = new Window { Title = $"Same name, other values – {p.Dst.Name}", Owner = this, Width = 900, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var dp = new DockPanel { Margin = new Thickness(10) };
+        var intro = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8),
+            Text = $"{p.Dst.Name} already has these records under the same name, with other values. For each one choose:\n" +
+                   "• Add as new – the source's goes in as a new record (new number); the destination's stays as it is for what already uses it.\n" +
+                   "• Replace – the destination's record gets the source's values (same number): everything in the destination that uses it changes too " +
+                   "(for example a weapon list, a radar or a weapon shared by several aircraft).\n" +
+                   "• Keep – the destination's record is used as it is; the source's values are not copied.",
+        };
+        DockPanel.SetDock(intro, Dock.Top); dp.Children.Add(intro);
+        var all = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
+        all.Children.Add(new TextBlock { Text = "Apply to all  ", VerticalAlignment = VerticalAlignment.Center });
+        var combos = new List<(Interchange.Conflict C, ComboBox Box)>();
+        ComboBox Box(Interchange.ConflictChoice sel)
+        {
+            var b = new ComboBox { Width = 230, Margin = new Thickness(0, 0, 6, 0) };
+            foreach (var c in new[] { Interchange.ConflictChoice.AddNew, Interchange.ConflictChoice.Replace, Interchange.ConflictChoice.Keep })
+                b.Items.Add(new ComboBoxItem { Content = c switch { Interchange.ConflictChoice.Replace => "Replace the destination's", Interchange.ConflictChoice.Keep => "Keep the destination's", _ => "Add as new" }, Tag = c });
+            b.SelectedIndex = sel switch { Interchange.ConflictChoice.Replace => 1, Interchange.ConflictChoice.Keep => 2, _ => 0 };
+            return b;
+        }
+        var allBox = Box(Interchange.ConflictChoice.AddNew);
+        var apply = new Button { Content = "Apply", Padding = new Thickness(10, 2, 10, 2) };
+        apply.Click += (_, _) => { foreach (var (_, b) in combos) b.SelectedIndex = allBox.SelectedIndex; };
+        all.Children.Add(allBox); all.Children.Add(apply);
+        DockPanel.SetDock(all, Dock.Top); dp.Children.Add(all);
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
+        var ok = new Button { Content = "OK – make the plan", Padding = new Thickness(12, 3, 12, 3), Margin = new Thickness(0, 0, 6, 0), IsDefault = true };
+        var cancel = new Button { Content = "Cancel", Padding = new Thickness(12, 3, 12, 3), IsCancel = true };
+        buttons.Children.Add(ok); buttons.Children.Add(cancel);
+        DockPanel.SetDock(buttons, Dock.Bottom); dp.Children.Add(buttons);
+
+        var grid = new Grid();
+        foreach (var width in new[] { 120.0, double.NaN, 150.0, 240.0 })
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = double.IsNaN(width) ? new GridLength(1, GridUnitType.Star) : new GridLength(width) });
+        void Cell(int r, int c, UIElement e) { Grid.SetRow(e, r); Grid.SetColumn(e, c); grid.Children.Add(e); }
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        int col = 0;
+        foreach (var h in new[] { "Kind", "Name", "Number (source → dest.)", "Choice" })
+            Cell(0, col++, new TextBlock { Text = h, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+        int row = 1;
+        foreach (var c in p.Conflicts.OrderBy(c => c.Table).ThenBy(c => c.Name))
+        {
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var m = new Thickness(0, 2, 6, 2);
+            Cell(row, 0, new TextBlock { Text = $"{TableText(c.Table)} ({c.Table})", VerticalAlignment = VerticalAlignment.Center, Margin = m });
+            Cell(row, 1, new TextBlock { Text = c.Name, VerticalAlignment = VerticalAlignment.Center, Margin = m, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = c.Name });
+            Cell(row, 2, new TextBlock { Text = $"{c.SrcNum} → {c.DstNum}", VerticalAlignment = VerticalAlignment.Center, Margin = m, FontFamily = new FontFamily("Consolas") });
+            var b = Box(_eResolve.TryGetValue(Interchange.ConflictKey(c.Table, c.Name), out var was) ? was : c.Choice);
+            b.Margin = new Thickness(0, 2, 0, 2);
+            Cell(row, 3, b);
+            combos.Add((c, b));
+            row++;
+        }
+        dp.Children.Add(new ScrollViewer { Content = grid, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        w.Content = dp;
+        ok.Click += (_, _) => w.DialogResult = true;
+        if (w.ShowDialog() != true) return false;
+        foreach (var (c, b) in combos)
+            _eResolve[Interchange.ConflictKey(c.Table, c.Name)] = (b.SelectedItem as ComboBoxItem)?.Tag is Interchange.ConflictChoice ch ? ch : Interchange.ConflictChoice.AddNew;
+        return true;
+    }
+
     private void InstallEntities()
     {
         if (_eCurrent is not { } p) return;
         if (BmsRunning()) { MessageBox.Show(this, "Falcon BMS is running: close it first.", Title, MessageBoxButton.OK, MessageBoxImage.Warning); return; }
-        if (MessageBox.Show(this, $"Copy {_eCurrentCts.Count} item(s) from {p.Src.Name} into {p.Dst.Name}?\n\n{p.Records.Count} new records, {p.Files.Count} files.\n" +
+        int nRep = p.Conflicts.Count(c => c.Choice == Interchange.ConflictChoice.Replace);
+        if (MessageBox.Show(this, $"Copy {_eCurrentCts.Count} item(s) from {p.Src.Name} into {p.Dst.Name}?\n\n{p.Records.Count} records ({nRep} of them replace the destination's), {p.Files.Count} files.\n" +
                                   $"Everything replaced is copied first to\n{BackupRoot}\nand Restore… removes what is added.\n\n" +
                                   "Make a backup copy of your BMS folder too before changing the database.", Title,
                             MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
@@ -402,7 +531,7 @@ public sealed class MainWindow : Window
         {
             string work = Path.Combine(Root(), "Transfers", $"{Safe(p.Src.Name)}_to_{Safe(p.Dst.Name)}_items");
             // il piano si rifa' adesso: numeri liberi calcolati sui file attuali della destinazione
-            var fresh = Interchange.MakeEntities(p.Src, p.Dst, _data.Text.Trim(), _eCurrentCts);
+            var fresh = Interchange.MakeEntities(p.Src, p.Dst, _data.Text.Trim(), _eCurrentCts, resolve: _eResolve, copySim: _eSim.IsChecked == true);
             Interchange.Write(fresh, work, Path.Combine(work, "out"));
             var log = Interchange.Install(fresh, Path.Combine(work, "out"), BackupRoot);
             _eReport.Text = "INSTALLED\n\n" + string.Join("\n", log) + "\n\n" + string.Join("\n", fresh.Report) +

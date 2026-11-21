@@ -33,6 +33,8 @@ public static partial class Interchange
         public Dictionary<int, int> ModelMap { get; } = new();
         /// <summary>Entities plan (MakeEntities): the chosen CT entries → their number in the destination.</summary>
         public Dictionary<int, int> CtMap { get; } = new();
+        /// <summary>Records the destination has with the same name but other values, with the choice applied (entities plan).</summary>
+        public List<Conflict> Conflicts { get; } = new();
         public int ReusedFeatures, AddedFeatures, ReusedModels, CopiedModels, KeptModels;
     }
 
@@ -359,7 +361,7 @@ public static partial class Interchange
             File.Copy(o, target, true);
             added++;
         }
-        log.Add($"{added} file(s) written (layouts, models, textures, racks)");
+        log.Add($"{added} file(s) written (layouts, models, textures, racks, Sim files)");
         foreach (var f in Directory.EnumerateFiles(p.Dst.ObjectDir, "FALCON4.*").Where(f => !f.EndsWith(".ini", StringComparison.OrdinalIgnoreCase)))
         {
             try { File.Delete(f); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { log.Add($"{Path.GetFileName(f)}: NOT removed – {ex.Message}"); }

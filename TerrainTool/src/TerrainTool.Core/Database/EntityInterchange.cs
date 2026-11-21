@@ -17,12 +17,22 @@ namespace TerrainTool.Core.Database;
 /// </list>
 /// A record the destination already has identical (same number or same name, same fields once renumbered, same 3D model) is
 /// reused; everything else is added at the end of its table. Weapons that get a new number are added to the destination's
-/// BmsRack.dat in the racks that carry them in the source. The Sim files (flight models, weapon and radar data) are not copied:
-/// both theaters are expected to use BMS's Sim data. Nothing is written here: Write/Install/Restore are the same as for layouts.
+/// BmsRack.dat in the racks that carry them in the source. A record the destination has under the same name with other values
+/// is a Conflict: by default the source's is added as a new record; resolve can replace the destination's or keep it. With
+/// copySim the Sim files they need (weapon and radar data, flight models of AI-only aircraft) are copied too (SimCopy).
+/// Nothing is written here: Write/Install/Restore are the same as for layouts.
 /// </summary>
 public static partial class Interchange
 {
     public enum EntityKind { Aircraft, Helicopter, Ground, Ship, Weapon, Squadron, GroundUnit, NavalUnit }
+
+    /// <summary>A record the destination has with the same name but other values: add the source's as new, replace the destination's, keep the destination's.</summary>
+    public enum ConflictChoice { AddNew, Replace, Keep }
+
+    /// <summary>A conflict found by the plan and the choice applied (Table, Name; source and destination record numbers).</summary>
+    public sealed record Conflict(string Table, string Name, int SrcNum, int DstNum, ConflictChoice Choice);
+
+    public static string ConflictKey(string table, string name) => table + "|" + name;
 
     /// <summary>Something that can be copied: its CT entry, kind, name and a short description.</summary>
     public sealed record Entity(int Ct, EntityKind Kind, string Name, string Table, int Idx, int Model, string Detail);
@@ -83,13 +93,14 @@ public static partial class Interchange
     /// these numbers by the install): used as they are.</param>
     public static Plan MakeEntities(BmsTheater src, BmsTheater dst, string dataDir, IList<int> cts, bool preferDestination = false,
                                     IReadOnlyDictionary<int, int>? modelMap = null, IReadOnlyDictionary<int, int>? airframeMap = null,
-                                    IReadOnlyDictionary<int, int>? acdAirframe = null)
+                                    IReadOnlyDictionary<int, int>? acdAirframe = null,
+                                    IReadOnlyDictionary<string, ConflictChoice>? resolve = null, bool copySim = false)
     {
         var p = new Plan { Src = src, Dst = dst, BmsObjects = Path.Combine(dataDir, "Terrdata", "objects") };
         if (modelMap != null) foreach (var kv in modelMap) p.ModelMap[kv.Key] = kv.Value;
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
-        var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination, AirframeMap = airframeMap, AcdAirframe = acdAirframe };
+        var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination, AirframeMap = airframeMap, AcdAirframe = acdAirframe, Resolve = resolve };
         foreach (int ct in cts) x.Selected.Add(ct);
         foreach (int ct in cts)
         {
@@ -104,13 +115,17 @@ public static partial class Interchange
         }
         x.Racks();
         if (preferDestination) { x.ServiceYears(); x.DropUnknownFields(); }
-        var counts = p.Records.GroupBy(r => r.Table).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}");
-        p.Report.Insert(0, $"{src.Name} → {dst.Name}: {cts.Count} item(s); new records: {(p.Records.Count == 0 ? "none" : string.Join(", ", counts))}; " +
+        else if (copySim) SimCopy.Apply(p, x.S, x.D, dataDir);
+        var added = p.Records.Where(r => x.D.Get(r.Table, r.Num) == null).ToList();
+        var counts = added.GroupBy(r => r.Table).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}");
+        int replaced = p.Records.Count - added.Count;
+        p.Report.Insert(0, $"{src.Name} → {dst.Name}: {cts.Count} item(s); new records: {(added.Count == 0 ? "none" : string.Join(", ", counts))}; " +
+                           (replaced > 0 ? $"{replaced} records replaced; " : "") +
                            $"{x.Reused} records reused; {p.ReusedModels} models already there, {p.CopiedModels} copied into {Path.Combine(dst.ModelsDir, "Models")}");
         if (x.SharedModels && modelMap == null)
             p.Report.Add($"Note: {dst.Name} takes its 3D models from BMS's shared Terrdata\\objects, which is never written: models that only {src.Name} has cannot be copied.");
-        if (x.AnyAircraft)
-            p.Report.Add("Note: aircraft keep their flight model, weapon and radar data numbers (Sim): both theaters use BMS's Sim data.");
+        if (x.AnyAircraft && !copySim)
+            p.Report.Add("Note: aircraft keep their flight model, weapon and radar data numbers (Sim): both theaters are expected to use the same Sim data.");
         return p;
     }
 
@@ -129,6 +144,11 @@ public static partial class Interchange
         public IReadOnlyDictionary<int, int>? AirframeMap;
         /// <summary>Source ACD → destination flight model chosen for it (an aircraft given another BMS flight model).</summary>
         public IReadOnlyDictionary<int, int>? AcdAirframe;
+        /// <summary>What to do with a record the destination has with the same name but other values (table|name → choice).</summary>
+        public IReadOnlyDictionary<string, ConflictChoice>? Resolve;
+
+        private ConflictChoice Choice(string table, string name) =>
+            Resolve != null && Resolve.TryGetValue(ConflictKey(table, name), out var c) ? c : ConflictChoice.AddNew;
         /// <summary>The CT entries chosen by the user (always added when the destination has no identical one).</summary>
         public readonly HashSet<int> Selected = new();
         private readonly Dictionary<(string, int), int> _map = new();
@@ -182,6 +202,24 @@ public static partial class Interchange
             if (sr.Name.Length > 0)
                 foreach (var r in D.All(table))
                     if (r.Name == sr.Name && Same(r.Fields, fields) && (alsoSame?.Invoke(r) ?? true)) { Reused++; return _map[(table, sr.Num)] = r.Num; }
+            // the destination has a record with this name but other values: what the user chose (add new, replace it, keep it)
+            if (!PreferDestination && sr.Name.Length > 0 && (dSame != null && dSame.Name == sr.Name ? dSame : D.All(table).FirstOrDefault(r => r.Name == sr.Name)) is { } other)
+            {
+                var ch = Choice(table, sr.Name);
+                if (!P.Conflicts.Any(c => c.Table == table && c.Name == sr.Name)) P.Conflicts.Add(new Conflict(table, sr.Name, sr.Num, other.Num, ch));
+                if (ch == ConflictChoice.Keep)
+                {
+                    Reused++;
+                    P.Report.Add($"  {Label(table, sr)}: the destination's {Label(table, other)} is kept (your choice)");
+                    return _map[(table, sr.Num)] = other.Num;
+                }
+                if (ch == ConflictChoice.Replace)
+                {
+                    P.Records.Add((table, other.Num, fields));
+                    P.Report.Add($"  {Label(table, sr)} → replaces the destination's {Label(table, other)} (your choice)");
+                    return _map[(table, sr.Num)] = other.Num;
+                }
+            }
             if (PreferDestination)
             {
                 // the destination's own version: same name, or (aircraft data, no name) the same number with the same flight model
@@ -363,6 +401,17 @@ public static partial class Interchange
                     return _map[("CT", sct)] = own.Num;
                 }
             }
+            // the user chose to keep the destination's own record with this name (nothing of the source's version is added)
+            DbRecord? SameName() => D.Get("CT", sct) is { } dn && dn.Int("EntityType") == et && D.Get(table, dn.Int("EntityIdx"))?.Name == name ? dn
+                : D.All("CT").FirstOrDefault(c => c.Int("EntityType") == et && D.Get(table, c.Int("EntityIdx"))?.Name == name);
+            if (!PreferDestination && Choice(table, name) == ConflictChoice.Keep && SameName() is { } kept)
+            {
+                Reused += 2;
+                if (!P.Conflicts.Any(c => c.Table == table && c.Name == name)) P.Conflicts.Add(new Conflict(table, name, se.Num, kept.Int("EntityIdx"), ConflictChoice.Keep));
+                _map[(table, se.Num)] = kept.Int("EntityIdx");
+                P.Report.Add($"  {table} '{name}' (CT {sct}): the destination's own CT {kept.Num} is kept (your choice)");
+                return _map[("CT", sct)] = kept.Num;
+            }
             // a placeholder against loops (a unit's vehicle is never the unit itself, but stay safe)
             _map[("CT", sct)] = sct;
 
@@ -421,6 +470,23 @@ public static partial class Interchange
                 Reused += 2;
                 _map[(table, se.Num)] = hit.Int("EntityIdx");
                 return _map[("CT", sct)] = hit.Num;
+            }
+            // the destination has one with this name but other values: replace it (its CT number and class numbers stay, so
+            // campaigns, TE lists and squadrons that use it keep working) or add the source's as a new one
+            if (!PreferDestination && SameName() is { } other)
+            {
+                var ch = Choice(table, name);
+                if (!P.Conflicts.Any(c => c.Table == table && c.Name == name)) P.Conflicts.Add(new Conflict(table, name, se.Num, other.Int("EntityIdx"), ch));
+                if (ch == ConflictChoice.Replace)
+                {
+                    int de = other.Int("EntityIdx");
+                    var keepClass = new[] { "Domain", "Class", "Type", "SubType", "Specific", "EntityIdx" }.Select(k => (k, other.Get(k) ?? "")).ToArray();
+                    P.Records.Add(("CT", other.Num, DbOps.With(cf, keepClass)));
+                    P.Records.Add((table, de, DbOps.With(ef, ("CtIdx", other.Num.ToString(Ci)))));
+                    _map[(table, se.Num)] = de;
+                    P.Report.Add($"  {name}: replaces the destination's CT {other.Num} ({table} {de}) with the source's values (your choice; its class numbers stay)");
+                    return _map[("CT", sct)] = other.Num;
+                }
             }
             cf = UniqueClass(sct, table, dom, cf, se, name);
             int nct = Next("CT"), ne = Next(table);

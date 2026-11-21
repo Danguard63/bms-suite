@@ -14,7 +14,7 @@ One main menu (`BMSSuite.exe`) starts every program on the theater you are worki
 | **Art Editor** | User interface art: flags, menu backgrounds, banners, campaign pictures, small maps, patches, fonts, sounds, texts. |
 | **Campaign Editor** | Campaigns (.cam) and Tactical Engagements (.tac): units, squadrons, objectives, priorities, stations, theater cells. |
 | **Model Editor** | 3D models: DirectX view with PBR materials, DOFs, switches, slots, Parent.dat checks; textures; the theater's database, with Duplicate for a copy of an aircraft under another name (PvP sides). |
-| **Database Interchange** | Copies bases and objective layouts, aircraft, helicopters, vehicles, ships, weapons and unit types from one theater to another, renumbered for the destination. |
+| **Database Interchange** | Copies bases and objective layouts, aircraft, helicopters, vehicles, ships, weapons and unit types from one theater to another, renumbered for the destination; choice for same-name records (add, replace, keep) and optional copy of the Sim files they need. |
 | **4.37 Units Converter** | Aircraft, helicopters, vehicles and weapons of an old BMS database into a 4.38 theater: models, hardpoints, weapons, squadrons, TE list, names, own flight model for AI-only aircraft; backup and restore. |
 | **Sim Editor** | A theater's own Sim files (missiles, radars, vehicles, AI-only aircraft), database changes and SAM check, for any add-on theater or TerrainTool project; install with backup and restore. |
 

@@ -108,7 +108,7 @@ public static class TheaterSim
                     manifest.Add("added;" + to);
                     n++;
                 }
-                string rel = Path.GetRelativePath(t.DataDir, sim);
+                string rel = Path.GetRelativePath(t.DataDir, sim).Replace('/', '\\');
                 string? tdf = Dds.TheaterSimData.SetSimDataDir(File.ReadAllText(t.Tdf), rel);
                 if (tdf != null) Write(t.Tdf, f => File.WriteAllText(f, tdf));
                 log.Add($"Theater Sim: {n} files of BMS Data\\Sim copied into {sim}; 'simdatadir {rel}' in {Path.GetFileName(t.Tdf)}");
