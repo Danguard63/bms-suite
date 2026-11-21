@@ -23,6 +23,7 @@ public sealed class App : Application
         TaskScheduler.UnobservedTaskException += (_, e) => { Log(e.Exception); e.SetObserved(); };
         Exit += (_, e) => Note($"exit (code {e.ApplicationExitCode})");
         BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
+        BmsSuiteUi.SuiteTheme.Apply(this);   // the look shared by the suite (Shared\SuiteTheme.cs)
     }
 
     private int Run(string[] args)

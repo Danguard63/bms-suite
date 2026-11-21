@@ -24,6 +24,7 @@ public sealed class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += OnUnhandled;
         BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
+        BmsSuiteUi.SuiteTheme.Apply(this);   // the look shared by the suite (Shared\SuiteTheme.cs)
         // errori fuori dal thread dell'interfaccia (lavori in background): prima chiudevano il programma senza lasciare traccia
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log(e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString()), "fatal");
         TaskScheduler.UnobservedTaskException += (_, e) => { Log(e.Exception, "background task"); e.SetObserved(); };

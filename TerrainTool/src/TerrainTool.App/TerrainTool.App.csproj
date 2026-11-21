@@ -43,4 +43,9 @@
     <Compile Remove="Preview3DWindow.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- the look shared by every program of the suite -->
+    <Compile Include="..\..\..\Shared\SuiteTheme.cs" Link="SuiteTheme.cs" />
+  </ItemGroup>
+
 </Project>

@@ -14,6 +14,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
         BmsSuiteUi.WindowShot.Register();   // F12 = PNG of the window (Screenshots folder)
+        BmsSuiteUi.SuiteTheme.Apply(this);   // the look shared by the suite (Shared\SuiteTheme.cs)
         // il processo finisce quando non resta nessuna finestra visibile (anche se una finestra e' stata creata ma mai mostrata,
         // o se l'avvio fallisce): cosi' non resta in memoria a bloccare TerrainTool.exe per il build
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
