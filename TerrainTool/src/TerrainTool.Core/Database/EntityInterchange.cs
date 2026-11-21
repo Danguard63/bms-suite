@@ -101,7 +101,7 @@ public static partial class Interchange
                 : $"{name} (CT {ct}) → CT {n} in {dst.Name}");
         }
         x.Racks();
-        if (preferDestination) x.DropUnknownFields();
+        if (preferDestination) { x.ServiceYears(); x.DropUnknownFields(); }
         var counts = p.Records.GroupBy(r => r.Table).OrderBy(g => g.Key).Select(g => $"{g.Count()} {g.Key}");
         p.Report.Insert(0, $"{src.Name} → {dst.Name}: {cts.Count} item(s); new records: {(p.Records.Count == 0 ? "none" : string.Join(", ", counts))}; " +
                            $"{x.Reused} records reused; {p.ReusedModels} models already there, {p.CopiedModels} copied into {Path.Combine(dst.ModelsDir, "Models")}");
@@ -473,6 +473,28 @@ public static partial class Interchange
                 P.Records.Add(("RKT", n, f));
                 P.Report.Add($"  rocket pod {S.Get("WCD", podWcd)?.Name}: added as RKT {n}");
             }
+        }
+
+        /// <summary>Default first year of service for another version's vehicles and weapons that have none.</summary>
+        public const int DefaultServiceStart = 1950;
+
+        /// <summary>
+        /// Vehicles and weapons of an older version (4.37 had no service years): BMS 4.38 offers in the Tactical Engagement only
+        /// what has an InServiceStart (every aircraft of its TePlanes.lst has one), so the new records get one when the
+        /// destination's table uses it. No InServiceEnd: still in service.
+        /// </summary>
+        public void ServiceYears()
+        {
+            var named = new List<string>();
+            foreach (var (t, _, fields) in P.Records)
+            {
+                if (t is not ("VCD" or "WCD") || fields.Any(f => f.Field == "InServiceStart")) continue;
+                if (!D.All(t).Any(r => r.Get("InServiceStart") != null)) continue;
+                fields.Add(("InServiceStart", DefaultServiceStart.ToString(Ci)));
+                named.Add(fields.FirstOrDefault(f => f.Field == "Name").Value ?? t);
+            }
+            if (named.Count > 0)
+                P.Report.Add($"In service from {DefaultServiceStart} (the source has no service years; BMS 4.38's Tactical Engagement needs one): {string.Join(", ", named)}");
         }
 
         /// <summary>
