@@ -81,13 +81,71 @@ internal static class SuiteTheme
             }
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((s, e) =>
             {
-                if (s is Window w && ReferenceEquals(e.OriginalSource, w) && w.Owner == null && w is not SuiteMessageBox.Dialog) SetHeader(w, true);
+                if (s is not Window w || !ReferenceEquals(e.OriginalSource, w)) return;
+                if (w.Owner == null && w is not SuiteMessageBox.Dialog) SetHeader(w, true);
+                if (w is not SuiteMessageBox.Dialog && (w.SizeToContent & SizeToContent.Width) == 0) FoldHelp(w, 0);
             }));
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException)
         {
             // the look is a comfort: without it the program still works, with the look of Windows
         }
+    }
+
+    /// <summary>
+    /// A button that opens a menu of other buttons (kept out of the window): the toolbar shows one entry per group instead
+    /// of one per tool. Each entry does what its button does, has its tooltip and is greyed when the button is disabled.
+    /// </summary>
+    public static Button MenuButton(string title, IEnumerable<Button> items, string? tip = null)
+    {
+        var list = items.ToList();
+        var b = new Button { Content = title + "  ▾", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 6, 0), ToolTip = tip };
+        var menu = new ContextMenu { PlacementTarget = b, Placement = PlacementMode.Bottom };
+        foreach (var it in list)
+        {
+            var src = it;
+            var mi = new MenuItem { Header = (it.Content as string ?? it.Content?.ToString() ?? "").Replace("_", "__") };
+            if (it.ToolTip is string tt) mi.ToolTip = new TextBlock { Text = tt, MaxWidth = 460, TextWrapping = TextWrapping.Wrap };
+            mi.Click += (_, _) => src.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            menu.Items.Add(mi);
+        }
+        b.Click += (_, _) =>
+        {
+            for (int i = 0; i < list.Count; i++) ((MenuItem)menu.Items[i]!).IsEnabled = list[i].IsEnabled;
+            menu.IsOpen = true;
+        };
+        return b;
+    }
+
+    /// <summary>
+    /// The long grey explanations above the panels: one line with "…" until clicked (the whole text also shows when the
+    /// mouse stays on it), so they do not take the room of the work area once read.
+    /// </summary>
+    private static void FoldHelp(DependencyObject o, int depth)
+    {
+        if (depth > 40) return;
+        if (o is TextBlock t)
+        {
+            if (t.TextWrapping != TextWrapping.NoWrap && t.ToolTip == null && t.Inlines.Count <= 1 && t.Text.Length > 170 && t.FontWeight == FontWeights.Normal
+                && t.Foreground is SolidColorBrush { Color: var c } && (c == Colors.DimGray || c == Colors.Gray))
+            {
+                var wrap = t.TextWrapping;
+                t.TextWrapping = TextWrapping.NoWrap;
+                t.TextTrimming = TextTrimming.CharacterEllipsis;
+                t.Cursor = Cursors.Hand;
+                t.ToolTip = new ToolTip { Content = new TextBlock { Text = t.Text + "\n\n(click the text to keep it open)", MaxWidth = 560, TextWrapping = TextWrapping.Wrap } };
+                ToolTipService.SetShowDuration(t, 60000);
+                t.MouseLeftButtonUp += (_, _) =>
+                {
+                    bool open = t.TextWrapping == TextWrapping.NoWrap;
+                    t.TextWrapping = open ? wrap : TextWrapping.NoWrap;
+                    t.TextTrimming = open ? TextTrimming.None : TextTrimming.CharacterEllipsis;
+                };
+            }
+            return;
+        }
+        foreach (var child in LogicalTreeHelper.GetChildren(o))
+            if (child is DependencyObject d) FoldHelp(d, depth + 1);
     }
 
     private static Style Simple(Type t, params (DependencyProperty P, object V)[] setters)

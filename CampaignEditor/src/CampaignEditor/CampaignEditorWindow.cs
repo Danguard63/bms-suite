@@ -127,36 +127,35 @@ public sealed class CampaignEditorWindow : Window
         bar.Children.Add(validate);
         var convertB = new Button { Content = "Convert unit types…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "Campaigns and TE missions of the old add-on: their units use the old add-on's class table; convert them to the BMS 4.38 types" };
-        if (_p != null) bar.Children.Add(convertB);
         var adB = new Button { Content = "Air defense plan…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "Move the air defense battalions of a team to the most important objectives and/or add new ones (Korea rules)" };
-        bar.Children.Add(adB);
         var depB = new Button { Content = "Deploy divisions…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "Put a team's brigades in front / second / reserve echelons behind the front, as the Korea campaigns start" };
-        bar.Children.Add(depB);
         var utB = new Button { Content = "Battalions & brigades…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "Table of every battalion and brigade type of BMS 4.38 (as in Mission Commander): add units to the campaign or change a unit's type" };
-        bar.Children.Add(utB);
         utB.Click += (_, _) => OpenUnitTable();
         var ulB = new Button { Content = "Units list…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "All units in a table (as the Units tab of Mission Commander): squadrons, packages, flights, brigades, battalions, task forces; filters, problems in colour, double-click = unit window" };
-        bar.Children.Add(ulB);
         ulB.Click += (_, _) => OpenUnitList();
         var stB = new Button { Content = "Station ILS…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "stations+ils.dat of the theater (as Mission Commander): TACAN, tower / ground / approach / ATIS frequencies, ILS per runway, checked against the runways of the new base layouts" };
-        bar.Children.Add(stB);
         stB.Click += (_, _) => OpenStations();
         var aiB = new Button { Content = "Campaign AI…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "Falcon4.aii (how far from the front AWACS, JSTARS, tankers, ECM, BAI, SAR, BARCAP fly; AI rules) and MissionData (altitudes, loiter, flight size of every mission type), compared with the Korea" };
-        bar.Children.Add(aiB);
         aiB.Click += (_, _) => new CampaignAiWindow(_ws) { Owner = this }.Show();
         var teB = new Button { Content = "TE lists…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "TePlanes.lst, TeUnits.lst, TeNavalUnits.lst: the aircraft, battalions and naval units offered in the Tactical Engagement (by producer), checked against this theater's database and the Korea" };
-        bar.Children.Add(teB);
         teB.Click += (_, _) => new TeListsWindow(_ws, _db) { Owner = this }.Show();
         var thrB = new Button { Content = "Campaign terrain (.thr)…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "The campaign's .thr (ground cover, relief, rail per km², still used by BMS 4.38 for move times, cover and 'near water'): view it, rebuild it from the New Terrain, compare it with the terrain BMS generates for the campaign" };
-        bar.Children.Add(thrB);
+        // the tools in two menus (one entry per group instead of nine buttons in a row)
+        var unitTools = new List<Button> { utB, ulB, depB, adB };
+        if (_p != null) unitTools.Add(convertB);
+        var unitsMenu = BmsSuiteUi.SuiteTheme.MenuButton("Units", unitTools, "Battalions and brigades, the units list, deploying divisions, the air defense plan, converting old unit types");
+        var filesMenu = BmsSuiteUi.SuiteTheme.MenuButton("Theater files", new[] { stB, aiB, teB, thrB }, "Station ILS, Campaign AI, TE lists, campaign terrain (.thr)");
+        filesMenu.Margin = new Thickness(0, 0, 12, 0);
+        bar.Children.Add(unitsMenu);
+        bar.Children.Add(filesMenu);
         thrB.Click += (_, _) => new TheaterCellsWindow(_ws) { Owner = this }.Show();
         depB.Click += (_, _) => OpenDeploy();
         adB.Click += (_, _) => OpenAirDefense();

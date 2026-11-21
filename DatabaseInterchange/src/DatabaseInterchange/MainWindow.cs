@@ -35,6 +35,8 @@ public sealed class MainWindow : Window
     private readonly TextBlock _status = new() { Margin = new Thickness(8, 2, 8, 6), TextWrapping = TextWrapping.Wrap };
     private readonly Button _plan = Btn("Make plan (nothing written)");
     private readonly Button _install = Btn("Install into the destination…");
+    private readonly WrapPanel _sum = new() { Margin = new Thickness(0, 0, 0, 6) };
+    private readonly WrapPanel _eSum = new() { Margin = new Thickness(0, 0, 0, 6) };
     private List<LayoutRow> _rows = new();
     private Interchange.Plan? _current;
 
@@ -128,6 +130,7 @@ public sealed class MainWindow : Window
         var restore = Btn("Restore…"); restore.Click += (_, _) => Restore(); bar.Children.Add(restore);
         var right = new DockPanel { Margin = new Thickness(0, 0, 6, 6) };
         DockPanel.SetDock(bar, Dock.Top); right.Children.Add(bar);
+        DockPanel.SetDock(_sum, Dock.Top); right.Children.Add(_sum);
         right.Children.Add(_report);
 
         var body = new DockPanel();
@@ -226,8 +229,28 @@ public sealed class MainWindow : Window
         _grid.ItemsSource = _rows.Where(r => q.Length == 0 || r.Ocd.ToString(Ci) == q || r.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || r.Type.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
+    /// <summary>The plan at a glance, above its text: a number and what it counts; amber where something is to check.</summary>
+    private static void Summary(WrapPanel p, params (string Value, string Label, bool Alert)[] items)
+    {
+        p.Children.Clear();
+        foreach (var (value, label, alert) in items)
+        {
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(new TextBlock { Text = value, FontWeight = FontWeights.Bold, FontSize = 14, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center });
+            sp.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+            p.Children.Add(new Border
+            {
+                Child = sp, Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 0, 6, 0), CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1),
+                Background = new SolidColorBrush(alert ? Color.FromRgb(0xFF, 0xF1, 0xCC) : Colors.White),
+                BorderBrush = new SolidColorBrush(alert ? Color.FromRgb(0xE0, 0xA8, 0x1A) : Color.FromRgb(0xD3, 0xD7, 0xDC)),
+            });
+        }
+    }
+
     private void Invalidate()
     {
+        _sum.Children.Clear();
+        _eSum.Children.Clear();
         _current = null;
         _install.IsEnabled = false;
         _eCurrent = null;
@@ -256,8 +279,14 @@ public sealed class MainWindow : Window
             if (p.FeatureCtMap.Count > 0)
             {
                 lines.Add(""); lines.Add("Pieces (CT in the source → CT in the destination):");
-                foreach (var kv in p.FeatureCtMap.OrderBy(k => k.Key)) lines.Add($"  {kv.Key,6} → {kv.Value,6}{(kv.Key != kv.Value ? "" : "  (same number)")}");
+                // only the pieces that change number: the others would be a long list saying nothing
+                int same = p.FeatureCtMap.Count(kv => kv.Key == kv.Value);
+                foreach (var kv in p.FeatureCtMap.Where(kv => kv.Key != kv.Value).OrderBy(k => k.Key)) lines.Add($"  {kv.Key,6} → {kv.Value,6}");
+                if (same > 0) lines.Add($"  {same} kind(s) of piece keep their number.");
             }
+            Summary(_sum, ($"{p.OcdMap.Count}", "layout(s)", false), ($"{p.Records.Count}", "new records", false),
+                    ($"{p.FeatureCtMap.Count(kv => kv.Key == kv.Value)}", "pieces reused", false), ($"{p.Files.Count}", "files", false),
+                    ($"{p.Problems.Count}", "to check", p.Problems.Count > 0));
             _report.Text = string.Join("\n", lines);
             _install.IsEnabled = _current != null && p.OcdMap.Count > 0;
             _status.Text = _install.IsEnabled ? "Plan ready: read it, then Install." : "Nothing to install.";
@@ -337,6 +366,7 @@ public sealed class MainWindow : Window
         var right = new DockPanel { Margin = new Thickness(0, 0, 6, 6) };
         DockPanel.SetDock(bar, Dock.Top); right.Children.Add(bar);
         DockPanel.SetDock(help, Dock.Top); right.Children.Add(help);
+        DockPanel.SetDock(_eSum, Dock.Top); right.Children.Add(_eSum);
         right.Children.Add(_eReport);
 
         var body = new DockPanel();
@@ -345,7 +375,7 @@ public sealed class MainWindow : Window
 
         _kind.SelectionChanged += (_, _) => FillEntities();
         _eSearch.TextChanged += (_, _) => FillEntities();
-        _eGrid.SelectionChanged += (_, _) => { _eCurrent = null; _eInstall.IsEnabled = false; _eChoices.IsEnabled = false; };
+        _eGrid.SelectionChanged += (_, _) => { _eCurrent = null; _eInstall.IsEnabled = false; _eChoices.IsEnabled = false; _eSum.Children.Clear(); };
         _eSim.Click += (_, _) => { _eCurrent = null; _eInstall.IsEnabled = false; };
         _ePlan.Click += (_, _) => MakeEntityPlan();
         _eChoices.Click += (_, _) => { if (_eCurrent != null) MakeEntityPlan(ask: true); };
@@ -425,6 +455,9 @@ public sealed class MainWindow : Window
             foreach (var f in p.Files.Keys.OrderBy(x => x).Take(400)) lines.Add("  " + f);
             if (p.Files.Count > 400) lines.Add($"  … {p.Files.Count - 400} more");
             _eReport.Text = string.Join("\n", lines);
+            Summary(_eSum, ($"{cts.Count}", "item(s)", false), ($"{added.Count}", "new records", false), ($"{replaced.Count}", "replaced", replaced.Count > 0),
+                    ($"{p.Conflicts.Count}", "same name, other values", p.Conflicts.Count > 0), ($"{p.Files.Count}", "files", false),
+                    ($"{p.Problems.Count}", "to check", p.Problems.Count > 0));
             _eInstall.IsEnabled = _eCurrent != null && (p.Records.Count > 0 || p.Files.Count > 0);
             _eChoices.IsEnabled = _eCurrent != null && p.Conflicts.Count > 0;
             _status.Text = _eInstall.IsEnabled ? "Plan ready: read it, then Install." : "Nothing to install.";
