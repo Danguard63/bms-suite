@@ -11,10 +11,11 @@ using TerrainTool.Core.Campaign;
 namespace BMSSuite;
 
 /// <summary>
-/// Menu principale della BMS Suite, in stile pannello di cabina (grafite, luci ambra, verde dei display): a sinistra i
-/// teatri di BMS (quello scelto e' il teatro di lavoro) e "riprendi"; a destra il percorso per costruire un teatro
-/// (01 terreno → 02 obiettivi → 03 grafica → 04 campagna), poi modelli e database, poi i backup. Ogni programma resta
-/// separato: qui si apre (con --theater e --bms-data), niente viene scritto in BMS.
+/// Menu principale della BMS Suite (grafite, un solo accento ambra per l'azione principale e la selezione, verde per lo
+/// stato): a sinistra i teatri di BMS (quello scelto e' il teatro di lavoro) con la sua scheda; a destra "riprendi", il
+/// percorso per costruire un teatro (01 terreno → 02 obiettivi → 03 grafica → 04 campagna), modelli e dati; in fondo
+/// backup, cartelle e guida. Ogni programma resta separato: qui si apre (con --theater e --bms-data), niente viene
+/// scritto in BMS.
 /// </summary>
 public sealed class MainWindow : Window
 {
@@ -24,7 +25,9 @@ public sealed class MainWindow : Window
     private static readonly Color PanelHi = Color.FromRgb(0x29, 0x2D, 0x32);
     private static readonly Color Line = Color.FromRgb(0x3A, 0x3F, 0x45);
     private static readonly Color Text = Color.FromRgb(0xE6, 0xE4, 0xDE);
-    private static readonly Color Sub = Color.FromRgb(0x98, 0x9C, 0xA0);
+    private static readonly Color Sub = Color.FromRgb(0xA4, 0xA8, 0xAC);
+    private static readonly Color SubHi = Color.FromRgb(0xB4, 0xB8, 0xBC);
+    private static readonly Color Edge = Color.FromRgb(0x5A, 0x60, 0x68);
     private static readonly Color AmberC = Color.FromRgb(0xF2, 0xA9, 0x00);
     private static readonly Color Hud = Color.FromRgb(0x6E, 0xE7, 0x8E);
     private static readonly Color Red = Color.FromRgb(0xE5, 0x5A, 0x4E);
@@ -69,10 +72,11 @@ public sealed class MainWindow : Window
     };
 
     private readonly ListBox _theaters = new() { Background = Brushes.Transparent, BorderThickness = new Thickness(0), HorizontalContentAlignment = HorizontalAlignment.Stretch };
-    private readonly TextBlock _theaterInfo = new() { Foreground = B(Sub), FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(14, 6, 14, 0) };
+    private readonly Border _theaterCard = new() { Margin = new Thickness(14, 12, 14, 0), Padding = new Thickness(14), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(5) };
+    private readonly Dictionary<Tool, (Ellipse Ring, TextBlock Num)> _tileStep = new();
     private readonly StackPanel _chips = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
     private readonly Border _continue = new();
-    private readonly StackPanel _right = new() { Margin = new Thickness(28, 22, 28, 28) };
+    private readonly StackPanel _right = new() { Margin = new Thickness(28, 22, 16, 24) };
     private readonly Dictionary<Tool, TextBlock> _tileState = new();
     private Settings _s = new();
     private string _data = "";
@@ -85,6 +89,8 @@ public sealed class MainWindow : Window
         public string? LastTool { get; set; }
         public string? LastTheater { get; set; }
         public DateTime? LastTime { get; set; }
+        /// <summary>Ultima apertura di ogni programma su ogni teatro ("programma|teatro").</summary>
+        public Dictionary<string, DateTime> Used { get; set; } = new();
     }
 
     /// <summary>Cartella della suite (C:\BMS Suite): quella sopra la cartella BMSSuite (sviluppo) o quella con Programs (rilascio).</summary>
@@ -133,6 +139,9 @@ public sealed class MainWindow : Window
         var left = BuildLeft();
         DockPanel.SetDock(left, Dock.Left);
         root.Children.Add(left);
+        var footer = BuildFooter();
+        DockPanel.SetDock(footer, Dock.Bottom);
+        root.Children.Add(footer);
         root.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = _right });
         Content = root;
 
@@ -141,8 +150,9 @@ public sealed class MainWindow : Window
             if (_theaters.SelectedItem is ListBoxItem { Tag: BmsTheater t })
             {
                 _s.Theater = t.Name; SaveSettings();
-                _theaterInfo.Text = $"{t.Subtitle}\nCampaign: {Short(t.CampaignDir)}\nObjects: {Short(t.ObjectDir)}";
+                FillTheaterCard(t);
                 foreach (var it in _theaters.Items.OfType<ListBoxItem>()) StyleTheaterItem(it, it.IsSelected);
+                RefreshTiles();
             }
         };
         Activated += (_, _) => { RefreshTiles(); UpdateChips(); };
@@ -215,10 +225,10 @@ public sealed class MainWindow : Window
         var bar = new Rectangle { Width = 4, Fill = selected ? B(AmberC) : Brushes.Transparent };
         DockPanel.SetDock(bar, Dock.Left);
         row.Children.Add(bar);
-        var tag = new TextBlock { Text = AddOn(t) ? "ADD-ON" : "BMS", FontFamily = Mono, FontSize = 10.5, Foreground = B(AddOn(t) ? Sub : Hud), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+        var tag = new TextBlock { Text = AddOn(t) ? "ADD-ON" : "BMS", FontFamily = Mono, FontSize = 10.5, Foreground = B(Sub), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
         DockPanel.SetDock(tag, Dock.Right);
         row.Children.Add(tag);
-        row.Children.Add(new TextBlock { Text = t.Name, FontSize = 14.5, FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal, Foreground = B(selected ? AmberC : Text), Margin = new Thickness(12, 8, 8, 8), TextTrimming = TextTrimming.CharacterEllipsis });
+        row.Children.Add(new TextBlock { Text = t.Name, FontSize = 14.5, FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal, Foreground = B(Text), Margin = new Thickness(12, 9, 8, 9), TextTrimming = TextTrimming.CharacterEllipsis });
         it.Content = new Border { Background = selected ? B(PanelHi) : Brushes.Transparent, Child = row };
         it.Background = Brushes.Transparent;
     }
@@ -227,22 +237,28 @@ public sealed class MainWindow : Window
     {
         _chips.Children.Clear();
         bool bms = _data.Length > 0;
-        _chips.Children.Add(Chip(bms ? "BMS 4.38 FOUND" : "BMS NOT FOUND", bms ? Hud : Red, bms ? _data + " (click to change)" : "Click to choose the Falcon BMS Data folder", ChooseData));
-        if (bms) _chips.Children.Add(Chip($"{_list.Count} THEATERS · {_list.Count(AddOn)} ADD-ONS", Sub, "theater.lst of the Data folder", null));
+        _chips.Children.Add(Chip(bms ? "BMS 4.38 found" : "BMS not found: choose its Data folder", bms ? Hud : Red, !bms, bms ? _data + " (click to change)" : "Click to choose the Falcon BMS Data folder", ChooseData));
         bool running = false;
         try { running = Process.GetProcesses().Any(p => p.ProcessName.StartsWith("Falcon BMS", StringComparison.OrdinalIgnoreCase)); } catch { }
-        _chips.Children.Add(Chip(running ? "BMS RUNNING – CLOSE IT BEFORE INSTALLING" : "BMS CLOSED", running ? AmberC : Sub, "The programs install into BMS only while it is closed", null));
+        _chips.Children.Add(Chip(running ? "BMS is running: close it before installing" : "BMS closed: safe to install", running ? AmberC : Hud, running, "The programs install into BMS only while it is closed", null));
+        if (bms) _chips.Children.Add(Chip($"{_list.Count} theaters · {_list.Count(AddOn)} add-ons", null, false, "theater.lst of the Data folder", null));
     }
 
-    private static FrameworkElement Chip(string text, Color c, string tip, Action? click)
+    /// <summary>Stato in alto: un punto colorato e una scritta (non un pulsante); in evidenza solo quando c'e' da fare qualcosa.</summary>
+    private static FrameworkElement Chip(string text, Color? dot, bool alert, string tip, Action? click)
     {
-        var dot = new Ellipse { Width = 7, Height = 7, Fill = B(c), Margin = new Thickness(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center };
-        var sp = new StackPanel { Orientation = Orientation.Horizontal };
-        sp.Children.Add(dot);
-        sp.Children.Add(new TextBlock { Text = text, FontFamily = Mono, FontSize = 11.5, Foreground = B(c), VerticalAlignment = VerticalAlignment.Center });
-        var b = new Border { BorderBrush = B(c, 90), BorderThickness = new Thickness(1), Padding = new Thickness(9, 4, 10, 4), Margin = new Thickness(8, 0, 0, 0), Child = sp, ToolTip = tip };
-        if (click != null) { b.Cursor = Cursors.Hand; b.MouseLeftButtonUp += (_, _) => click(); }
-        return b;
+        var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(20, 0, 0, 0), ToolTip = tip, Background = Brushes.Transparent, VerticalAlignment = VerticalAlignment.Center };
+        if (dot is { } c) sp.Children.Add(new Ellipse { Width = 8, Height = 8, Fill = B(c), Margin = new Thickness(0, 0, 7, 0), VerticalAlignment = VerticalAlignment.Center });
+        var tb = new TextBlock { Text = text, FontFamily = Mono, FontSize = 12, Foreground = B(alert && dot is { } a ? a : SubHi), VerticalAlignment = VerticalAlignment.Center };
+        sp.Children.Add(tb);
+        if (click != null)
+        {
+            sp.Cursor = Cursors.Hand;
+            sp.MouseEnter += (_, _) => tb.TextDecorations = TextDecorations.Underline;
+            sp.MouseLeave += (_, _) => tb.TextDecorations = null;
+            sp.MouseLeftButtonUp += (_, _) => click();
+        }
+        return sp;
     }
 
     private void ChooseData()
@@ -274,28 +290,25 @@ public sealed class MainWindow : Window
         DockPanel.SetDock(_chips, Dock.Right);
         dp.Children.Add(_chips);
         dp.Children.Add(logo);
-        var strip = new Border { Background = B(Panel), BorderBrush = B(AmberC, 160), BorderThickness = new Thickness(0, 0, 0, 2), Child = dp };
+        var strip = new Border { Background = B(Panel), BorderBrush = B(Line), BorderThickness = new Thickness(0, 0, 0, 1), Child = dp };
         return strip;
     }
 
     /// <summary>Pagina delle donazioni dell'autore.</summary>
     public const string SupportUrl = "https://ko-fi.com/danguard63";
 
-    /// <summary>"Support on Ko-fi": apre la pagina delle donazioni nel browser.</summary>
-    private static FrameworkElement SupportButton(bool large = false)
+    /// <summary>"Support on Ko-fi": apre la pagina delle donazioni nel browser (pulsante con il solo bordo).</summary>
+    private static FrameworkElement SupportButton()
     {
-        var sp = new StackPanel { Orientation = Orientation.Horizontal };
-        sp.Children.Add(new TextBlock { Text = "\u2615", FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = large ? 24 : 20, Foreground = B(Bg), Margin = new Thickness(0, 0, 9, 0), VerticalAlignment = VerticalAlignment.Center });
-        sp.Children.Add(new TextBlock { Text = "SUPPORT ON KO-FI", FontFamily = Mono, FontSize = large ? 18 : 15, FontWeight = FontWeights.Bold, Foreground = B(Bg), VerticalAlignment = VerticalAlignment.Center });
+        var tb = new TextBlock { Text = "Support on Ko-fi", FontSize = 12.5, Foreground = B(SubHi), VerticalAlignment = VerticalAlignment.Center };
         var b = new Border
         {
-            Background = B(AmberC), Padding = large ? new Thickness(24, 12, 26, 12) : new Thickness(18, 7, 20, 7), Margin = large ? new Thickness(0) : new Thickness(18, 0, 4, 0), Child = sp, Cursor = Cursors.Hand,
-            CornerRadius = new CornerRadius(5), BorderBrush = B(Hud), BorderThickness = new Thickness(2),
-            VerticalAlignment = VerticalAlignment.Center,
+            Background = Brushes.Transparent, Padding = new Thickness(14, 6, 14, 7), Margin = new Thickness(22, 0, 4, 0), Child = tb, Cursor = Cursors.Hand,
+            CornerRadius = new CornerRadius(4), BorderBrush = B(Edge), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center,
             ToolTip = "The BMS Suite is free. If it helps you, you can buy the author a coffee (" + SupportUrl + ")",
         };
-        b.MouseEnter += (_, _) => b.Background = B(Hud);
-        b.MouseLeave += (_, _) => b.Background = B(AmberC);
+        b.MouseEnter += (_, _) => { b.BorderBrush = B(AmberC); tb.Foreground = B(Text); };
+        b.MouseLeave += (_, _) => { b.BorderBrush = B(Edge); tb.Foreground = B(SubHi); };
         b.MouseLeftButtonUp += (_, _) =>
         {
             try { Process.Start(new ProcessStartInfo(SupportUrl) { UseShellExecute = true }); } catch { }
@@ -303,88 +316,116 @@ public sealed class MainWindow : Window
         return b;
     }
 
-    /// <summary>Riquadro delle donazioni nello spazio principale del menu.</summary>
-    private static FrameworkElement SupportCard()
-    {
-        var dp = new DockPanel();
-        var cup = new TextBlock { Text = "\u2615", FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 40, Foreground = B(AmberC), Margin = new Thickness(0, 0, 18, 0), VerticalAlignment = VerticalAlignment.Center };
-        DockPanel.SetDock(cup, Dock.Left);
-        dp.Children.Add(cup);
-        var btn = SupportButton(large: true);
-        DockPanel.SetDock(btn, Dock.Right);
-        dp.Children.Add(btn);
-        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        text.Children.Add(new TextBlock { Text = "Free and open source, made in spare time", FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = B(Text) });
-        text.Children.Add(new TextBlock
-        {
-            Text = "If the BMS Suite saves you time, you can buy the author a coffee on Ko-fi. Every coffee helps new tools and updates. Thank you!",
-            FontSize = 13, Foreground = B(Sub), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 16, 0),
-        });
-        dp.Children.Add(text);
-        return new Border
-        {
-            Background = B(PanelHi), BorderBrush = B(AmberC, 200), BorderThickness = new Thickness(2), CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(20, 16, 20, 16), Margin = new Thickness(0, 0, 0, 8), Child = dp,
-        };
-    }
-
     private FrameworkElement BuildLeft()
     {
         var sp = new DockPanel();
-        var head = Label("WORKING THEATER", new Thickness(14, 18, 14, 4));
+        var head = Label("WORKING THEATER", new Thickness(16, 20, 14, 10));
         DockPanel.SetDock(head, Dock.Top);
         sp.Children.Add(head);
-        var hint = new TextBlock { Text = "Every program opens on it", Foreground = B(Sub), FontSize = 11.5, Margin = new Thickness(14, 0, 14, 10) };
-        DockPanel.SetDock(hint, Dock.Top);
+        var hint = new TextBlock { Text = "Every program opens on the working theater.", Foreground = B(Sub), FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(16, 10, 14, 0) };
+        DockPanel.SetDock(hint, Dock.Bottom);
         sp.Children.Add(hint);
-        var bottom = new StackPanel();
-        bottom.Children.Add(_theaterInfo);
-        bottom.Children.Add(Label("CONTINUE", new Thickness(14, 22, 14, 6)));
-        bottom.Children.Add(_continue);
-        DockPanel.SetDock(bottom, Dock.Bottom);
-        sp.Children.Add(bottom);
-        sp.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = _theaters });
-        return new Border { Width = 290, Background = B(Panel), BorderBrush = B(Line), BorderThickness = new Thickness(0, 0, 1, 0), Padding = new Thickness(0, 0, 0, 16), Child = sp };
+        _theaterCard.Background = B(Bg);
+        _theaterCard.BorderBrush = B(Line);
+        var list = new StackPanel();
+        list.Children.Add(_theaters);
+        list.Children.Add(_theaterCard);
+        // la rotella scorre la colonna, non l'elenco (che non ha barra sua)
+        _theaters.PreviewMouseWheel += (_, e) =>
+        {
+            if (e.Handled) return;
+            e.Handled = true;
+            list.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta) { RoutedEvent = UIElement.MouseWheelEvent });
+        };
+        ScrollViewer.SetVerticalScrollBarVisibility(_theaters, ScrollBarVisibility.Disabled);
+        sp.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = list });
+        return new Border { Width = 300, Background = B(Panel), BorderBrush = B(Line), BorderThickness = new Thickness(0, 0, 1, 0), Padding = new Thickness(0, 0, 0, 14), Child = sp };
+    }
+
+    /// <summary>Scheda del teatro scelto: cosa ha di suo e dove sono i suoi file (solo letti).</summary>
+    private void FillTheaterCard(BmsTheater t)
+    {
+        static int Count(string dir, string pattern)
+        {
+            try { return Directory.Exists(dir) ? Directory.EnumerateFiles(dir, pattern).Count() : 0; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
+        }
+        bool ownDb = true, ownSim = false;
+        string sim = "";
+        try { ownDb = !TerrainTool.Core.Database.DbInstaller.IsShared(_data, t.ObjectDir); } catch (Exception ex) when (ex is IOException or ArgumentException) { }
+        try { ownSim = TerrainTool.Core.Sim.TheaterSim.HasOwnSim(t); sim = TerrainTool.Core.Sim.TheaterSim.SimDir(t); } catch (Exception ex) when (ex is IOException or ArgumentException) { }
+
+        var sp = new StackPanel();
+        sp.Children.Add(new TextBlock { Text = t.Subtitle, Foreground = B(SubHi), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
+        var stats = new UniformGrid2(2);
+        FrameworkElement Stat(string value, string label, string tip) => new StackPanel
+        {
+            Margin = new Thickness(0, 0, 8, 10), ToolTip = tip,
+            Children = { new TextBlock { Text = value, FontSize = 17, FontWeight = FontWeights.SemiBold, Foreground = B(Text) }, new TextBlock { Text = label, FontSize = 11, Foreground = B(Sub) } },
+        };
+        stats.Add(Stat(Count(t.CampaignDir, "*.cam").ToString(), "campaign files", "The .cam files of its Campaign folder (campaigns and their saves)"));
+        stats.Add(Stat(Count(t.CampaignDir, "*.tac").ToString(), "TE missions", "The .tac files of its Campaign folder"));
+        stats.Add(Stat(ownDb ? "Its own" : "BMS's", "database", ownDb ? "The theater has its own objects database: the programs can install into it" : "The theater uses BMS's shared database, which is never written"));
+        stats.Add(Stat(ownSim ? "Its own" : "BMS's", "Sim files", ownSim ? "The theater has its own Sim folder" : "The theater uses BMS's Data\\Sim; it gets its own the first time a program installs Sim files"));
+        sp.Children.Add(stats.Panel);
+        sp.Children.Add(new Border { Height = 1, Background = B(Line), Margin = new Thickness(0, 0, 0, 8) });
+        void PathLine(string label, string path)
+        {
+            if (path.Length == 0) return;
+            sp.Children.Add(new TextBlock { Text = label.PadRight(10) + Short(path), FontFamily = Mono, FontSize = 10.5, Foreground = B(Sub), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = path, Margin = new Thickness(0, 0, 0, 3) });
+        }
+        PathLine("Campaign", t.CampaignDir);
+        PathLine("Objects", t.ObjectDir);
+        PathLine("Sim", sim);
+        _theaterCard.Child = sp;
     }
 
     private static TextBlock Label(string text, Thickness m) =>
-        new() { Text = text, FontFamily = Mono, FontSize = 12, FontWeight = FontWeights.Bold, Foreground = B(AmberC), Margin = m };
+        new() { Text = text, FontFamily = Mono, FontSize = 12, Foreground = B(Sub), Margin = m };
 
+    /// <summary>"Riprendi": l'ultimo programma aperto, con l'unico pulsante pieno della pagina.</summary>
     private void FillContinue()
     {
         var last = Tools.FirstOrDefault(t => t.Title == _s.LastTool);
-        var sp = new StackPanel();
+        var row = new DockPanel();
         if (last != null)
         {
-            var row = new DockPanel();
-            var ic = ToolIcon(last.Exe, 34) ?? new TextBlock { Text = last.Glyph, FontFamily = Icons, FontSize = 22, Foreground = B(Hud) };
-            ic.VerticalAlignment = VerticalAlignment.Center; ic.Margin = new Thickness(0, 0, 12, 0);
+            var ic = ToolIcon(last.Exe, 36) ?? new TextBlock { Text = last.Glyph, FontFamily = Icons, FontSize = 24, Foreground = B(AmberC) };
+            ic.VerticalAlignment = VerticalAlignment.Center; ic.Margin = new Thickness(0, 0, 14, 0);
             DockPanel.SetDock(ic, Dock.Left);
             row.Children.Add(ic);
-            var go = new TextBlock { Text = "▶", Foreground = B(Hud), FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
+            var go = new Border
+            {
+                Background = B(AmberC), CornerRadius = new CornerRadius(4), Padding = new Thickness(22, 9, 22, 10), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center,
+                Child = new TextBlock { Text = "Continue", FontSize = 14, FontWeight = FontWeights.Bold, Foreground = B(Bg) },
+            };
+            go.MouseEnter += (_, _) => go.Background = B(Color.FromRgb(0xFF, 0xC2, 0x33));
+            go.MouseLeave += (_, _) => go.Background = B(AmberC);
+            go.MouseLeftButtonUp += ContinueClick;
             DockPanel.SetDock(go, Dock.Right);
             row.Children.Add(go);
+            var title = new TextBlock { FontSize = 16, TextTrimming = TextTrimming.CharacterEllipsis };
+            title.Inlines.Add(new System.Windows.Documents.Run(last.Title) { FontWeight = FontWeights.SemiBold });
+            string where = (_s.LastTheater is { Length: > 0 } th ? "  ·  " + th : "") + (_s.LastTime is { } w ? "  ·  " + When(w) : "");
+            title.Inlines.Add(new System.Windows.Documents.Run(where) { Foreground = B(SubHi) });
             row.Children.Add(new StackPanel
             {
-                Children =
-                {
-                    new TextBlock { Text = last.Title, FontSize = 14.5, FontWeight = FontWeights.SemiBold },
-                    new TextBlock { Text = (_s.LastTheater ?? "") + (_s.LastTime is { } w ? " · " + w.ToString("dd/MM HH:mm") : ""), Foreground = B(Sub), FontSize = 11.5 },
-                },
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { new TextBlock { Text = "Continue where you left off", Foreground = B(Sub), FontSize = 11.5, Margin = new Thickness(0, 0, 0, 2) }, title },
             });
-            sp.Children.Add(row);
         }
-        else sp.Children.Add(new TextBlock { Text = "Nothing opened yet", Foreground = B(Sub), FontSize = 12.5 });
-        _continue.Child = sp;
-        _continue.Margin = new Thickness(14, 0, 14, 0);
-        _continue.Padding = new Thickness(12, 10, 12, 10);
-        _continue.BorderBrush = B(last != null ? Hud : Line, 140);
+        else row.Children.Add(new TextBlock { Text = "Choose the working theater on the left, then a program below.", Foreground = B(SubHi), FontSize = 13.5 });
+        _continue.Child = row;
+        _continue.Padding = new Thickness(16, 12, 16, 12);
+        _continue.CornerRadius = new CornerRadius(5);
+        _continue.BorderBrush = B(Line);
         _continue.BorderThickness = new Thickness(1);
-        _continue.Background = B(Hud, 14);
-        _continue.Cursor = last != null ? Cursors.Hand : null;
-        _continue.MouseLeftButtonUp -= ContinueClick;
-        if (last != null) _continue.MouseLeftButtonUp += ContinueClick;
+        _continue.Background = B(Panel);
     }
+
+    private static string When(DateTime w) =>
+        w.Date == DateTime.Today ? "today " + w.ToString("HH:mm") : w.Date == DateTime.Today.AddDays(-1) ? "yesterday " + w.ToString("HH:mm")
+        : w.ToString("d MMM", System.Globalization.CultureInfo.InvariantCulture);
 
     private void ContinueClick(object sender, MouseButtonEventArgs e)
     {
@@ -398,120 +439,105 @@ public sealed class MainWindow : Window
     {
         _right.Children.Clear();
         _tileState.Clear();
+        _tileStep.Clear();
+        if (_continue.Parent is Panel old) old.Children.Remove(_continue);
+        _right.Children.Add(_continue);
 
-        _right.Children.Add(Section("BUILD A THEATER", "From the ground up: each step uses what the one before made"));
-        var steps = new Grid { Margin = new Thickness(0, 6, 0, 0) };
-        var build = Tools.Where(t => t.Step > 0).OrderBy(t => t.Step).ToList();
-        for (int i = 0; i < build.Count; i++) steps.ColumnDefinitions.Add(new ColumnDefinition());
-        // linea del percorso dietro i numeri
-        var rail = new Rectangle { Height = 2, Fill = B(AmberC, 120), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(40, 17, 40, 0) };
-        Grid.SetColumnSpan(rail, build.Count);
-        steps.Children.Add(rail);
-        for (int i = 0; i < build.Count; i++)
-        {
-            var card = StepCard(build[i]);
-            Grid.SetColumn(card, i);
-            steps.Children.Add(card);
-        }
-        _right.Children.Add(steps);
+        _right.Children.Add(Section("BUILD A THEATER", "Each step uses what the one before made"));
+        var build = new UniformGrid2(4);
+        foreach (var t in Tools.Where(t => t.Step > 0).OrderBy(t => t.Step)) build.Add(Tile(t));
+        _right.Children.Add(build.Panel);
 
         _right.Children.Add(Section("MODELS & DATA", "Any theater, any time"));
-        var data = new UniformGrid2(2);
-        foreach (var t in Tools.Where(t => t.Group == "DATA")) data.Add(WideCard(t));
+        var data = new UniformGrid2(4);
+        foreach (var t in Tools.Where(t => t.Group == "DATA")) data.Add(Tile(t));
         _right.Children.Add(data.Panel);
-
-        _right.Children.Add(Section("SAFETY", "Every program saves what it replaces before writing into BMS"));
-        var safety = new WrapPanel();
-        safety.Children.Add(SmallButton("\uE81C", "Backups", "Every backup made by the programs, newest first", () => new BackupsWindow(SuiteRoot()) { Owner = this }.ShowDialog()));
-        safety.Children.Add(SmallButton("\uE8B7", "Suite folder", "Programs, settings and logs of the BMS Suite", () => OpenFolder(SuiteRoot())));
-        safety.Children.Add(SmallButton("\uE838", "BMS Data folder", "Falcon BMS 4.38\\Data (read it, do not change it by hand)", () => OpenFolder(_data)));
-        _right.Children.Add(safety);
-
-        _right.Children.Add(Section("SUPPORT", "The BMS Suite is free"));
-        _right.Children.Add(SupportCard());
         RefreshTiles();
     }
 
     private static FrameworkElement Section(string title, string sub)
     {
-        var sp = new StackPanel { Margin = new Thickness(0, 22, 0, 10) };
-        var row = new StackPanel { Orientation = Orientation.Horizontal };
-        row.Children.Add(new TextBlock { Text = title, FontFamily = Mono, FontSize = 13, FontWeight = FontWeights.Bold, Foreground = B(AmberC) });
-        row.Children.Add(new TextBlock { Text = "  —  " + sub, FontSize = 12.5, Foreground = B(Sub), VerticalAlignment = VerticalAlignment.Center });
-        sp.Children.Add(row);
-        return sp;
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 22, 0, 10) };
+        row.Children.Add(new TextBlock { Text = title, FontFamily = Mono, FontSize = 12, Foreground = B(Sub), VerticalAlignment = VerticalAlignment.Center });
+        row.Children.Add(new TextBlock { Text = "    " + sub, FontSize = 12.5, Foreground = B(Sub), VerticalAlignment = VerticalAlignment.Center });
+        return row;
     }
 
-    /// <summary>Passo del percorso: numero nel cerchio sulla linea, poi la scheda del programma.</summary>
-    private FrameworkElement StepCard(Tool t)
+    /// <summary>
+    /// Scheda di un programma: icona, (per i passi del percorso) il numero nel cerchio, nome, a cosa serve e in fondo lo
+    /// stato sul teatro di lavoro. Il bordo si accende d'ambra al passaggio; clic = apre il programma.
+    /// </summary>
+    private FrameworkElement Tile(Tool t)
     {
-        var col = new StackPanel { Margin = new Thickness(6, 0, 6, 0) };
-        var num = new Grid { Width = 36, Height = 36, HorizontalAlignment = HorizontalAlignment.Center };
-        num.Children.Add(new Ellipse { Fill = B(Bg), Stroke = B(AmberC), StrokeThickness = 2 });
-        num.Children.Add(new TextBlock { Text = t.Step.ToString("00"), FontFamily = Mono, FontWeight = FontWeights.Bold, FontSize = 13, Foreground = B(AmberC), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
-        col.Children.Add(num);
-        var state = new TextBlock { FontFamily = Mono, FontSize = 10.5, Margin = new Thickness(0, 10, 0, 0) };
+        var state = new TextBlock { FontSize = 11.5, Margin = new Thickness(0, 10, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
         _tileState[t] = state;
-        var inner = new StackPanel { Margin = new Thickness(16, 16, 16, 14) };
-        var big = ToolIcon(t.Exe, 52) ?? new TextBlock { Text = t.Glyph, FontFamily = Icons, FontSize = 30, Foreground = B(Text) };
-        big.Margin = new Thickness(0, 0, 0, 12);
-        inner.Children.Add(big);
-        inner.Children.Add(new TextBlock { Text = t.Title, FontSize = 16, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
-        inner.Children.Add(new TextBlock { Text = t.Line, Foreground = B(Sub), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) });
+        var inner = new DockPanel { Margin = new Thickness(16, 14, 16, 13), LastChildFill = true };
+        var head = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
+        if (t.Step > 0)
+        {
+            var num = new Grid { Width = 30, Height = 30, VerticalAlignment = VerticalAlignment.Top };
+            var ring = new Ellipse { StrokeThickness = 2 };
+            var n = new TextBlock { Text = t.Step.ToString("00"), FontFamily = Mono, FontWeight = FontWeights.Bold, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            num.Children.Add(ring); num.Children.Add(n);
+            _tileStep[t] = (ring, n);
+            DockPanel.SetDock(num, Dock.Right);
+            head.Children.Add(num);
+        }
+        var ic = ToolIcon(t.Exe, 44) ?? new TextBlock { Text = t.Glyph, FontFamily = Icons, FontSize = 28, Foreground = B(AmberC), HorizontalAlignment = HorizontalAlignment.Left };
+        head.Children.Add(ic);
+        DockPanel.SetDock(head, Dock.Top);
+        inner.Children.Add(head);
+        DockPanel.SetDock(state, Dock.Bottom);
         inner.Children.Add(state);
-        col.Children.Add(Panelize(inner, t, new Thickness(0, 12, 0, 0)));
-        return col;
-    }
-
-    private FrameworkElement WideCard(Tool t)
-    {
-        var state = new TextBlock { FontFamily = Mono, FontSize = 10.5, Margin = new Thickness(0, 6, 0, 0) };
-        _tileState[t] = state;
-        var row = new DockPanel { Margin = new Thickness(16, 14, 16, 14) };
-        var ic = ToolIcon(t.Exe, 52) ?? new TextBlock { Text = t.Glyph, FontFamily = Icons, FontSize = 30, Foreground = B(Text) };
-        ic.VerticalAlignment = VerticalAlignment.Center; ic.Margin = new Thickness(0, 0, 16, 0);
-        DockPanel.SetDock(ic, Dock.Left);
-        row.Children.Add(ic);
-        row.Children.Add(new StackPanel
+        inner.Children.Add(new StackPanel
         {
             Children =
             {
-                new TextBlock { Text = t.Title, FontSize = 16, FontWeight = FontWeights.SemiBold },
-                new TextBlock { Text = t.Line, Foreground = B(Sub), FontSize = 12.5 },
-                state,
+                new TextBlock { Text = t.Title, FontSize = 16, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
+                new TextBlock { Text = t.Line, Foreground = B(SubHi), FontSize = 12.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) },
             },
         });
-        return Panelize(row, t, new Thickness(0, 0, 12, 12));
-    }
-
-    /// <summary>Pannello da cabina: angolo smussato in alto a destra, bordo che si accende d'ambra al passaggio.</summary>
-    private Border Panelize(FrameworkElement inner, Tool t, Thickness margin)
-    {
-        var corner = new System.Windows.Shapes.Path { Data = Geometry.Parse("M0,0 L14,0 L14,14 Z"), Fill = B(AmberC, 200), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Visibility = Visibility.Hidden };
-        var g = new Grid();
-        g.Children.Add(inner);
-        g.Children.Add(corner);
         var b = new Border
         {
-            Background = B(Panel), BorderBrush = B(Line), BorderThickness = new Thickness(1), Margin = margin, Cursor = Cursors.Hand, Child = g,
+            Background = B(Panel), BorderBrush = B(Line), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(5), Margin = new Thickness(0, 0, 12, 0), MinHeight = t.Step > 0 ? 176 : 150,
+            Cursor = Cursors.Hand, Child = inner,
             ToolTip = new ToolTip { Content = new TextBlock { Text = t.Description, MaxWidth = 340, TextWrapping = TextWrapping.Wrap } },
         };
-        b.MouseEnter += (_, _) => { b.BorderBrush = B(AmberC); b.Background = B(PanelHi); corner.Visibility = Visibility.Visible; };
-        b.MouseLeave += (_, _) => { b.BorderBrush = B(Line); b.Background = B(Panel); corner.Visibility = Visibility.Hidden; };
+        b.MouseEnter += (_, _) => { b.BorderBrush = B(AmberC); b.Background = B(PanelHi); };
+        b.MouseLeave += (_, _) => { b.BorderBrush = B(Line); b.Background = B(Panel); };
         b.MouseLeftButtonUp += (_, _) => Launch(t, CurrentTheater);
         return b;
     }
 
-    private static FrameworkElement SmallButton(string glyph, string title, string tip, Action act)
+    /// <summary>Barra in fondo: i backup, le cartelle e la guida (collegamenti, non pulsanti).</summary>
+    private FrameworkElement BuildFooter()
     {
-        var sp = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(14, 9, 16, 9) };
-        sp.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 16, Foreground = B(AmberC), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
-        sp.Children.Add(new TextBlock { Text = title, FontSize = 13.5, VerticalAlignment = VerticalAlignment.Center });
-        var b = new Border { Background = B(Panel), BorderBrush = B(Line), BorderThickness = new Thickness(1), Margin = new Thickness(0, 0, 10, 10), Cursor = Cursors.Hand, Child = sp, ToolTip = tip };
-        b.MouseEnter += (_, _) => b.BorderBrush = B(AmberC);
-        b.MouseLeave += (_, _) => b.BorderBrush = B(Line);
-        b.MouseLeftButtonUp += (_, _) => act();
-        return b;
+        var dp = new DockPanel { Margin = new Thickness(28, 10, 28, 11) };
+        var links = new StackPanel { Orientation = Orientation.Horizontal };
+        FrameworkElement Link(string text, string tip, Action act)
+        {
+            var tb = new TextBlock { Text = text, FontSize = 12.5, Foreground = B(SubHi), Margin = new Thickness(22, 0, 0, 0), Cursor = Cursors.Hand, ToolTip = tip, Background = Brushes.Transparent };
+            tb.MouseEnter += (_, _) => { tb.Foreground = B(Text); tb.TextDecorations = TextDecorations.Underline; };
+            tb.MouseLeave += (_, _) => { tb.Foreground = B(SubHi); tb.TextDecorations = null; };
+            tb.MouseLeftButtonUp += (_, _) => act();
+            return tb;
+        }
+        links.Children.Add(Link("Backups", "Every backup made by the programs, newest first", () => new BackupsWindow(SuiteRoot()) { Owner = this }.ShowDialog()));
+        links.Children.Add(Link("Suite folder", "Programs, settings and logs of the BMS Suite", () => OpenFolder(SuiteRoot())));
+        links.Children.Add(Link("BMS Data folder", "Falcon BMS 4.38\\Data (read it, do not change it by hand)", () => OpenFolder(_data)));
+        if (GuideFile() is { } guide)
+            links.Children.Add(Link("User guide", guide, () => { try { Process.Start(new ProcessStartInfo(guide) { UseShellExecute = true }); } catch { } }));
+        DockPanel.SetDock(links, Dock.Right);
+        dp.Children.Add(links);
+        dp.Children.Add(new TextBlock { Text = "Every program saves what it replaces before writing into BMS.", FontSize = 12.5, Foreground = B(Sub), TextTrimming = TextTrimming.CharacterEllipsis });
+        return new Border { Background = B(Color.FromRgb(0x1B, 0x1D, 0x21)), BorderBrush = B(Line), BorderThickness = new Thickness(0, 1, 0, 0), Child = dp };
+    }
+
+    private static string? GuideFile()
+    {
+        foreach (var p in new[] { System.IO.Path.Combine(SuiteRoot(), "BMS-Suite-User-Guide.pdf"), System.IO.Path.Combine(SuiteRoot(), "docs", "BMS-Suite-User-Guide.pdf") })
+            if (File.Exists(p)) return p;
+        return null;
     }
 
     /// <summary>Griglia a colonne uguali che va a capo (le schede larghe di modelli e dati).</summary>
@@ -529,15 +555,27 @@ public sealed class MainWindow : Window
         }
     }
 
+    private string UsedKey(Tool t, string? theater) => t.Title + "|" + (theater ?? "");
+
+    /// <summary>Stato di una scheda sul teatro di lavoro: non compilato, in esecuzione, gia' aperto su questo teatro (quando) o no.</summary>
     private void UpdateState(Tool t)
     {
         if (!_tileState.TryGetValue(t, out var s)) return;
         var exe = ExeOf(t);
         bool running = false;
         try { running = Process.GetProcessesByName(System.IO.Path.GetFileNameWithoutExtension(t.Exe)).Length > 0; } catch { }
-        if (exe == null) { s.Text = "NOT BUILT"; s.Foreground = B(Red); }
-        else if (running) { s.Text = "● RUNNING"; s.Foreground = B(Hud); }
-        else { s.Text = "READY"; s.Foreground = B(Sub); }
+        bool used = _s.Used.TryGetValue(UsedKey(t, CurrentTheater), out var at);
+        if (exe == null) { s.Text = "Not built: run its build.bat"; s.Foreground = B(Red); }
+        else if (running) { s.Text = "Running now"; s.Foreground = B(Hud); }
+        else if (used) { s.Text = $"Opened on {CurrentTheater ?? "this theater"} · {When(at)}"; s.Foreground = B(SubHi); }
+        else { s.Text = CurrentTheater != null ? "Not opened on this theater yet" : ""; s.Foreground = B(Sub); }
+        if (_tileStep.TryGetValue(t, out var step))
+        {
+            // pieno = aperto adesso, bordo verde = gia' usato su questo teatro, grigio = ancora da fare
+            step.Ring.Fill = running ? B(Hud) : Brushes.Transparent;
+            step.Ring.Stroke = B(running || used ? Hud : Edge);
+            step.Num.Foreground = B(running ? Bg : used ? Hud : Sub);
+        }
     }
 
     private void RefreshTiles() { foreach (var t in Tools) UpdateState(t); }
@@ -560,7 +598,9 @@ public sealed class MainWindow : Window
             if (theater != null) { psi.ArgumentList.Add("--theater"); psi.ArgumentList.Add(theater); }
             if (_data.Length > 0) { psi.ArgumentList.Add("--bms-data"); psi.ArgumentList.Add(_data); }
             Process.Start(psi);
-            _s.LastTool = t.Title; _s.LastTheater = theater; _s.LastTime = DateTime.Now; SaveSettings();
+            _s.LastTool = t.Title; _s.LastTheater = theater; _s.LastTime = DateTime.Now;
+            _s.Used[UsedKey(t, theater)] = DateTime.Now;
+            SaveSettings();
             FillContinue();
             Dispatcher.BeginInvoke(new Action(RefreshTiles), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }

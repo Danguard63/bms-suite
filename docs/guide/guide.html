@@ -164,27 +164,29 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <figure><img src="shots/01_home.jpg"><figcaption><b>Figure 3.1</b> The main menu with the Mideast 4.38 theater selected.</figcaption></figure>
   <div class="keep"><h2>Top bar</h2>
   <ul>
-    <li><b>BMS 4.38 FOUND</b> – the BMS Data folder in use. Click it to choose another one.</li>
-    <li><b>THEATERS · ADD-ONS</b> – how many theaters are in BMS's theater list.</li>
-    <li><b>BMS CLOSED / BMS RUNNING</b> – the programs install into BMS only while it is closed. When BMS runs the chip turns amber.</li>
-    <li><b>SUPPORT ON KO-FI</b> – opens the author's donation page in the browser.</li>
+    <li><b>BMS 4.38 found</b> – the BMS Data folder in use. Click it to choose another one.</li>
+    <li><b>theaters · add-ons</b> – how many theaters are in BMS's theater list.</li>
+    <li><b>BMS closed / BMS is running</b> – the programs install into BMS only while it is closed. When BMS runs the text turns amber.</li>
+    <li><b>Support on Ko-fi</b> – opens the author's donation page in the browser.</li>
   </ul></div>
   <div class="keep"><h2>Working theater</h2>
-  <p>The list on the left shows the theaters installed in BMS (<b>BMS</b> = Korea, the base theater; <b>ADD-ON</b> = any other). The selected theater is the one every program opens on. Below the list you see where its campaign and objects folders are.</p></div>
-  <p><b>Continue</b> shows the last program you opened and its theater: click it to open it again.</p>
+  <p>The list on the left shows the theaters installed in BMS (<b>BMS</b> = Korea, the base theater; <b>ADD-ON</b> = any other). The selected theater is the one every program opens on. The card below the list tells what it has: how many campaign files and TE missions, whether the database and the Sim files are its own or BMS's, and where its folders are (the full path shows when you point at a line).</p></div>
+  <p><b>Continue</b>, at the top, shows the last program you opened and its theater: the button opens it again.</p>
   <div class="keep"><h2>Program tiles</h2>
-  <p><b>Build a theater</b> shows the four steps in order (01 TerrainTool, 02 Objective Studio, 03 Art Editor, 04 Campaign Editor). <b>Models &amp; data</b> holds the Model Editor, Database Interchange, 4.37 Units Converter and Sim Editor. Click a tile to start the program. The state under each name tells you:</p></div>
+  <p><b>Build a theater</b> shows the four steps in order (01 TerrainTool, 02 Objective Studio, 03 Art Editor, 04 Campaign Editor). <b>Models &amp; data</b> holds the Model Editor, Database Interchange, 4.37 Units Converter and Sim Editor. Click a tile to start the program. The line at the bottom of each tile, and the circle of the four steps, tell you:</p></div>
   <table>
     <tr><th>State</th><th>Meaning</th></tr>
-    <tr><td>READY</td><td>The program is there and can be started.</td></tr>
-    <tr><td>● RUNNING</td><td>The program is already open.</td></tr>
-    <tr><td>NOT BUILT</td><td>The program is missing (only in a development copy built from source: run <code>build.bat</code> in its folder).</td></tr>
+    <tr><td>Not opened on this theater yet</td><td>The program is there; you have not used it on the working theater (grey circle).</td></tr>
+    <tr><td>Opened on <i>theater</i> · <i>when</i></td><td>The last time you opened it on the working theater (green circle).</td></tr>
+    <tr><td>Running now</td><td>The program is open (full green circle).</td></tr>
+    <tr><td>Not built</td><td>The program is missing (only in a development copy built from source: run <code>build.bat</code> in its folder).</td></tr>
   </table>
-  <div class="keep"><h2>Safety</h2>
+  <div class="keep"><h2>Bottom bar</h2>
   <ul>
     <li><b>Backups</b> – every backup made by every program, newest first (Figure 3.2).</li>
     <li><b>Suite folder</b> – opens the BMS Suite folder.</li>
     <li><b>BMS Data folder</b> – opens the BMS Data folder (look, do not change files by hand).</li>
+    <li><b>User guide</b> – opens this guide.</li>
   </ul></div>
   <figure><img src="shots/02_backups.jpg"><figcaption><b>Figure 3.2</b> The Backups window: program, date, size and folder of each backup. <b>Open folder</b> (or double-click) opens it. To put a backup back, use <b>Restore</b> in the program that made it: it knows what goes where.</figcaption></figure>
 </section>
