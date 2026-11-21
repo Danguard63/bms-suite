@@ -11,8 +11,16 @@ public sealed class SimLibrary
     public string Overrides { get; }
     public string Baseline { get; }
 
-    /// <summary>Folders the editor shows, as in BMS Data\Sim.</summary>
-    public static readonly string[] Folders = { "Misdata", "Radar", "Acdata", "Vehdef", "Bombdata" };
+    /// <summary>Folders the editor shows, as in BMS Data\Sim. Not Acdata: the flight models are BMS's and stay as they are
+    /// (the BMS developers do not want them changed or passed around).</summary>
+    public static readonly string[] Folders = { "Misdata", "Radar", "Vehdef", "Bombdata" };
+
+    /// <summary>Sim folders the suite never copies into a project nor edits: the flight models.</summary>
+    public static readonly string[] Protected = { "Acdata" };
+
+    /// <summary>True for a path (relative to Sim, or a full path) inside a protected folder (Acdata).</summary>
+    public static bool IsProtected(string path) =>
+        path.Replace('/', '\\').Split('\\', StringSplitOptions.RemoveEmptyEntries).Any(p => Protected.Contains(p, StringComparer.OrdinalIgnoreCase));
     public static readonly string[] Extensions = { ".dat", ".veh", ".lst", ".txt", ".txtpb" };
 
     public SimLibrary(string bmsSim, string overrides)
@@ -54,6 +62,7 @@ public sealed class SimLibrary
     /// <summary>Saves the project's copy; the first time, it also keeps the BMS file as it is now (SimOverrides_BMS).</summary>
     public void SaveOverride(string rel, SimTextFile file)
     {
+        if (IsProtected(rel)) throw new InvalidOperationException($"{rel}: the flight models (Acdata) are not edited by the suite");
         if (!File.Exists(BaselinePath(rel)) && File.Exists(BmsPath(rel)))
         {
             Directory.CreateDirectory(Path.GetDirectoryName(BaselinePath(rel))!);

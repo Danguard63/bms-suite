@@ -415,7 +415,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <p>The Sim Editor works on a TerrainTool project (it opens on the project from the <b>Sim Editor</b> button of TerrainTool, or asks for it: <b>Recent projects</b> → <b>Open</b>, or <b>Browse project...</b>). Everything it changes goes into the theater with <b>Run Objects</b> (Objective Studio) and <b>Build theater</b> (TerrainTool), then the install: BMS's own files are never changed.</p>
   <div class="keep"><h2>The theater's own Sim</h2>
   <ul>
-    <li><b>Copy a BMS Sim file to SimOverrides...</b>: pick files of BMS <code>Data\Sim</code> (for example <code>Misdata\SA-2F.dat</code>); they are copied into the project's <code>SimOverrides</code> folder with the same path. Edit them there (<b>Open SimOverrides</b>).</li>
+    <li><b>Copy a BMS Sim file to SimOverrides...</b>: pick files of BMS <code>Data\Sim</code> (for example <code>Misdata\SA-2F.dat</code>); they are copied into the project's <code>SimOverrides</code> folder with the same path. Edit them there (<b>Open SimOverrides</b>). The flight models (<code>Acdata</code>) are not copied nor edited: they stay BMS's, as the BMS developers ask.</li>
     <li>The line under the buttons says whether the theater has its own Sim and which files it changes. <b>Build theater</b> makes <code>NT\Sim</code> = a full copy of BMS <code>Data\Sim</code> plus your files.</li>
     <li><b>Install theater Sim into BMS...</b> (BMS closed) copies it into the theater's folder and sets <code>simdatadir</code> in its <code>.tdf</code>; replaced files are saved in <code>Output\BmsBackup</code>. The same button is in TerrainTool, tab 9.</li>
   </ul></div>

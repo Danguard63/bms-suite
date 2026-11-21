@@ -76,25 +76,6 @@ public static class SimDocs
         ("^TrailerDataTractorCt$", "Class table entry of the tractor that tows it (-1 = none)"),
     };
 
-    private static readonly (string Pattern, string Text)[] Aircraft =
-    {
-        ("^fmtype$", "Flight model kind (FM_OFM older model, FM_AFM advanced model)"),
-        ("^empty_weight_lbs$", "Empty weight (pounds)"),
-        ("^internal_fuel_lbs$", "Internal fuel (pounds)"),
-        ("^area_sqft$", "Wing reference area (square feet)"),
-        ("^max_g$", "Highest load factor (g)"),
-        ("^aoa_max_player_deg$", "Highest angle of attack for the player (degrees)"),
-        ("^aoa_max_ai_deg$", "Highest angle of attack for the AI (degrees)"),
-        ("^min_vcas_kts$", "Lowest calibrated airspeed (knots)"),
-        ("^max_vcas_kts$", "Highest calibrated airspeed (knots)"),
-        ("^corner_vcas_kts$", "Corner speed: best turn (knots)"),
-        ("^cg_location_ft$", "Centre of gravity from the nose (feet)"),
-        ("^breakpoints$", "Breakpoints of this axis of the table (the rows or columns of the data below)"),
-        ("^values$", "One row of the table: a value for each breakpoint of the other axis"),
-        ("^multiplier$", "Multiplies every value of the table"),
-        ("^title$", "Name of the table or axis"),
-    };
-
     /// <summary>Units from the end of a name (_lbs, _ft, _deg, _kts…), for the fields with no entry above.</summary>
     private static string UnitOf(string name)
     {
@@ -116,7 +97,6 @@ public static class SimDocs
             "radar" => Radar,
             "misdata" => Missile.Concat(Radar).ToArray(),
             "vehdef" => Vehicle,
-            "acdata" => Aircraft,
             _ => Array.Empty<(string, string)>(),
         };
         string name = it.Key ?? it.Label;

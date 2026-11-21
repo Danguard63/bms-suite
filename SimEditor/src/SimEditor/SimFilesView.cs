@@ -159,7 +159,7 @@ public sealed class SimFilesView : DockPanel
         _grid.PreviewKeyDown += (_, e) => { if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control) { _grid.CommitEdit(); Save(); e.Handled = true; } };
         _save.IsEnabled = _reset.IsEnabled = false;
         FillList();
-        Status("Choose a file on the left: missiles (Misdata), radars (Radar), aircraft (Acdata, flight models), vehicles (Vehdef), bombs (Bombdata).", false);
+        Status("Choose a file on the left: missiles (Misdata), radars (Radar), vehicles (Vehdef), bombs (Bombdata).", false);
     }
 
     internal void Status(string s, bool warn) { _status.Text = s; _status.Foreground = warn ? Brushes.Firebrick : Brushes.DimGray; }
