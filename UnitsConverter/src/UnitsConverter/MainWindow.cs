@@ -88,6 +88,7 @@ public sealed class MainWindow : Window
         Title = "BMS 4.37 Units Converter";
         Width = 1450; Height = 900; MinWidth = 1050; MinHeight = 620;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        WindowState = WindowState.Maximized;   // the list has long texts: the whole screen from the start
         _startTheater = theater;
         string[] saved = { "", "" };
         try { if (File.Exists(SettingsFile)) saved = File.ReadAllLines(SettingsFile).Concat(new[] { "", "" }).Take(2).ToArray(); } catch (IOException) { }
@@ -278,7 +279,9 @@ public sealed class MainWindow : Window
         _grid.Columns.Add(Check("Convert", nameof(Row.Convert), nameof(Row.CanConvert), "Convert this into the theater"));
         _grid.Columns.Add(Text("Kind", nameof(Row.Kind), 95));
         _grid.Columns.Add(Text("Name", nameof(Row.Name), 150));
-        _grid.Columns.Add(Text("3D model and state", nameof(Row.State), 0, star: true));
+        var state = Text("3D model and state", nameof(Row.State), 0, star: true);
+        state.MinWidth = 260;
+        _grid.Columns.Add(state);
         _grid.Columns.Add(Check("Source model", nameof(Row.SourceModel), nameof(Row.SourceModelPossible),
             "BMS 4.38 has a different model with the same number: tick to bring the old database's model (with a free number) instead of BMS's"));
         var name = new DataGridTextColumn { Header = new TextBlock { Text = "Name in the TE", ToolTip = "Aircraft and helicopters: the name the Tactical Engagement shows" },
