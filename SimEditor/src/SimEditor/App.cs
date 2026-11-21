@@ -6,7 +6,7 @@ namespace SimEditor;
 
 /// <summary>
 /// BMS Sim Editor: the theater's own Sim (BMS Data\Sim + SimOverrides), the database changes (DbEdits.txt) and the check of the
-/// air defence systems, for a TerrainTool project. Arguments: --project &lt;file.ttproj&gt; (from TerrainTool); without it, it asks.
+/// air defence systems, for a theater installed in BMS or a TerrainTool project. Arguments: --project &lt;file.ttproj&gt;, or --theater/--bms-data (BMS Suite menu); without them, it asks.
 /// </summary>
 public sealed class App : Application
 {
@@ -34,6 +34,12 @@ public sealed class App : Application
             {
                 string? project = TerrainTool.Core.SuiteArgs.Value(args, "project");
                 if (project != null && !File.Exists(project)) { MessageBox.Show("Project not found: " + project, "Sim Editor"); project = null; }
+                // the theater chosen in the BMS Suite main menu: its work folder
+                if (project == null && TerrainTool.Core.SuiteArgs.Theater(args) is { } t)
+                {
+                    try { project = StartWindow.OpenTheater(t); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Note("theater " + t.Name + ": " + ex.Message); }
+                }
                 if (project == null)
                 {
                     var start = new StartWindow();

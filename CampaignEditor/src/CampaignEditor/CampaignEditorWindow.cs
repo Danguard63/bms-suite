@@ -544,7 +544,7 @@ public sealed class CampaignEditorWindow : Window
             _doc.Path = dst;   // da qui in poi il file e' la copia salvata (i dati restano quelli in memoria)
             Title = $"Campaign editor – {_ws.Name} – {name}";
             _status.Text = _p != null
-                ? $"Saved {dst} (and the Install copy). 'Install into BMS…' copies it into the add-on; Objects and Assemble keep it."
+                ? $"Saved {dst} (and the Install copy). 'Install into BMS…' copies it into the add-on."
                 : $"Saved {dst}" + (_lastBackup != null ? $" (previous version backed up in {_lastBackup})." : ".");
             return true;
         }
@@ -1721,7 +1721,7 @@ public sealed class CampaignEditorWindow : Window
             "Which .pri file does BMS really use? Test with markers:\n\n" +
             "Yes = write the 5 .pri files into Output\\Install\\Campaign with a different BEACH priority each " +
             "(Offense 11, Defense 12, Attrit 13, Intdict 14, Cas 15; beaches do not matter for the air AI).\n" +
-            "Then: Install objects + campaign, start the campaign, let it run some hours (until air actions start), save, " +
+            "Then: 'Install campaign files into BMS…' (start window), start the campaign, let it run some hours (until air actions start), save, " +
             "open the save here: the Teams tab says which marker each team has.\n\n" +
             "No = put back the original .pri files (then Install again).\nCancel = nothing.",
             "Marker test", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
@@ -1735,7 +1735,7 @@ public sealed class CampaignEditorWindow : Window
                 if (r == MessageBoxResult.Yes) { p.Obj[PriFile.MarkerType] = PriFile.MarkerOf(p.Name); p.Save(dst); }
                 else File.Copy(p.Path, dst, true);
             }
-            _status.Text = r == MessageBoxResult.Yes ? "Marked .pri files written to Output\\Install\\Campaign: now Install objects + campaign and play." : "Original .pri files put back in Output\\Install\\Campaign: Install again.";
+            _status.Text = r == MessageBoxResult.Yes ? "Marked .pri files written to Output\\Install\\Campaign: now 'Install campaign files into BMS…' (start window) and play." : "Original .pri files put back in Output\\Install\\Campaign: Install again.";
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "Marker test", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }

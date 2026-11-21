@@ -372,6 +372,6 @@ public sealed class UnitConvertWindow : Window
             catch (Exception ex) { Log($"{r.Name}: ERROR {ex.Message}"); }
         }
         FillFiles();
-        Log("Done. Next: Install into BMS… (editor) or Install objects + campaign (TerrainTool), then try the campaign in BMS.");
+        Log("Done. Next: 'Install campaign files into BMS…' (start window), then try the campaign in BMS.");
     }
 }

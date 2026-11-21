@@ -230,7 +230,7 @@ public sealed class BridgesWindow : Window
             int j = fin.Count(r => r.Final == BridgeAction.Junction);
             _status.Text = $"Saved {BridgePlan.PathFor(_p.ProjectFolder)}: {j} bridges become junctions, {fin.Count - j} stay bridges" +
                            (moved > 0 ? $", {moved} moved onto their river (objective_edits.csv, previous version in .bak)" : "") +
-                           (_p.IsInstalledTheater ? ". Next: Build objects, then Install into BMS." : ". Next: Run Objects, then Campaign Editor → Apply object changes.") + " Survey again after saving: moved bridges then show as 'crosses the river correctly'.";
+                           (_p.IsInstalledTheater ? ". Next: Build objects, then Install into BMS." : ". Next: Run Objects, then Install into BMS (objects and campaign files).") + " Survey again after saving: moved bridges then show as 'crosses the river correctly'.";
             return true;
         }
         catch (Exception ex) { MessageBox.Show(this, "Not saved: " + ex.Message, Title); return false; }

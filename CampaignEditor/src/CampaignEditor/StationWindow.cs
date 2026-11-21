@@ -305,7 +305,7 @@ public sealed class StationWindow : Window
             _f.Save(_dst);
             _dirty = false;
             Recheck();
-            MessageBox.Show(this, $"Saved: {_dst}\nAssemble / Install objects + campaign copy it into the add-on's Campaign folder.", Title);
+            MessageBox.Show(this, $"Saved: {_dst}\n'Install campaign files into BMS…' (start window) copies it into the theater's Campaign folder.", Title);
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning); }
     }

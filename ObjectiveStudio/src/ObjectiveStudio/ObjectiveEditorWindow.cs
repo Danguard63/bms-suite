@@ -454,7 +454,7 @@ public sealed class ObjectiveEditorWindow : Window
         ShowInfo();
         _status.Text = _d.Project.IsInstalledTheater
             ? $"Saved {n} edits in the theater's work folder ({ObjectiveEdits.PathFor(_d.Project.ProjectFolder)}). BMS is not touched: next, Build objects and Install (main window)."
-            : $"Saved {n} edits to {ObjectiveEdits.PathFor(_d.Project.ProjectFolder)}. Run Objects and then Install objects (main window); campaign files: Campaign Editor (Apply object changes).";
+            : $"Saved {n} edits to {ObjectiveEdits.PathFor(_d.Project.ProjectFolder)}. Run Objects and then Install into BMS (main window): objects and campaign files.";
         AskRunObjects();
     }
 
@@ -464,7 +464,7 @@ public sealed class ObjectiveEditorWindow : Window
         if (RunObjectsRequested == null) return;
         var r = MessageBox.Show(this,
             "Edits saved. They reach BMS only after 'Run Objects' and 'Install'.\n\n" +
-            "Yes = Run Objects now, then Install objects into BMS\nNo = Run Objects only\nCancel = later",
+            "Yes = Run Objects now, then Install into BMS (objects and campaign files)\nNo = Run Objects only\nCancel = later",
             "Objective editor", MessageBoxButton.YesNoCancel, MessageBoxImage.Question, MessageBoxResult.Yes);
         if (r == MessageBoxResult.Cancel) return;
         _status.Text = "Objects job running in the main window…";

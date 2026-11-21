@@ -13,7 +13,7 @@ namespace ObjectiveStudio;
 /// Rete degli obiettivi sulla mappa dell'Objective Studio (con "Links" acceso): link troppo lunghi in evidenza, e con il tasto destro
 /// "Add intersection here" (spezza il link con un incrocio nuovo), "Remove link", "Link from this objective…" (poi clic su un
 /// altro obiettivo: aggiunge il link, o lo toglie se c'e' gia'), "Remove new objective". Le modifiche vanno subito in
-/// network_edits.json del progetto; "Apply object changes" del Campaign Editor le scrive nei file della campagna.
+/// network_edits.json del progetto; "Install into BMS" le scrive nei file della campagna.
 /// </summary>
 public sealed partial class EditorMap
 {
@@ -139,7 +139,7 @@ public sealed partial class EditorMap
         _netUndo.Push(JsonSerializer.Serialize(Net));
         change();
         Net.Save(NetworkEdits.PathFor(_d.Project));
-        HoverText?.Invoke($"{what} — network_edits.json: {Net.Added.Count} new objectives, {Net.Links.Count} link changes. Write them into the campaign with 'Apply object changes' in the Campaign Editor.");
+        HoverText?.Invoke($"{what} — network_edits.json: {Net.Added.Count} new objectives, {Net.Links.Count} link changes. 'Install into BMS' writes them into the campaign files.");
         NetworkChanged?.Invoke();
         InvalidateVisual();
     }

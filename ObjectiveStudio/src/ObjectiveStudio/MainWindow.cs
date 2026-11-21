@@ -35,9 +35,9 @@ public sealed class MainWindow : Window
     private readonly ProgressBar _bar = new() { Height = 12, Minimum = 0, Maximum = 1, Margin = new Thickness(0, 6, 0, 0) };
     private readonly TextBlock _buildInfo = new() { FontFamily = new FontFamily("Consolas"), FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
 
-    private readonly Button _install = Big("Install objects into BMS…", "Copies the built objects into BMS (asks first) and deletes the caches BMS rebuilds when a campaign or TE starts");
+    private readonly Button _install = Big("Install into BMS…", "Copies the built objects into BMS (asks first), writes the objectives moved, turned, replaced or removed into the campaign and TE files and installs them too; deletes the caches BMS rebuilds when a campaign or TE starts. Every file replaced is saved first.");
     private readonly Button _restore = Small("Restore a backup…", "Puts back the BMS files replaced by an earlier install");
-    private readonly Button _campaign = Small("Open Campaign Editor", "Objectives moved, turned, replaced or removed: the campaign and TE files must follow (Campaign Editor)");
+    private readonly Button _campaign = Small("Campaign Editor", "To edit the campaign itself (squadrons, units, teams…). Not needed to install: Install into BMS already brings the campaign files up to date with the objectives.");
 
     private readonly TextBlock _status = new() { FontFamily = new FontFamily("Consolas"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
     private readonly TextBox _notes = new() { IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 11, TextWrapping = TextWrapping.NoWrap, MinHeight = 120,
@@ -77,14 +77,15 @@ public sealed class MainWindow : Window
         var step1 = Step("1 · Edit objectives", "Edits are saved in the work folder, BMS is not touched.",
             new StackPanel { Orientation = Orientation.Horizontal, Children = { _editor, _fly } }, _convTools);
         var step2 = Step("2 · Build objects", "", new StackPanel { Orientation = Orientation.Horizontal, Children = { _build, _cancel } }, _bar, _buildInfo);
-        var step3 = Step("3 · Install into BMS and update the campaign", "Make a backup copy of your BMS Data folder before installing for the first time.",
-            new StackPanel { Orientation = Orientation.Horizontal, Children = { _install, _restore, _campaign } });
+        var step3 = Step("3 · Install into BMS (objects and campaign files)", "Every file replaced in BMS is saved first.",
+            new StackPanel { Orientation = Orientation.Horizontal, Children = { _install, _restore } });
 
         var other = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         other.Children.Add(new TextBlock { Text = "Other tools: ", VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.DimGray });
         var tex = Small("Model textures…", "Textures of aircraft, helicopters, vehicles and ships (will move to the Model Editor)");
         tex.Click += (_, _) => new ModelTexturesWindow(_p) { Owner = this }.Show();
         other.Children.Add(tex);
+        other.Children.Add(_campaign);
         var outBtn = Small("Open output folder", "Where Build objects writes");
         outBtn.Click += (_, _) => { if (_p != null) Explore(Path.Combine(_p.ProjectFolder, "Output")); };
         other.Children.Add(outBtn);
@@ -223,9 +224,9 @@ public sealed class MainWindow : Window
             _sub.Text = "TerrainTool project · theater conversion from the old add-on.";
             _paths.Text = $"Project    {_p.ProjectFolder}\nOld add-on {_p.OldTheaterFolder} (read only)\nOutput     {Path.Combine(_p.ProjectFolder, "Output", "Install", addOn, "Terrdata", ObjectsJob.FolderName)}";
             _build.Content = "Run Objects (from the old add-on)";
-            _install.Content = "Install objects into BMS…";
+            _install.Content = "Install into BMS…";
             _build.ToolTip = "Builds Output\\Install\\<add-on>\\Terrdata\\ObjectsNT: BMS 4.38 database, old add-on layouts, removed bases, objective editor edits, Korean bases, leveling. " +
-                             "The changes for the campaign go into Output\\ObjectChanges.json (Campaign Editor: Apply object changes).";
+                             "The changes for the campaign go into Output\\ObjectChanges.json: Install into BMS writes them into the campaign files.";
         }
         _convTools.Visibility = Visibility.Visible;
         // teatro installato: dei lavori della conversione resta solo Optimize bridges (con le scelte fatte a mano)
@@ -304,8 +305,8 @@ public sealed class MainWindow : Window
         {
             string ch = ObjectChangeSet.PathFor(_p);
             next = built == DateTime.MinValue ? "Run Objects once: it builds the theater's objects from the old add-on."
-                 : lastEdit > built ? "Edits saved after the last Run Objects: run it again, then Install objects into BMS."
-                 : File.Exists(ch) && Time(ch) >= built.AddMinutes(-1) ? "Install objects into BMS. If airbases were moved, turned, replaced or removed: Campaign Editor → Apply object changes → Install campaign files."
+                 : lastEdit > built ? "Edits saved after the last Run Objects: run it again, then Install into BMS."
+                 : File.Exists(ch) && Time(ch) >= built.AddMinutes(-1) ? "Install into BMS: the objects, and the campaign files with the airbases moved, turned, replaced or removed."
                  : "Everything built. Edit objectives or install.";
         }
         _next.Text = next;
@@ -506,21 +507,21 @@ public sealed class MainWindow : Window
     {
         if (Installed) { await InstallInstalledAsync(); return; }
         if (_p == null || _cts != null) return;
-        var inst = new BmsInstaller(_p, true, false);
+        var inst = new BmsInstaller(_p, objects: true, photoreal: false, campaign: true);
         if (inst.Problems.Count > 0)
         {
-            MessageBox.Show(this, string.Join("\n", inst.Problems), "Install objects into BMS", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, string.Join("\n", inst.Problems), "Install into BMS", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        if (MessageBox.Show(this, inst.Plan() + "\n\nProceed?", "Install objects into BMS", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
+        if (MessageBox.Show(this, inst.Plan() + "\n\nProceed?", "Install into BMS", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
         SetEnabled(false);
-        var lines = new List<string> { "Install objects into BMS → " + inst.Target };
+        var lines = new List<string> { "Install into BMS → " + inst.Target };
         try
         {
             await Task.Run(() => inst.Run(l => Dispatcher.Invoke(() => { lines.Add(l); _notes.Text = string.Join(Environment.NewLine, lines); })));
             try { File.WriteAllText(Path.Combine(_p.ProjectFolder, "Output", "Install_log.txt"), $"{DateTime.Now:yyyy-MM-dd HH:mm}\r\n" + string.Join("\r\n", lines)); } catch (IOException) { }
-            _status.Text = "✓ Objects installed. If bases changed: Campaign Editor → Apply object changes → Install campaign files into BMS.";
+            _status.Text = "✓ Objects and campaign files installed. If bases were moved, create a NEW TE scenario.";
         }
         catch (Exception ex) { _status.Text = "Install: ERROR " + ex.Message; }
         finally { SetEnabled(true); Refresh(); }

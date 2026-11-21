@@ -12,7 +12,7 @@ namespace SimEditor;
 /// <summary>
 /// "Sim files" tab: the BMS Sim files (missiles, radars, vehicles, bombs) as tables of values with their names and
 /// explanations, next to BMS's value. BMS's files are only read: the first change is saved as the project's copy in
-/// SimOverrides (Build theater puts it into the theater's NT\Sim); "Reset to BMS" moves the copy away.
+/// SimOverrides (Install into BMS puts it into the theater's Sim); "Reset to BMS" moves the copy away.
 /// </summary>
 public sealed class SimFilesView : DockPanel
 {
@@ -132,7 +132,7 @@ public sealed class SimFilesView : DockPanel
             Foreground = Brushes.DimGray, FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0),
             Text = "Yellow = different from BMS (your change). Red = BMS changed this value after it was copied into this theater (BMS update): point at the row to see both. " +
                    "Blue = not in BMS's file. A table row keeps its number of values. BMS's files are never written: the first save makes the theater's copy in SimOverrides; " +
-                   "Build theater (TerrainTool) puts it into the theater, then Install theater Sim.",
+                   "'Install into BMS…' puts it into the theater.",
         };
         var right = new DockPanel();
         DockPanel.SetDock(_title, Dock.Top); right.Children.Add(_title);
@@ -302,7 +302,7 @@ public sealed class SimFilesView : DockPanel
             _lib.SaveOverride(_cur.Rel, _file);
             _dirty = false; _save.IsEnabled = false; _reset.IsEnabled = true;
             _title.Text = _cur.Name;
-            string msg = $"{_cur.Rel} saved in SimOverrides{(first ? " (this theater's copy is made now)" : "")}. Build theater (TerrainTool) puts it into the theater, then Install theater Sim into BMS.";
+            string msg = $"{_cur.Rel} saved in SimOverrides{(first ? " (this theater's copy is made now)" : "")}. 'Install into BMS…' puts it into the theater.";
             Status(msg, false); _log(msg);
             var keep = _cur;
             FillList();

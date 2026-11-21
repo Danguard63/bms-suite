@@ -95,7 +95,7 @@ public sealed class CoastalWindow : Window
                    "If more than a quarter of its buildings are in the water, it moves the objective by the shortest distance (up to 4 km) that leaves 10% or less " +
                    "of them in the water. In ports, piers, quays and ships do not count as buildings and at least half of them should still touch the water, so the " +
                    "port stays on the coast. Decision: empty or MOVE = keep the move, KEEP = leave the objective where the add-on put it (fix it by hand in the " +
-                   "objective editor if needed: a hand edit always wins). Save, then Run Objects and, in the Campaign Editor, Apply object changes.",
+                   "objective editor if needed: a hand edit always wins). Save, then Run Objects and Install into BMS (objects and campaign files).",
         };
         var root = new DockPanel { Margin = new Thickness(10) };
         foreach (var e in new UIElement[] { top, _status }) { DockPanel.SetDock(e, Dock.Top); root.Children.Add(e); }
@@ -163,7 +163,7 @@ public sealed class CoastalWindow : Window
             }
             int keep = _rows.Count(r => r.R.Moved && r.Decision == "KEEP");
             _status.Text = $"Saved {CoastalPlan.PathFor(_p.ProjectFolder)}: {keep} objectives stay where the add-on put them, {_rows.Count(r => r.R.Moved) - keep} are moved. " +
-                           "Next: Run Objects, Install objects, then Campaign Editor → Apply object changes and Install campaign files into BMS.";
+                           "Next: Run Objects, then Install into BMS (objects and campaign files).";
             return true;
         }
         catch (Exception ex) { MessageBox.Show(this, "Not saved: " + ex.Message, Title); return false; }

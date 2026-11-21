@@ -103,7 +103,8 @@ public static class TheaterSimData
     }
 
     /// <summary>Applica DbEdits.txt agli Falcon4_*.xml di dbDir. Errore se il record non c'e'; un campo assente si aggiunge.</summary>
-    public static List<string> ApplyDbEdits(string dbDir, string editsFile)
+    /// <param name="again">The tables already had these changes once (an installed theater): a COPY whose record is there is skipped.</param>
+    public static List<string> ApplyDbEdits(string dbDir, string editsFile, bool again = false)
     {
         var notes = new List<string>();
         if (!File.Exists(editsFile)) return notes;
@@ -123,6 +124,7 @@ public static class TheaterSimData
                     int max = Regex.Matches(xml, $@"<{e.Table} Num=""(\d+)"">").Select(x => int.Parse(x.Groups[1].Value, CultureInfo.InvariantCulture)).DefaultIfEmpty(-1).Max();
                     // the database is copied fresh from BMS every time: a record already there is BMS's own (an update added it),
                     // and the edits after the COPY would overwrite it
+                    if (again && Regex.IsMatch(xml, $@"<{e.Table} Num=""{e.Num}"">")) { notes.Add($"DB: {e.Table} {e.Num} already there (copy of {e.Table} {src})"); continue; }
                     if (Regex.IsMatch(xml, $@"<{e.Table} Num=""{e.Num}"">"))
                         throw new InvalidOperationException($"DbEdits.txt line {e.Line}: COPY {e.Table} {src} {e.Num}: this BMS version already has {e.Table} {e.Num} " +
                             $"(a BMS update added it). Use the next free number, {max + 1}, here and in the lines that refer to {e.Num}");

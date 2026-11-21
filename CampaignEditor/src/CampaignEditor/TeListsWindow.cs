@@ -470,8 +470,8 @@ public sealed class TeListsWindow : Window
         }
         if (!Save()) return;
         string next = _ws.InstallCopyDir != null
-            ? "Now press 'Install campaign files into BMS…' in the Campaign Editor's start window, then start BMS."
-            : "BMS is not touched: copy them into the theater's Campaign folder to use them.";
+            ? "Now press 'Install campaign files into BMS…' in the start window, then start BMS."
+            : "Now press 'Install campaign files into BMS…' in the start window, then start BMS.";
         MessageBox.Show(this, _status.Text + "\n\n" + next, "TE lists saved", MessageBoxButton.OK, MessageBoxImage.Information);
         Close();
     }
@@ -501,7 +501,7 @@ public sealed class TeListsWindow : Window
             if (_naval.SaveIfDirty() is { } n) saved.Add(n);
             _status.Text = saved.Count == 0 ? "Nothing changed." :
                 "Saved: " + string.Join(", ", saved.Select(Path.GetFileName)) + " → " + _ws.EditsFolder +
-                (_ws.InstallCopyDir != null ? " (and Output\\Install)." : ". BMS is not touched: copy them into the theater's Campaign folder to use them.");
+                (_ws.InstallCopyDir != null ? " (and Output\\Install)." : ". 'Install campaign files into BMS…' (start window) copies them into the theater.");
             return true;
         }
         catch (Exception e) { MessageBox.Show(this, e.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Warning); return false; }

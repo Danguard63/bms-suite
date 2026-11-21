@@ -431,7 +431,7 @@ public sealed class CampaignAiWindow : Window
             }
             _status.Text = saved.Count == 0 ? "Nothing changed." :
                 "Saved: " + string.Join(", ", saved.Select(Path.GetFileName)) + " → " + _ws.EditsFolder +
-                (_ws.InstallCopyDir != null ? " (and Output\\Install). Assemble / Install bring them into the add-on." : ". BMS is not touched: copy them into the theater's Campaign folder to use them.");
+                ". BMS is not touched yet: 'Install campaign files into BMS…' (start window) copies them into the theater.";
             return true;
         }
         catch (Exception e) { MessageBox.Show(this, e.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Warning); return false; }

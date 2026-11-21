@@ -49,8 +49,8 @@ public sealed class StartWindow : Window
     private readonly Button _installAll = new()
     {
         Content = "Install campaign files into BMS…", Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 2, 6, 2), Visibility = Visibility.Collapsed,
-        ToolTip = "TerrainTool project: copies into the add-on's Campaign folder in BMS the files of Output\\Install\\<add-on>\\Campaign that differ from BMS " +
-                  "(editor saves and applied object changes). Each replaced file is kept in Backup.",
+        ToolTip = "Copies into the theater's Campaign folder in BMS the saved campaign files that differ from BMS (TerrainTool project: Output\\Install\\<add-on>\\Campaign, " +
+                  "with the object changes of Run Objects written in first). Each replaced file is kept in Backup.",
     };
     private readonly Button _applyCh = new()
     {
@@ -264,7 +264,9 @@ public sealed class StartWindow : Window
     {
         _files.ItemsSource = null;
         _ws = MakeWorkspace();
-        _installAll.Visibility = _applyCh.Visibility = _ws?.IsProject == true ? Visibility.Visible : Visibility.Collapsed;
+        _applyCh.Visibility = _ws?.IsProject == true ? Visibility.Visible : Visibility.Collapsed;
+        // installed theater: only when it has its own Campaign folder (BMS's own Data\Campaign is never written)
+        _installAll.Visibility = _ws?.IsProject == true || (_ws?.BmsTheater is { } bt && !SameDir(bt.CampaignDir, Path.Combine(bt.DataDir, "Campaign"))) ? Visibility.Visible : Visibility.Collapsed;
         _thr.IsEnabled = _ws != null;
         if (_ws == null) return;
         var ws = _ws;
@@ -351,7 +353,7 @@ public sealed class StartWindow : Window
         string f = ObjectChangeSet.PathFor(p);
         var set = ObjectChangeSet.Load(f);
         var net = NetworkEdits.Load(NetworkEdits.PathFor(p));
-        if (set == null && net.IsEmpty) { MessageBox.Show(this, $"No object changes found ({f}).\nRun Objects in the Object Editor first.", Title); return; }
+        if (set == null && net.IsEmpty) { MessageBox.Show(this, $"No object changes found ({f}): they come from Run Objects (Objective Studio), which also installs them.", Title); return; }
         string what = (set != null ? $"Object changes of {set.Created:yyyy-MM-dd HH:mm}: {set.Objectives.Count} objectives, {set.RemovedBases.Count} removed bases.\n" : "") +
                       (!net.IsEmpty ? $"Objective network (Object Editor): {net.Added.Count} new objectives, {net.Links.Count} link changes.\n" : "");
         set ??= new ObjectChangeSet();
@@ -367,6 +369,7 @@ public sealed class StartWindow : Window
                 foreach (var x in Directory.EnumerateFiles(edits).Where(x => x.EndsWith(".cam", StringComparison.OrdinalIgnoreCase) || x.EndsWith(".tac", StringComparison.OrdinalIgnoreCase)))
                     BackupStore.Save(x);
             var notes = ObjectChangeApplier.Apply(set, p, campOut, net);
+            TerrainTool.Core.Campaign.ProjectCampaign.MarkApplied(p);
             FillFiles();
             MessageBox.Show(this, string.Join("\n", notes), "Apply object changes");
         }
@@ -380,7 +383,25 @@ public sealed class StartWindow : Window
     /// </summary>
     private void InstallProjectCampaign()
     {
-        if (_ws?.Project is not { } p || _ws.InstallCopyDir is not { } src || !Directory.Exists(src)) { MessageBox.Show(this, "No Output\\Install\\Campaign folder in this project: save a file or apply the object changes first.", Title); return; }
+        if (_ws?.Project == null && _ws?.BmsTheater is { } th) { InstallTheaterCampaign(th); return; }
+        if (_ws?.Project is not { } p || _ws.InstallCopyDir is not { } src) return;
+        // the object changes of Run Objects not yet in the campaign files: written first
+        if (TerrainTool.Core.Campaign.ProjectCampaign.HasPending(p))
+        {
+            if (MessageBox.Show(this, "Run Objects changed objectives (moved, turned, replaced or removed) after the campaign files were last updated.\n\n" +
+                    "Write those changes into the campaign files first (CampObjData.XML, *.cam, Te_New_Nt.tac, stations+ils.dat), then install?",
+                    "Install campaign files into BMS", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes) != MessageBoxResult.Yes) return;
+            try
+            {
+                Cursor = System.Windows.Input.Cursors.Wait;
+                string bak = Path.Combine(BackupStore.Root, DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_objectchanges");
+                TerrainTool.Core.Campaign.ProjectCampaign.ApplyPending(p, bak);
+                FillFiles();
+            }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, "Apply object changes", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            finally { Cursor = null; }
+        }
+        if (!Directory.Exists(src)) { MessageBox.Show(this, "No campaign file saved yet in this project.", Title); return; }
         string? target = ProjectInstall.TargetCampaign(p);
         if (target == null) { MessageBox.Show(this, "The add-on's Campaign folder was not found in BMS.", Title, MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         if (BmsInstaller.IsBmsRunning()) { MessageBox.Show(this, "Falcon BMS is running: close it first.", Title, MessageBoxButton.OK, MessageBoxImage.Warning); return; }
@@ -408,6 +429,44 @@ public sealed class StartWindow : Window
                 File.Copy(from, dst, true); n++;
             }
             MessageBox.Show(this, $"Installed {n} file(s) into {target}.\nCreate a NEW TE scenario if bases were moved.", Title);
+        }
+        catch (Exception ex) { MessageBox.Show(this, $"After {n} file(s): {ex.Message}", Title, MessageBoxButton.OK, MessageBoxImage.Warning); }
+    }
+
+    private static bool SameDir(string a, string b) =>
+        string.Equals(Path.GetFullPath(a).TrimEnd('\\', '/'), Path.GetFullPath(b).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Installed theater: the campaign files saved by the editor (its work folder) that differ from the theater's Campaign
+    /// folder are copied there, each replaced file kept in Backup. BMS's own Data\Campaign is never written.
+    /// </summary>
+    private void InstallTheaterCampaign(BmsTheater th)
+    {
+        string src = _ws!.EditsFolder, target = th.CampaignDir;
+        if (SameDir(target, Path.Combine(th.DataDir, "Campaign"))) { MessageBox.Show(this, "This theater uses BMS's own Campaign folder, which is not changed.", Title); return; }
+        if (!Directory.Exists(src) || !Directory.Exists(target)) { MessageBox.Show(this, "No campaign file saved yet for this theater.", Title); return; }
+        if (BmsInstaller.IsBmsRunning()) { MessageBox.Show(this, "Falcon BMS is running: close it first.", Title, MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        var todo = ProjectInstall.Changed(src, target).Where(f => !f.EndsWith(".bak", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (todo.Count == 0) { MessageBox.Show(this, "The theater's Campaign folder in BMS already has the same files.", Title); return; }
+        string list = string.Join("\n", todo.Take(25).Select(f => "  " + Path.GetFileName(f) + (File.Exists(Path.Combine(target, Path.GetFileName(f))) ? "" : "  (new)")))
+                      + (todo.Count > 25 ? $"\n  … and {todo.Count - 25} more" : "");
+        if (MessageBox.Show(this, $"Copy {todo.Count} file(s) from\n{src}\ninto\n{target}?\n\n{list}\n\nEach replaced file is kept in {BackupStore.Root} ('Backups…').",
+                "Install campaign files into BMS", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        int n = 0;
+        try
+        {
+            foreach (var f in todo)
+            {
+                string dst = Path.Combine(target, Path.GetFileName(f)), from = f;
+                if (Path.GetFileName(f).Equals("TePlanes.lst", StringComparison.OrdinalIgnoreCase))
+                {
+                    string merged = Path.Combine(Path.GetTempPath(), "TePlanes_merged.lst");
+                    if (TerrainTool.Core.Database.UnitsConversion.KeepConvertedTeLines(f, dst, th.ObjectDir, merged) > 0) from = merged;
+                }
+                BackupStore.Save(dst);
+                File.Copy(from, dst, true); n++;
+            }
+            MessageBox.Show(this, $"Installed {n} file(s) into {target}.", Title);
         }
         catch (Exception ex) { MessageBox.Show(this, $"After {n} file(s): {ex.Message}", Title, MessageBoxButton.OK, MessageBoxImage.Warning); }
     }

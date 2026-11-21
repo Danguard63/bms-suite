@@ -34,7 +34,7 @@ public sealed class MainWindow : Window
     private readonly CheckBox _allTypes = new() { Content = "All SAM types", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), ToolTip = "Also the battalion types not used in the project's campaigns" };
     private readonly CheckBox _problemsOnly = new() { Content = "Only problems", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
     private readonly Button _check = Btn("Check SAM systems & positions", bold: true);
-    private readonly Button _install = Btn("Install theater Sim into BMS…");
+    private readonly Button _install = Btn("Install into BMS…", bold: true);
     private readonly TextBox _log = new()
     {
         IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 11.5, Height = 120, TextWrapping = TextWrapping.NoWrap,
@@ -55,24 +55,40 @@ public sealed class MainWindow : Window
 
     private string AddOnName => new DirectoryInfo(_p.OldTheaterFolder).Name;
     private string SimInstallDir => Path.Combine(_p.ProjectFolder, "Output", "Install", AddOnName, TheaterSimData.SimRel);
-    private string? BmsSimDir => AssembleJob.FindDataDir(_p.KoreaNewTerrain) is { } d ? Path.Combine(d, "Sim") : null;
+    /// <summary>The theater installed in BMS this work folder belongs to (null = a TerrainTool project).</summary>
+    private readonly TerrainTool.Core.Campaign.BmsTheater? _theater;
+    /// <summary>The Sim the files start from: an installed theater's own (else BMS's), BMS Data\Sim for a project.</summary>
+    private string? BmsSimDir => _theater != null ? TheaterSim.SimDir(_theater)
+                                 : AssembleJob.FindDataDir(_p.KoreaNewTerrain) is { } d ? Path.Combine(d, "Sim") : null;
+    private string BackupRoot => Path.Combine(_p.ProjectFolder, "Output", "BmsBackup");
+    private readonly Button _restore = Btn("Restore…");
 
     public MainWindow(string projectFile)
     {
         _projectFile = projectFile;
         _p = TheaterProject.Load(projectFile);
-        Title = $"Sim Editor – {_p.Theater.Name}";
+        _theater = TheaterSim.TheaterOf(_p);
+        if (_p.IsInstalledTheater && _theater == null) throw new InvalidOperationException($"The theater of {projectFile} is no longer in BMS's theater list ({_p.InstalledTheaterTdf}).");
+        Title = $"Sim Editor – {(_theater?.Name ?? _p.Theater.Name)}";
         Width = 1500; Height = 900; MinWidth = 1000; MinHeight = 600;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         // ── left: theater Sim and the SAM check
         var bar = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         _check.ToolTip = "Reads the theater database (with DbEdits.txt applied, also the changes not saved yet), the Sim radar data and every campaign / TE of the project, and checks that each air defence battalion fits in the point list BMS gives it on its objective.";
-        _install.ToolTip = @"Copies Output\Install\<add-on>\NT\Sim (made by 'Build theater' = full copy of BMS Data\Sim + the SimOverrides folder) into BMS\Data\<add-on>\NT\Sim and sets 'simdatadir' in the _NT.tdf (asks first). Replaced files and the .tdf are saved in Output\BmsBackup\<date>. BMS Data\Sim is never touched.";
+        _install.ToolTip = "Everything this editor changes, into BMS in one go (asks first): the theater's Sim (a full copy of BMS Data\\Sim + the SimOverrides files) into <add-on>\\NT\\Sim with 'simdatadir' in the _NT.tdf; " +
+                           "the database changes (DbEdits.txt): the theater's objects are built again (as Run Objects) and installed with the campaign files. Replaced files are saved in Output\\BmsBackup\\<date>. BMS Data\\Sim is never touched.";
         var copy = Btn("Copy a BMS Sim file to SimOverrides…");
         copy.ToolTip = @"Pick a file of BMS Data\Sim (e.g. Misdata\SA-2F.dat, Radar\Fan_Song_F.dat): it is copied into the project's SimOverrides folder with the same path, ready to be edited.";
         var openOv = Btn("Open SimOverrides");
         bar.Children.Add(_check); bar.Children.Add(_install); bar.Children.Add(copy); bar.Children.Add(openOv);
+        if (_theater != null)
+        {
+            _restore.ToolTip = "Puts the theater back as it was before an 'Install into BMS…' (newest first): the files it added are removed, the ones it replaced put back.";
+            bar.Children.Add(_restore);
+            _restore.Click += (_, _) => RestoreBackup();
+            if (TheaterSim.Problem(_theater) is { } why) { _install.IsEnabled = false; _install.ToolTip = "Not possible: " + why; ToolTipService.SetShowOnDisabled(_install, true); }
+        }
         bar.Children.Add(_allTypes); bar.Children.Add(_problemsOnly);
 
         void Col(DataGrid g, string h, string path, double w, bool star = false)
@@ -121,8 +137,8 @@ public sealed class MainWindow : Window
         {
             Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6),
             Text = "One change per line: TABLE Num Field Value  # comment   (e.g. UCD 161 ElementCount_1 3), or COPY TABLE From To for a new record (To = the next free number). " +
-                   "Applied by 'Run Objects' (Objective Studio) on top of BMS's database, so they survive BMS updates; the SAM check on the left uses them right away. " +
-                   "To get them into BMS: Run Objects, Build theater (TerrainTool), then Install objects.",
+                   "Applied on top of BMS's database each time the theater's objects are built, so they survive BMS updates; the SAM check on the left uses them right away. " +
+                   "'Install into BMS…' builds the objects with them and installs them.",
         };
         var save = Btn("Save", bold: true); var reload = Btn("Reload");
         var rb = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
@@ -142,8 +158,8 @@ public sealed class MainWindow : Window
         Grid.SetColumn(right, 2); body.Children.Add(right);
 
         var top = new DockPanel { Margin = new Thickness(10, 8, 10, 0) };
-        var proj = new TextBlock { Text = $"Project: {_projectFile}", Foreground = Brushes.DimGray, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
-        var other = Btn("Open another project…");
+        var proj = new TextBlock { Text = _theater != null ? $"Theater: {_theater.Name} ({_theater.Tdf}) · your changes: {_p.ProjectFolder}" : $"Project: {_projectFile}", Foreground = Brushes.DimGray, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        var other = Btn("Open another theater…");
         other.Click += (_, _) => OpenOther();
         DockPanel.SetDock(other, Dock.Right); top.Children.Add(other);
         top.Children.Add(proj);
@@ -157,7 +173,7 @@ public sealed class MainWindow : Window
             _files = new SimFilesView(new TerrainTool.Core.Sim.SimLibrary(bmsSim, TheaterSimData.SimOverridesFolder(_p)), s => { Log(s); RefreshSim(); });
             tabs.Items.Add(new TabItem { Header = "Sim files", Content = _files });
         }
-        else tabs.Items.Add(new TabItem { Header = "Sim files", Content = new TextBlock { Margin = new Thickness(12), Text = "BMS Data\\Sim not found: set 'Korea NewTerrain' in TerrainTool (tab 1) to the Korea of your BMS 4.38." } });
+        else tabs.Items.Add(new TabItem { Header = "Sim files", Content = new TextBlock { Margin = new Thickness(12), Text = $"Sim folder not found: {BmsSimDir ?? "(the BMS 4.38 installation of this project)"}." } });
         tabs.Items.Add(new TabItem { Header = "SAM check & database changes", Content = body });
         root.Children.Add(tabs);
         Content = root;
@@ -179,7 +195,7 @@ public sealed class MainWindow : Window
         };
         RefreshSim();
         LoadDbEdits();
-        Log($"Project {_p.Theater.Name}: {_p.ProjectFolder}");
+        Log(_theater != null ? $"Theater {_theater.Name}: Sim {TheaterSim.SimDir(_theater)}, database {_theater.ObjectDir}; your changes in {_p.ProjectFolder}" : $"Project {_p.Theater.Name}: {_p.ProjectFolder}");
     }
 
     private void Log(string s) { _log.AppendText($"{DateTime.Now:HH:mm:ss} {s}\n"); _log.ScrollToEnd(); }
@@ -199,13 +215,19 @@ public sealed class MainWindow : Window
     {
         string ov = TheaterSimData.SimOverridesFolder(_p);
         var sb = new StringBuilder();
-        if (!Directory.Exists(ov)) sb.Append("Theater Sim: OFF (no SimOverrides folder: the theater uses the shared BMS Data\\Sim). 'Copy a BMS Sim file…' turns it on.");
+        if (_theater != null)
+        {
+            var files = TheaterSim.OverrideFiles(ov);
+            sb.Append($"Theater Sim: {TheaterSim.SimDir(_theater)}{(TheaterSim.HasOwnSim(_theater) ? "" : " (BMS's own: the theater gets its own copy at the first install)")}\n");
+            sb.Append($"Your changes: {files.Count} file(s){(files.Count > 0 ? ": " + string.Join(", ", files.Take(12)) + (files.Count > 12 ? " …" : "") : "")}. 'Install into BMS…' writes them into the theater.");
+        }
+        else if (!Directory.Exists(ov)) sb.Append("Theater Sim: OFF (no SimOverrides folder: the theater uses the shared BMS Data\\Sim). 'Copy a BMS Sim file…' turns it on.");
         else
         {
             var files = Directory.EnumerateFiles(ov, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(ov, f))
                 .Where(f => !f.StartsWith("README", StringComparison.OrdinalIgnoreCase)).ToList();
             sb.Append($"Theater Sim: ON → <add-on>\\{TheaterSimData.SimRel} = BMS Data\\Sim + {files.Count} SimOverrides file(s): {string.Join(", ", files.DefaultIfEmpty("none"))}");
-            sb.Append(Directory.Exists(SimInstallDir) ? $"\nOutput copy: {SimInstallDir} (run 'Build theater' in TerrainTool after changing SimOverrides)" : "\nNot assembled yet: run 'Build theater' (TerrainTool, tab 8), then 'Install theater Sim into BMS…'");
+            sb.Append("\n'Install into BMS…' makes the theater's Sim (BMS Data\\Sim + these files) and installs it.");
         }
         _simStatus.Text = sb.ToString();
     }
@@ -231,7 +253,7 @@ public sealed class MainWindow : Window
             int n = TheaterSimData.ParseDbEdits(tmp).Count;     // a format error: not saved
             File.WriteAllText(f, _dbEdits.Text, new UTF8Encoding(false));
             _dbEditsLoaded = _dbEdits.Text;
-            Log($"DbEdits.txt saved ({n} changes). Run Objects (Objective Studio) + Build theater (TerrainTool) and install the objects to get them into BMS.");
+            Log($"DbEdits.txt saved ({n} changes). 'Install into BMS…' builds the theater's objects with them and installs them.");
         }
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "DbEdits.txt", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
@@ -241,7 +263,7 @@ public sealed class MainWindow : Window
     private void CopySimFile()
     {
         string? sim = BmsSimDir;
-        if (sim == null || !Directory.Exists(sim)) { Log("BMS Data\\Sim not found (set 'Korea NewTerrain' in TerrainTool, tab 1)"); return; }
+        if (sim == null || !Directory.Exists(sim)) { Log($"Sim folder not found: {sim}"); return; }
         var dlg = new OpenFileDialog { InitialDirectory = sim, Filter = "Sim data (*.dat;*.lst;*.txt)|*.dat;*.lst;*.txt|All files|*.*", Multiselect = true };
         if (dlg.ShowDialog(this) != true) return;
         string ov = TheaterSimData.SimOverridesFolder(_p);
@@ -255,26 +277,109 @@ public sealed class MainWindow : Window
                     MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) continue;
             Directory.CreateDirectory(Path.GetDirectoryName(to)!);
             File.Copy(full, to, true);
-            Log($"{full[root.Length..]} copied to SimOverrides (edit it there, then 'Build theater' and 'Install theater Sim into BMS…')");
+            Log($"{full[root.Length..]} copied to SimOverrides (edit it there, then 'Install into BMS…')");
         }
         RefreshSim();
     }
 
+    /// <summary>The time Run Objects last built the theater's objects (its log), or MinValue.</summary>
+    private DateTime ObjectsBuilt => File.Exists(Path.Combine(_p.ProjectFolder, "Output", "RunObjects_log.txt")) ? File.GetLastWriteTimeUtc(Path.Combine(_p.ProjectFolder, "Output", "RunObjects_log.txt")) : DateTime.MinValue;
+
+    /// <summary>
+    /// Everything this editor changes, into BMS: the theater's Sim made again (BMS Data\Sim + SimOverrides) and, when DbEdits.txt
+    /// changed after the last build of the objects, the objects built again (Run Objects) and installed with the campaign files.
+    /// </summary>
     private async Task InstallSimAsync()
     {
-        var inst = new BmsInstaller(_p, objects: false, photoreal: false, water: false, art: false, sim: true);
-        if (inst.Problems.Count > 0)
+        if (_busy) return;
+        if (DbEditsChanged()) { SaveDbEdits(); if (DbEditsChanged()) return; }
+        if (_files != null && !_files.AskLeave()) return;
+        if (_theater != null) { await InstallTheaterAsync(_theater); return; }
+        string dbFile = TheaterSimData.DbEditsFile(_p);
+        bool sim = TheaterSimData.Enabled(_p);
+        bool db = File.Exists(dbFile) && File.GetLastWriteTimeUtc(dbFile) > ObjectsBuilt;
+        if (!sim && !db) { MessageBox.Show(this, "Nothing to install: no Sim file of the theater (SimOverrides) and no database change after the last build of the objects.", "Install into BMS"); return; }
+        if (sim && (BmsSimDir is not { } bmsSim || !Directory.Exists(bmsSim))) { MessageBox.Show(this, "BMS Data\\Sim not found (the project's BMS 4.38 installation).", "Install into BMS", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        var job = TextureJob.All.OfType<ObjectsJob>().First();
+        var ctx = new TextureContext(_p, _p.TbOutputOrDefault);
+        if (db && job.Missing(ctx) is { } miss) { MessageBox.Show(this, "The theater's objects cannot be built: missing " + miss, "Install into BMS", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        string what = (sim ? "• the theater's Sim: BMS Data\\Sim + the SimOverrides files, into <add-on>\\NT\\Sim\n" : "") +
+                      (db ? "• the database changes (DbEdits.txt): the theater's objects are built again (as Run Objects, some minutes), then installed with the campaign files\n" : "");
+        if (MessageBox.Show(this, "Install into BMS:\n" + what + "\nEvery file replaced in BMS is saved first. Proceed?", "Install into BMS", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        _busy = true; _install.IsEnabled = false;
+        try
         {
-            foreach (var pr in inst.Problems) Log("Install into BMS: " + pr);
-            MessageBox.Show(this, string.Join("\n", inst.Problems), "Install into BMS", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            if (sim)
+            {
+                Log("Theater Sim: building…");
+                foreach (var n in await Task.Run(() => TheaterSimData.BuildSim(BmsSimDir!, SimInstallDir, TheaterSimData.SimOverridesFolder(_p)))) Log(n);
+            }
+            if (db)
+            {
+                Log("Objects: building with DbEdits.txt (Run Objects)…");
+                var t0 = DateTime.Now;
+                var prog = new Progress<double>(f => _simStatus.Text = $"Building the theater's objects… {f * 100:0}%");
+                var (_, notes) = await Task.Run(() => job.Run(ctx, prog, CancellationToken.None));
+                foreach (var n in notes.Where(n => n.StartsWith("DB:", StringComparison.Ordinal) || n.Contains("DbEdits", StringComparison.Ordinal))) Log(n);
+                try { File.WriteAllText(Path.Combine(_p.ProjectFolder, "Output", "RunObjects_log.txt"), $"Run Objects {t0:yyyy-MM-dd HH:mm} (Sim Editor)\r\n" + string.Join("\r\n", notes)); } catch (IOException) { }
+                Log($"Objects built in {DateTime.Now - t0:mm\\:ss}");
+            }
+            var inst = new BmsInstaller(_p, objects: db, photoreal: false, water: false, art: false, sim: sim, campaign: db);
+            if (inst.Problems.Count > 0) { foreach (var pr in inst.Problems) Log("Install into BMS: " + pr); MessageBox.Show(this, string.Join("\n", inst.Problems), "Install into BMS", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            Log("Install into BMS → " + inst.Target);
+            await Task.Run(() => inst.Run(l => Dispatcher.Invoke(() => Log(l))));
+            Log("✓ Installed.");
         }
-        if (MessageBox.Show(this, inst.Plan() + "\n\nProceed?", "Install into BMS", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        _install.IsEnabled = false;
-        Log("Install into BMS: started → " + inst.Target);
-        try { await Task.Run(() => inst.Run(l => Dispatcher.Invoke(() => Log(l)))); }
         catch (Exception ex) { Log("Install into BMS: ERROR " + ex.Message); }
-        finally { _install.IsEnabled = true; }
+        finally { _busy = false; _install.IsEnabled = true; RefreshSim(); }
+    }
+
+    private string DbMarker => Path.Combine(_p.ProjectFolder, "Output", "DbEdits_installed.txt");
+
+    /// <summary>Installed theater: the changed Sim files and the database changes into the theater, with a backup (Restore).</summary>
+    private async Task InstallTheaterAsync(TerrainTool.Core.Campaign.BmsTheater t)
+    {
+        string ov = TheaterSimData.SimOverridesFolder(_p), db = TheaterSimData.DbEditsFile(_p);
+        bool hasDb = File.Exists(db) && TheaterSimData.ParseDbEdits(db).Count > 0
+                     && (!File.Exists(DbMarker) || File.GetLastWriteTimeUtc(db) > File.GetLastWriteTimeUtc(DbMarker));
+        var plan = TheaterSim.Plan(t, ov, hasDb ? db : null);
+        if (plan.Count == 0) { MessageBox.Show(this, "Nothing to install: no Sim file changed and no new database change.", "Install into BMS"); return; }
+        if (MessageBox.Show(this, $"Install into {t.Name}:\n\n{string.Join("\n", plan)}\n\nEvery file replaced or added is listed in a backup: 'Restore…' puts the theater back. Proceed?",
+                "Install into BMS", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        _busy = true; _install.IsEnabled = false;
+        try
+        {
+            string bak = Path.Combine(BackupRoot, DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+            var log = await Task.Run(() => TheaterSim.Install(t, ov, hasDb ? db : null, bak, Path.Combine(_p.ProjectFolder, "Output")));
+            foreach (var l in log) Log(l);
+            if (hasDb) File.WriteAllText(DbMarker, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            Log("✓ Installed.");
+        }
+        catch (Exception ex) { Log("Install into BMS: ERROR " + ex.Message); MessageBox.Show(this, ex.Message, "Install into BMS", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        finally { _busy = false; _install.IsEnabled = true; RefreshSim(); }
+    }
+
+    private void RestoreBackup()
+    {
+        var list = TheaterSim.Backups(BackupRoot);
+        if (list.Count == 0) { MessageBox.Show(this, "No backup yet: 'Install into BMS…' makes one each time.", "Restore"); return; }
+        var lb = new ListBox { Height = 220, Margin = new Thickness(10) };
+        foreach (var b in list) lb.Items.Add(new ListBoxItem { Content = $"{b.Time:dd/MM/yyyy HH:mm:ss}   {b.Summary}", Tag = b.Dir });
+        lb.SelectedIndex = 0;
+        var ok = new Button { Content = "Restore", IsDefault = true, Padding = new Thickness(14, 3, 14, 3), Margin = new Thickness(10, 0, 6, 10), HorizontalAlignment = HorizontalAlignment.Left };
+        var w = new Window { Title = "Restore", Width = 560, SizeToContent = SizeToContent.Height, Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel { Children = { new TextBlock { Text = "The theater goes back to how it was before that install (and the later ones, if you restore them one after the other, newest first).", Margin = new Thickness(10, 10, 10, 0), TextWrapping = TextWrapping.Wrap }, lb, ok } } };
+        ok.Click += (_, _) => w.DialogResult = true;
+        if (w.ShowDialog() != true || (lb.SelectedItem as ListBoxItem)?.Tag is not string dir) return;
+        try
+        {
+            foreach (var l in TheaterSim.Restore(dir)) Log("Restore: " + l);
+            Directory.Move(dir, dir + "_restored");
+            try { File.Delete(DbMarker); } catch (IOException) { }
+            Log("✓ Restored.");
+        }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Restore", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        RefreshSim();
     }
 
     // ───────────────────────── SAM check
@@ -289,10 +394,10 @@ public sealed class MainWindow : Window
         try
         {
             var p = _p;
-            string simDir = Directory.Exists(SimInstallDir) ? SimInstallDir : BmsSimDir ?? "";
+            string simDir = _theater == null && Directory.Exists(SimInstallDir) ? SimInstallDir : BmsSimDir ?? "";
             var (systems, places, notes) = await Task.Run(() =>
             {
-                var ws = CampaignWorkspace.FromProject(p);
+                var ws = _theater != null ? CampaignWorkspace.FromTheater(_theater, Path.Combine(StartWindow.Root(), "Theaters")) : CampaignWorkspace.FromProject(p);
                 var db = CampaignDb.Load(ws.DbDirs);
                 var s = SamDb.Load(ws.DbDirs, simDir, edits);
                 var nts = new List<string>(s.Notes);

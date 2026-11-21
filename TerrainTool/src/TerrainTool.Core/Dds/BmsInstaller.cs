@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using TerrainTool.Core.Project;
+using Campaign_ = TerrainTool.Core.Campaign;
 
 namespace TerrainTool.Core.Dds;
 
@@ -7,7 +8,8 @@ namespace TerrainTool.Core.Dds;
 /// "Install into BMS": copia nell'installazione BMS solo le parti che cambiano a ogni giro delle basi
 /// (Terrdata\ObjectsNT) e le tessere Photoreal\4K nuove o cambiate, e cancella le cache che BMS rigenera all'avvio di una
 /// campagna o di un TE (Campaign\*.terrain.binpb/txtpb, NewTerrain\HeightMaps\...): senza, userebbe gli oggetti vecchi.
-/// I file della campagna (.cam, .tac, CampObjData.XML, stations+ils.dat ...) li installa solo il Campaign Editor.
+/// Con Campaign anche i file della campagna (.cam, .tac, CampObjData.XML, stations+ils.dat ...): prima le modifiche agli obiettivi
+/// scritte nei file del progetto, poi i file cambiati copiati nella cartella Campaign dell'add-on (ProjectCampaign).
 /// Scrive SOLO dentro &lt;BMS&gt;\Data\&lt;add-on&gt; (mai nella Korea, in theater.lst o nel resto di BMS).
 /// </summary>
 public sealed class BmsInstaller
@@ -35,6 +37,8 @@ public sealed class BmsInstaller
     /// <summary>Sim del teatro (copia della 4.38 + SimOverrides) da Output\Install\&lt;add-on&gt;\NT\Sim in &lt;add-on&gt;\NT\Sim,
     /// e riga simdatadir del .tdf _NT installato.</summary>
     public bool Sim { get; }
+    /// <summary>The campaign files: the object changes written into them, then the changed ones copied into BMS.</summary>
+    public bool Campaign { get; }
 
     /// <summary>File copiati dall'opzione Water (relativi a NewTerrain).</summary>
     public static readonly string[] WaterFiles =
@@ -45,11 +49,11 @@ public sealed class BmsInstaller
         @"GroundTypes\LandCoverMap.raw", @"Trees\Maps\ForestMap.raw",
     };
 
-    public BmsInstaller(TheaterProject p, bool objects = true, bool photoreal = true, bool water = false, bool art = false, bool sim = false)
+    public BmsInstaller(TheaterProject p, bool objects = true, bool photoreal = true, bool water = false, bool art = false, bool sim = false, bool campaign = false)
     {
         _p = p;
-        Objects = objects; Photoreal = photoreal; Water = water; Art = art; Sim = sim;
-        if (!objects && !photoreal && !water && !art && !sim) Problems.Add("Nothing selected");
+        Objects = objects; Photoreal = photoreal; Water = water; Art = art; Sim = sim; Campaign = campaign;
+        if (!objects && !photoreal && !water && !art && !sim && !campaign) Problems.Add("Nothing selected");
         string addOn = new DirectoryInfo(p.OldTheaterFolder).Name;
         var d = new DirectoryInfo(p.KoreaNewTerrain);
         while (d != null && !d.Name.Equals("Data", StringComparison.OrdinalIgnoreCase)) d = d.Parent;
@@ -60,7 +64,7 @@ public sealed class BmsInstaller
 
         if (d == null) Problems.Add($"BMS Data folder not found above {p.KoreaNewTerrain}");
         else if (!Directory.Exists(Target)) Problems.Add($"{Target} does not exist (copy the add-on into BMS first)");
-        if (objects && !Directory.Exists(Path.Combine(Source, "Terrdata", ObjectsJob.FolderName))) Problems.Add($"{Source}\\Terrdata\\{ObjectsJob.FolderName} missing: run 'Objects' and 'Build theater' first");
+        if (objects && !Directory.Exists(Path.Combine(Source, "Terrdata", ObjectsJob.FolderName))) Problems.Add($"{Source}\\Terrdata\\{ObjectsJob.FolderName} missing: press 'Run Objects' first");
         if (objects && Directory.Exists(Target))
         {
             // il database nuovo non deve avere meno obiettivi (voci CT con EntityType 3) di quello in BMS: le campagne usano quelli
@@ -313,9 +317,16 @@ public sealed class BmsInstaller
                 lines.Add("2. Only aircraft / weapon / vehicle / unit / radar data changed (pieces and objectives the same): the terrain caches and SPD_*.SPB are KEPT (no long reload in BMS)");
             else
                 lines.Add($"2. Delete the caches BMS rebuilds when a campaign or TE starts: {string.Join(", ", TerrainCaches().Concat(HeightCaches()).Select(Path.GetFileName).DefaultIfEmpty("(none present)"))}");
-            lines.Add("   Campaign files (.cam, .tac, CampObjData.XML, stations+ils.dat …) are not copied: install them from the Campaign Editor.");
+            if (!Campaign) lines.Add("   Campaign files (.cam, .tac, CampObjData.XML, stations+ils.dat …) are not copied.");
         }
         else lines.Add(Water ? "Objects: not selected" : "Objects: not selected (caches are kept)");
+        if (Campaign)
+        {
+            string? tc = Campaign_.ProjectCampaign.TargetCampaign(_p);
+            bool pending = Campaign_.ProjectCampaign.HasPending(_p);
+            lines.Add("Campaign files:" + (pending ? " the objectives moved, turned, replaced or removed are first written into the campaign files (CampObjData.XML, *.cam, Te_New_Nt.tac, stations+ils.dat);" : "") +
+                      $" the changed files are copied into {tc ?? "(the add-on's Campaign folder: NOT found)"}, each replaced file saved in {BackupDir}\\Campaign.");
+        }
         if (Photoreal)
             lines.Add(PhotoTarget == null ? "3. Photoreal 4K: NewTerrain folder not found in BMS, skipped"
                 : $"3. Copy {_photo.Count} new or changed Photoreal 4K tiles ({_photo.Sum(f => new FileInfo(f).Length) / 1073741824.0:0.0} GB) → {PhotoTarget}");
@@ -377,6 +388,11 @@ public sealed class BmsInstaller
             }
             catch (Exception ex) when (ex is IOException or InvalidOperationException or InvalidDataException or System.Xml.XmlException)
             { log("  4.37 Units Converter: the converted aircraft and vehicles were NOT converted again: " + ex.Message + " (open the Units Converter and convert them again)"); }
+        }
+        if (Campaign)
+        {
+            if (Campaign_.ProjectCampaign.HasPending(_p)) foreach (var l in Campaign_.ProjectCampaign.ApplyPending(_p, BackupDir)) log("  " + l);
+            foreach (var l in Campaign_.ProjectCampaign.Install(_p, BackupDir)) log("  " + l);
         }
         if (Photoreal) RunPhotoreal(log);
         if (Water) RunWater(log);
