@@ -36,6 +36,10 @@ public sealed class MainWindow : Window
         IsReadOnly = true, FontFamily = new FontFamily("Consolas"), FontSize = 12, TextWrapping = TextWrapping.NoWrap,
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
     };
+    private readonly TextBlock _reportTitle = new() { FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4), TextWrapping = TextWrapping.Wrap };
+    private const string TitleIdle = "4 · What the conversion will do, step by step ('Check the conversion' shows it here; nothing is written yet)";
+    private const string TitlePlan = "4 · What 'Convert and install…' will do, step by step, by itself (nothing written yet)";
+    private const string TitleDone = "Done: what the conversion did (Restore… undoes it)";
     private readonly TextBlock _status = new() { Margin = new Thickness(8, 4, 8, 6), TextWrapping = TextWrapping.Wrap };
     private readonly Button _find = Btn("Find what can be converted");
     private readonly Button _check = Btn("Check the conversion (nothing written)");
@@ -131,8 +135,7 @@ public sealed class MainWindow : Window
         DockPanel.SetDock(filter, Dock.Top); left.Children.Add(filter);
         left.Children.Add(_grid);
         var right = new DockPanel { Margin = new Thickness(10, 0, 0, 0) };
-        var rt = new TextBlock { Text = "4 · The conversion, step by step", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) };
-        DockPanel.SetDock(rt, Dock.Top); right.Children.Add(rt);
+        DockPanel.SetDock(_reportTitle, Dock.Top); right.Children.Add(_reportTitle);
         right.Children.Add(_report);
         var mid = new Grid { Margin = new Thickness(10, 4, 10, 0) };
         mid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.25, GridUnitType.Star) });
@@ -168,6 +171,7 @@ public sealed class MainWindow : Window
         _src.SelectionChanged += (_, _) => { ShowSource(); Clear(); };
         _dst.SelectionChanged += (_, _) => { ShowDestination(); Clear(); };
         SetupGrid();
+        _reportTitle.Text = TitleIdle;
         _check.IsEnabled = _install.IsEnabled = false;
         Loaded += (_, _) => { LoadSources(); LoadDestinations(); };
         _status.Text = "Choose the old database and the BMS 4.38 theater, then 'Find what can be converted'.";
@@ -252,7 +256,7 @@ public sealed class MainWindow : Window
 
     private void Clear()
     {
-        _rows = new(); _grid.ItemsSource = null; _plan = null; _report.Text = "";
+        _rows = new(); _grid.ItemsSource = null; _plan = null; _report.Text = ""; _reportTitle.Text = TitleIdle;
         _check.IsEnabled = _install.IsEnabled = false;
     }
 
@@ -321,7 +325,7 @@ public sealed class MainWindow : Window
             int ok = _rows.Count(r => r.CanConvert);
             _status.Text = $"{_rows.Count} item(s) of {s.Theater.Name} that {d.Theater.Name} has not; {ok} can be converted. Tick them, then 'Check the conversion'." +
                            (an.Problems.Count > 0 ? "  " + string.Join("; ", an.Problems) : "");
-            _report.Text = "";
+            _report.Text = ""; _reportTitle.Text = TitleIdle;
             _check.IsEnabled = ok > 0; _install.IsEnabled = false;
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or System.Xml.XmlException or UnauthorizedAccessException)
@@ -362,6 +366,7 @@ public sealed class MainWindow : Window
             _plan = UnitsConversion.MakePlan(s, d, picks, Path.Combine(WorkDir, "plan"));
             _planKey = Key(picks);
             _report.Text = _plan.Text();
+            _reportTitle.Text = TitlePlan;
             _install.IsEnabled = _plan.HasWork;
             _status.Text = !_plan.HasWork ? "Nothing to write: the theater has all of it already."
                 : _plan.Problems.Count > 0 ? $"Read the plan: {_plan.Problems.Count} problem(s) at the end. 'Convert and install…' writes it anyway (what has a problem may not show in BMS)."
@@ -389,14 +394,16 @@ public sealed class MainWindow : Window
         {
             Mouse(true);
             var log = UnitsConversion.Install(_plan, Path.Combine(WorkDir, "plan"), BackupRoot);
-            _report.Text = "INSTALLED\r\n" + string.Join("\r\n", log) + "\r\n\r\n" + _report.Text;
+            string done = "INSTALLED\r\n" + string.Join("\r\n", log) + "\r\n\r\n" + _report.Text;
+            _plan = null;
+            Mouse(false);
+            Analyze();   // the list again: what was converted is no longer in it
+            _report.Text = done;
+            _reportTitle.Text = TitleDone;
             _status.Text = $"Converted into {d.Theater.Name}. Start BMS: Tactical Engagement → New, the aircraft are in the squadron list of the teams. " +
                            "Restore… undoes it.";
             MessageBox.Show(this, $"Done: {picks.Count} item(s) converted into {d.Theater.Name}.\n\nStart BMS and try them in a new Tactical Engagement.\nRestore… undoes the conversion.",
                 Title, MessageBoxButton.OK, MessageBoxImage.Information);
-            _plan = null;
-            Mouse(false);
-            Analyze();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -430,10 +437,11 @@ public sealed class MainWindow : Window
             {
                 var log = UnitsConversion.Restore(b[i].Dir);
                 Directory.Move(b[i].Dir, b[i].Dir + "_restored");
-                _report.Text = "RESTORED\r\n" + string.Join("\r\n", log);
-                _status.Text = "Theater restored as it was before that conversion.";
                 w.Close();
                 Analyze();
+                _report.Text = "RESTORED\r\n" + string.Join("\r\n", log);
+                _reportTitle.Text = "Restored: the theater is as it was before that conversion";
+                _status.Text = "Theater restored as it was before that conversion.";
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
             { MessageBox.Show(w, ex.Message, "Not restored", MessageBoxButton.OK, MessageBoxImage.Error); }
