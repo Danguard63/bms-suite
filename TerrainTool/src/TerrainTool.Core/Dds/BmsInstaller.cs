@@ -251,7 +251,32 @@ public sealed class BmsInstaller
     }
 
     /// <summary>true se gli oggetti nuovi cambiano solo armi/mezzi/radar: le cache del terreno restano.</summary>
-    private bool ObjectsKeepTerrainCaches(List<string> changed) => changed.All(r => NoTerrainFiles.Contains(r));
+    private bool ObjectsKeepTerrainCaches(List<string> changed) => changed.All(r =>
+        NoTerrainFiles.Contains(r)
+        // the suite's own reports (Airbases_leveling.csv…): BMS does not read them
+        || (Path.GetDirectoryName(r) is "" && r.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+        // the CT with the same pieces and objectives: only aircraft, vehicles, weapons or units changed (e.g. an import)
+        || (r.Equals("Falcon4_CT.xml", StringComparison.OrdinalIgnoreCase) && SameTerrainCt()));
+
+    private bool? _sameTerrainCt;
+
+    /// <summary>True when the new CT and BMS's have the same records of pieces (EntityType 1) and objectives (3).</summary>
+    private bool SameTerrainCt()
+    {
+        if (_sameTerrainCt is bool b) return b;
+        static string Terrain(string f)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(f), @"<CT Num=""\d+"">.*?</CT>",
+                         System.Text.RegularExpressions.RegexOptions.Singleline))
+                if (m.Value.Contains("<EntityType>1</EntityType>") || m.Value.Contains("<EntityType>3</EntityType>")) sb.Append(m.Value).Append('\n');
+            return sb.ToString();
+        }
+        string a = Path.Combine(Source, "Terrdata", ObjectsJob.FolderName, "Falcon4_CT.xml"), t = Path.Combine(ObjectsTarget, "Falcon4_CT.xml");
+        try { _sameTerrainCt = File.Exists(a) && File.Exists(t) && Terrain(a) == Terrain(t); }
+        catch (IOException) { _sameTerrainCt = false; }
+        return _sameTerrainCt.Value;
+    }
 
     /// <summary>Testo per la finestra di conferma.</summary>
     private List<string> _photo = new();
@@ -272,7 +297,7 @@ public sealed class BmsInstaller
             }
             lines.Add($"   Changed files: {string.Join(", ", ch.Take(12).DefaultIfEmpty("none"))}{(ch.Count > 12 ? $" … and {ch.Count - 12} more" : "")}");
             if (ObjectsKeepTerrainCaches(ch))
-                lines.Add("2. Only weapon / vehicle / unit / radar data changed: the terrain caches and SPD_*.SPB are KEPT (no long reload in BMS)");
+                lines.Add("2. Only aircraft / weapon / vehicle / unit / radar data changed (pieces and objectives the same): the terrain caches and SPD_*.SPB are KEPT (no long reload in BMS)");
             else
                 lines.Add($"2. Delete the caches BMS rebuilds when a campaign or TE starts: {string.Join(", ", TerrainCaches().Concat(HeightCaches()).Select(Path.GetFileName).DefaultIfEmpty("(none present)"))}");
             lines.Add("   Campaign files (.cam, .tac, CampObjData.XML, stations+ils.dat …) are not copied: install them from the Campaign Editor.");
