@@ -42,7 +42,7 @@ public static class TheaterSimData
         {
             string rel = Path.GetRelativePath(overrides, f);
             if (rel.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) && rel.StartsWith("README", StringComparison.OrdinalIgnoreCase)) continue;
-            // the flight models stay BMS's (the developers do not want them changed or passed around)
+            // the flight models of flyable aircraft stay BMS's (the developers do not want them changed or passed around)
             if (Sim.SimLibrary.IsProtected(rel)) { skipped.Add(rel); continue; }
             // stesso nome del file di BMS anche con maiuscole diverse
             string? existing = FindCaseInsensitive(dst, rel);
@@ -53,7 +53,7 @@ public static class TheaterSimData
         }
         if (changed.Count > 0) notes.Add($"Sim: {changed.Count} files replaced from SimOverrides: {string.Join(", ", changed)}");
         if (added.Count > 0) notes.Add($"Sim: {added.Count} files added from SimOverrides (not in BMS): {string.Join(", ", added)}");
-        if (skipped.Count > 0) notes.Add($"Sim: {skipped.Count} SimOverrides files in Acdata NOT used (flight models stay BMS's): {string.Join(", ", skipped)}");
+        if (skipped.Count > 0) notes.Add($"Sim: {skipped.Count} SimOverrides files NOT used (flight models of flyable aircraft and AcTypes.lst stay BMS's): {string.Join(", ", skipped)}");
         if (changed.Count + added.Count == 0) notes.Add("Sim: SimOverrides is empty (identical to the BMS one)");
         return notes;
     }

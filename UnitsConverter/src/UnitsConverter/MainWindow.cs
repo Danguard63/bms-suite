@@ -304,9 +304,10 @@ public sealed class MainWindow : Window
             Header = new TextBlock
             {
                 Text = "Flies like",
-                ToolTip = "Aircraft: BMS 4.38 has no flight model of its own for it. It will fly, stand on its wheels and carry its pylons and racks like the BMS aircraft chosen here " +
-                          "(flight models are never copied nor changed).\n✓ racks on every pylon it uses, wheels close to the old height (the suggested one is chosen)\n" +
-                          "⚠ some pylons it uses have no racks: weapons there hang without pylon or rack.\nThe flight model of the same name flies more like the old one; the suggested one looks right on the ground and with weapons.",
+                ToolTip = "Aircraft: the flight model it flies with. It also gives where it stands on its wheels and which pylons and racks it carries.\n" +
+                          "'Its own' (AI-only aircraft): the old database's flight model, copied into the theater's Sim folder and added to its AcTypes.lst: as it was.\n" +
+                          "Otherwise a BMS 4.38 flight model (never changed; those of flyable aircraft are never copied).\n" +
+                          "✓ racks on every pylon it uses, left and right alike · ⚠ pylons without racks or different left and right.",
             },
             CellTemplate = new DataTemplate { VisualTree = ff }, Width = new DataGridLength(330),
         });
@@ -344,10 +345,10 @@ public sealed class MainWindow : Window
                 var fits = air ? UnitsConversion.FlightModelsFor(s, d, S, c.Ct) : new();
                 var proposed = UnitsConversion.Proposed(fits);
                 string Label(UnitsConversion.FlightModelFit f) =>
-                    (f.NoRack.Count == 0 && f.Asymmetric.Count == 0 ? "✓ " : "⚠ ") + f.Model.Name + (f.SameName ? " (same name)" : "") + (f == proposed ? " — suggested" : "") +
+                    (f.NoRack.Count == 0 && f.Asymmetric.Count == 0 ? "✓ " : "⚠ ") + (f.Own ? $"Its own (the old database's {f.Model.Name}, copied into the theater)" : f.Model.Name) + (f.SameName ? " (same name)" : "") + (f == proposed ? " — suggested" : "") +
                     (f.NoRack.Count > 0 ? $": pylons {string.Join(", ", f.NoRack)} without racks" : ": racks on all pylons") +
                     (f.Asymmetric.Count > 0 ? ", left ≠ right" : ", left = right") +
-                    (double.IsNaN(f.GearDiff) ? "" : ", " + f.Wheels) +
+                    (f.Own ? ", wheels as before" : double.IsNaN(f.GearDiff) ? "" : ", " + f.Wheels) +
                     (f.OtherPylons.Count == 0 ? ", same pylons as before" : "");
                 var items = fits.Take(12).ToList();
                 foreach (var f in fits.Where(f => f.SameName || f == proposed)) if (!items.Contains(f)) items.Insert(0, f);
@@ -358,8 +359,8 @@ public sealed class MainWindow : Window
                 State = x.c.What + (x.c.Note.Length > 0 ? " — " + x.c.Note : ""),
                 SourceModelPossible = x.c.OwnModelPossible && !x.c.OwnModelDefault, SourceModel = false,
                 IsAircraft = x.air, TeName = x.air ? x.c.Name : "",
-                FlightModels = x.items.Select(f => new FmItem(f.Model.Name, x.Label(f))).ToList(),
-                FlightModel = x.proposed?.Model.Name,
+                FlightModels = x.items.Select(f => new FmItem(f.Key, x.Label(f))).ToList(),
+                FlightModel = x.proposed?.Key,
                 SameNameModel = x.items.FirstOrDefault(f => f.SameName)?.Model.Name,
             }).ToList();
             Fill();

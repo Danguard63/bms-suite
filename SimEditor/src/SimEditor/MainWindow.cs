@@ -249,7 +249,7 @@ public sealed class MainWindow : Window
         {
             string full = Path.GetFullPath(f), root = Path.GetFullPath(sim).TrimEnd('\\') + "\\";
             if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase)) { Log($"{f} is not inside {sim}"); continue; }
-            if (SimLibrary.IsProtected(full[root.Length..])) { Log($"{full[root.Length..]}: flight models (Acdata) are not copied nor edited: they stay BMS's"); continue; }
+            if (SimLibrary.IsProtected(full[root.Length..])) { Log($"{full[root.Length..]}: flight models of flyable aircraft (and AcTypes.lst) are not copied nor edited: they stay BMS's"); continue; }
             string to = Path.Combine(ov, full[root.Length..]);
             if (File.Exists(to) && MessageBox.Show(this, $"{to}\nalready exists (it may contain your changes). Replace it with the BMS file?", "SimOverrides",
                     MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) continue;

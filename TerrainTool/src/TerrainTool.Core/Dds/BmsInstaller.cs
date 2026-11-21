@@ -187,9 +187,22 @@ public sealed class BmsInstaller
         if (Directory.Exists(SimTarget))
         {
             var set = new HashSet<string>(src, StringComparer.OrdinalIgnoreCase);
-            ex.AddRange(Directory.EnumerateFiles(SimTarget, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(SimTarget, f)).Where(r => !set.Contains(r)));
+            var keep = ConverterFlightModels();
+            ex.AddRange(Directory.EnumerateFiles(SimTarget, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(SimTarget, f)).Where(r => !set.Contains(r) && !keep.Contains(r)));
         }
         return (ch, ex);
+    }
+
+    /// <summary>Files the 4.37 Units Converter added to the theater's Sim (its flight models and their list): they stay.</summary>
+    private HashSet<string> ConverterFlightModels()
+    {
+        var res = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string ac = Path.Combine(SimTarget, "Acdata");
+        var list = Database.UnitsConversion.ReadFlightModelsFile(ac);
+        if (list.Count == 0) return res;
+        res.Add(Path.Combine("Acdata", Database.UnitsConversion.FlightModelsFile));
+        foreach (var (_, n) in list) res.Add(Path.Combine("Acdata", n + ".txtpb"));
+        return res;
     }
 
     public static bool IsBmsRunning() =>
@@ -352,6 +365,8 @@ public sealed class BmsInstaller
     {
         if (Problems.Count > 0) throw new InvalidOperationException(string.Join("\n", Problems));
         if (Objects) RunObjects(log);
+        // the theater's Sim before the converter runs again: it finds there the flight models it added
+        if (Sim) RunSim(log);
         if (Objects)
         {
             // the 4.37 Units Converter's conversions (the theater's picks file, kept from the database just replaced)
@@ -366,7 +381,6 @@ public sealed class BmsInstaller
         if (Photoreal) RunPhotoreal(log);
         if (Water) RunWater(log);
         if (Art) RunArt(log);
-        if (Sim) RunSim(log);
         log("  Done." + (Objects ? " Install the campaign files from the Campaign Editor if Objects changed them, then start BMS." : ""));
     }
 
@@ -473,6 +487,7 @@ public sealed class BmsInstaller
 
     private void RunSim(Action<string> log)
     {
+        var kept = Database.UnitsConversion.ReadFlightModelsFile(Path.Combine(SimTarget, "Acdata"));
         var (ch, ex) = SimDiff();
         foreach (var rel in ch.Concat(ex))
         {
@@ -492,6 +507,8 @@ public sealed class BmsInstaller
             File.Copy(Path.Combine(SimSource, rel), to, false);
         }
         log(ch.Count + ex.Count == 0 ? "  Theater Sim: already up to date in BMS" : $"  Theater Sim: {ch.Count} files copied, {ex.Count} removed → {SimTarget}");
+        // the converter's own flight models (AI-only aircraft) back into AcTypes.lst with their numbers
+        foreach (var l in Database.UnitsConversion.KeepFlightModels(Path.Combine(SimTarget, "Acdata"), kept)) log("  " + l);
         foreach (var r in ch.Where(r => File.Exists(Path.Combine(TheaterSimData.SimOverridesFolder(_p), r)))) log($"    (from SimOverrides) {r}");
 
         string tdf = InstalledTdf()!;
