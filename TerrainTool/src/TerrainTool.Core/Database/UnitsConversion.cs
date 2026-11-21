@@ -179,7 +179,110 @@ public static class UnitsConversion
 
     /// <param name="TeName">Name in the Tactical Engagement (aircraft and helicopters); null = the database name.</param>
     /// <param name="TeTemplate">ID of the TePlanes entry whose picture and icon it takes; -1 = the aircraft with the same flight model.</param>
-    public sealed record Pick(int Ct, string Name, bool OwnModel, string? TeName = null, int TeTemplate = -1);
+    /// <param name="FlightModel">Aircraft: the BMS 4.38 flight model (name in AcTypes.lst) it flies with; null = the one of the same name.</param>
+    public sealed record Pick(int Ct, string Name, bool OwnModel, string? TeName = null, int TeTemplate = -1, string? FlightModel = null);
+
+    // ───────────────────────── flight models (read only: never copied nor changed)
+
+    /// <summary>A flight model of the list: its hardpoint groups (racks and pylons of each hardpoint, BmsRack.dat) and the
+    /// height of its wheels under the reference point (nose wheel first), read from its .txtpb.</summary>
+    public sealed record FlightModel(int Index, string Name, IReadOnlyList<string> Groups, IReadOnlyList<double> GearZ)
+    {
+        public bool HasGroup(int hp) => hp < Groups.Count && Groups[hp].Length > 0 && Groups[hp] != "0";
+        public int Hardpoints => Enumerable.Range(1, Math.Max(0, Groups.Count - 1)).Count(HasGroup);
+        public string Gear => GearZ.Count == 0 ? "?" : string.Join(" / ", GearZ.Take(2).Select(z => z.ToString("0.##", Ci)));
+        public override string ToString() => Name;
+    }
+
+    private static FlightModel? ReadFlightModel(string dir, int index, string name)
+    {
+        string f = Path.Combine(dir, name + ".txtpb");
+        if (!File.Exists(f)) return null;
+        string t;
+        try { t = File.ReadAllText(f); } catch (IOException) { return null; }
+        var gear = Regex.Matches(t, @"gear \{\s*position_ft \{\s*x: *([-\d.eE]+)\s*y: *([-\d.eE]+)\s*z: *([-\d.eE]+)")
+            .Select(m => double.Parse(m.Groups[3].Value, Ci)).ToList();
+        var hp = Regex.Match(t, @"hardpoints \{(.*?)\n  \}", RegexOptions.Singleline);
+        var groups = hp.Success ? Regex.Matches(hp.Groups[1].Value, "hardpoint_grp: \"([^\"]*)\"").Select(m => m.Groups[1].Value).ToList() : new List<string>();
+        return new FlightModel(index, name, groups, gear);
+    }
+
+    private static List<FlightModel> ReadFlightModels(string? acTypes)
+    {
+        var res = new List<FlightModel>();
+        if (acTypes == null || !File.Exists(acTypes)) return res;
+        string dir = Path.GetDirectoryName(acTypes)!;
+        var names = ReadAcTypes(acTypes);
+        for (int i = 0; i < names.Count; i++)
+            if (ReadFlightModel(dir, i, names[i]) is { } fm) res.Add(fm);
+        return res;
+    }
+
+    private static readonly Dictionary<string, List<FlightModel>> _fmCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The flight models of the destination theater (its Sim, else BMS's).</summary>
+    public static List<FlightModel> FlightModels(Destination d)
+    {
+        string? f = DestAcTypes(d);
+        if (f == null) return new();
+        if (!_fmCache.TryGetValue(f, out var l)) _fmCache[f] = l = ReadFlightModels(f);
+        return l;
+    }
+
+    /// <summary>Hardpoints an aircraft of the source uses (1…15: a list with at least one weapon).</summary>
+    private static List<int> UsedHardpoints(BmsDatabase S, int ct)
+    {
+        var res = new List<int>();
+        if (S.EntityOf(ct) is not { Table: "VCD" } v) return res;
+        for (int i = 1; i < 16; i++)
+        {
+            int w = v.Int($"WpnOrHpIdx_{i}", 0);
+            if (w <= 0 || S.Get("WLD", w) is not { } wl) continue;
+            if (wl.Fields.Any(x => x.Field.StartsWith("WpnIdx_", StringComparison.Ordinal) && int.TryParse(x.Value.Trim(), NumberStyles.Integer, Ci, out int n) && n > 0)) res.Add(i);
+        }
+        return res;
+    }
+
+    /// <summary>The source's own flight model of an aircraft (its theater's Sim, read only), for the comparison.</summary>
+    private static FlightModel? SourceFlightModel(SourceDb s, BmsDatabase S, int ct)
+    {
+        int acd = S.Get("CT", ct)?.Int("MoverDefinitionData", -1) ?? -1;
+        int af = acd >= 0 ? S.Get("ACD", acd)?.Int("AirframeDatIdx", -1) ?? -1 : -1;
+        if (af < 0 || s.AcTypes == null) return null;
+        var names = ReadAcTypes(s.AcTypes);
+        return af < names.Count ? ReadFlightModel(Path.GetDirectoryName(s.AcTypes)!, af, names[af]) ?? new FlightModel(af, names[af], new List<string>(), new List<double>()) : null;
+    }
+
+    /// <summary>What a flight model gives an aircraft: hardpoints it uses without racks, wheels against the old ones.</summary>
+    public sealed record FlightModelFit(FlightModel Model, List<int> NoRack, double GearDiff, bool SameName)
+    {
+        public string Text => $"{Model.Name}: {Model.Hardpoints} hardpoints with racks" +
+            (NoRack.Count > 0 ? $", hardpoint(s) {string.Join(", ", NoRack)} used by the aircraft have NO rack group" : ", all the hardpoints the aircraft uses have racks") +
+            $", wheels {Model.Gear} ft" + (double.IsNaN(GearDiff) ? "" : $" ({GearDiff:0.0} ft from the old database's)");
+    }
+
+    /// <summary>The BMS 4.38 flight models for an aircraft of the source, best first: every hardpoint it uses with a rack
+    /// group, then wheels as tall as its old flight model's; the one of the same name first among equals.</summary>
+    public static List<FlightModelFit> FlightModelsFor(SourceDb s, Destination d, int ct)
+    {
+        var S = BmsDatabase.Load(s.Theater.ObjectDir);
+        return Fits(s, d, S, ct);
+    }
+
+    private static List<FlightModelFit> Fits(SourceDb s, Destination d, BmsDatabase S, int ct)
+    {
+        var used = UsedHardpoints(S, ct);
+        var old = SourceFlightModel(s, S, ct);
+        double Diff(FlightModel m) => old == null || old.GearZ.Count == 0 || m.GearZ.Count == 0 ? double.NaN
+            : m.GearZ.Zip(old.GearZ).Take(2).Sum(p => Math.Abs(p.First - p.Second));
+        return FlightModels(d).Where(m => m.GearZ.Count > 0)
+            .Select(m => new FlightModelFit(m, used.Where(h => !m.HasGroup(h)).ToList(), Diff(m), old != null && m.Name.Equals(old.Name, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(f => f.NoRack.Count).ThenBy(f => double.IsNaN(f.GearDiff) ? 0 : Math.Round(f.GearDiff * 2) / 2).ThenBy(f => f.SameName ? 0 : 1).ThenBy(f => f.GearDiff)
+            .ToList();
+    }
+
+    /// <summary>The source flight model's name of an aircraft (the one of the same name is the default), or null.</summary>
+    public static string? SourceFlightModelName(SourceDb s, int ct) => SourceFlightModel(s, BmsDatabase.Load(s.Theater.ObjectDir), ct)?.Name;
 
     public static readonly string[] StepNames =
     {
@@ -279,8 +382,27 @@ public static class UnitsConversion
 
         // 4 · the flight model of the same name in the two AcTypes.lst
         var airframes = AirframeMap(s.AcTypes, DestAcTypes(d), c);
+        // the flight model of each aircraft: the chosen one, else the one of the same name; hardpoints without racks are told
+        var acdAirframe = new Dictionary<int, int>();
+        foreach (var (ct, p) in byCt)
+        {
+            if (S.EntityOf(ct) is not { Table: "VCD" } || S.Get("CT", ct)?.Int("Domain") != 2) continue;
+            var fits = Fits(s, d, S, ct);
+            var fit = p.FlightModel != null ? fits.FirstOrDefault(f => f.Model.Name.Equals(p.FlightModel, StringComparison.OrdinalIgnoreCase)) : fits.FirstOrDefault(f => f.SameName);
+            if (p.FlightModel != null && fit == null) { c.Problems.Add($"{p.Name}: flight model '{p.FlightModel}' is not in the theater's list (Sim\\Acdata\\AcTypes.lst)"); continue; }
+            if (fit == null) continue;
+            int acd = S.Get("CT", ct)!.Int("MoverDefinitionData", -1);
+            if (p.FlightModel != null && acd >= 0) acdAirframe[acd] = fit.Model.Index;
+            c.Steps[3].Add($"{p.Name}: flies with {fit.Text}{(p.FlightModel == null || fit.SameName ? " (the flight model of the same name)" : "")}");
+            if (fit.NoRack.Count > 0)
+            {
+                var best = fits.FirstOrDefault(f => f.NoRack.Count == 0);
+                c.Problems.Add($"{p.Name}: hardpoint(s) {string.Join(", ", fit.NoRack)} have no rack group in the flight model {fit.Model.Name}: weapons there hang without pylon or rack" +
+                               (best != null ? $" (e.g. '{best.Model.Name}' has racks on all of them: choose it as flight model)" : ""));
+            }
+        }
 
-        var plan = Interchange.MakeEntities(src, dst, d.DataDir, cts, preferDestination: true, modelMap: modelMap, airframeMap: airframes);
+        var plan = Interchange.MakeEntities(src, dst, d.DataDir, cts, preferDestination: true, modelMap: modelMap, airframeMap: airframes, acdAirframe: acdAirframe);
         // what comes along (weapons, pods, tanks the source has and BMS has not): their 3D models too, then the plan again
         int before = modelMap.Count;
         foreach (var (t, _, f) in plan.Records.Where(r => r.Table == "CT"))
@@ -291,7 +413,7 @@ public static class UnitsConversion
                 AddModel(m, $"model {m} (a weapon or store that comes along)");
             }
         if (modelMap.Count > before)
-            plan = Interchange.MakeEntities(src, dst, d.DataDir, cts, preferDestination: true, modelMap: modelMap, airframeMap: airframes);
+            plan = Interchange.MakeEntities(src, dst, d.DataDir, cts, preferDestination: true, modelMap: modelMap, airframeMap: airframes, acdAirframe: acdAirframe);
         c.Plan = plan;
         c.Problems.AddRange(plan.Problems);
         foreach (var (target, from) in modelFiles)
@@ -492,10 +614,10 @@ public static class UnitsConversion
         // the choices (all of them: earlier conversions from any source, and these)
         var all = LoadPicks(d).Where(x => !(Same(x.Source, s.Theater.ObjectDir) && picks.Any(p => p.Name == x.Pick.Name))).ToList();
         all.AddRange(picks.Select(p => (s.Theater.ObjectDir, p)));
-        var ps = new StringBuilder("Source;Ct;Name;SourceModel;TeName;TeTemplate\r\n");
+        var ps = new StringBuilder("Source;Ct;Name;SourceModel;TeName;TeTemplate;FlightModel\r\n");
         foreach (var (src, p) in all)
             ps.Append(src).Append(';').Append(p.Ct.ToString(Ci)).Append(';').Append(p.Name.Replace(';', ',')).Append(';').Append(p.OwnModel ? "1" : "0")
-              .Append(';').Append((p.TeName ?? "").Replace(';', ',')).Append(';').Append(p.TeTemplate.ToString(Ci)).Append("\r\n");
+              .Append(';').Append((p.TeName ?? "").Replace(';', ',')).Append(';').Append(p.TeTemplate.ToString(Ci)).Append(';').Append(p.FlightModel ?? "").Append("\r\n");
         string pf = Path.Combine(workDir, PicksFile);
         File.WriteAllText(pf, ps.ToString(), new UTF8Encoding(false));
         plan.Files[Path.Combine(d.Theater.ObjectDir, PicksFile)] = (pf, null);
@@ -532,7 +654,8 @@ public static class UnitsConversion
         {
             var c = l.Split(';');
             if (c.Length < 6 || !int.TryParse(c[1], NumberStyles.Integer, Ci, out int ct)) continue;
-            res.Add((c[0], new Pick(ct, c[2], c[3] == "1", c[4].Length > 0 ? c[4] : null, int.TryParse(c[5], NumberStyles.Integer, Ci, out int t) ? t : -1)));
+            res.Add((c[0], new Pick(ct, c[2], c[3] == "1", c[4].Length > 0 ? c[4] : null, int.TryParse(c[5], NumberStyles.Integer, Ci, out int t) ? t : -1,
+                                    c.Length > 6 && c[6].Trim().Length > 0 ? c[6].Trim() : null)));
         }
         return res;
     }

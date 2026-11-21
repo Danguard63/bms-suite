@@ -82,13 +82,14 @@ public static partial class Interchange
     /// <param name="modelMap">Source model numbers already decided (an old add-on's own models, copied into BMS's models with
     /// these numbers by the install): used as they are.</param>
     public static Plan MakeEntities(BmsTheater src, BmsTheater dst, string dataDir, IList<int> cts, bool preferDestination = false,
-                                    IReadOnlyDictionary<int, int>? modelMap = null, IReadOnlyDictionary<int, int>? airframeMap = null)
+                                    IReadOnlyDictionary<int, int>? modelMap = null, IReadOnlyDictionary<int, int>? airframeMap = null,
+                                    IReadOnlyDictionary<int, int>? acdAirframe = null)
     {
         var p = new Plan { Src = src, Dst = dst, BmsObjects = Path.Combine(dataDir, "Terrdata", "objects") };
         if (modelMap != null) foreach (var kv in modelMap) p.ModelMap[kv.Key] = kv.Value;
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
-        var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination, AirframeMap = airframeMap };
+        var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination, AirframeMap = airframeMap, AcdAirframe = acdAirframe };
         foreach (int ct in cts) x.Selected.Add(ct);
         foreach (int ct in cts)
         {
@@ -126,6 +127,8 @@ public static partial class Interchange
         public bool PreferDestination;
         /// <summary>Source AirframeDatIdx → destination one (the flight model of the same name in the two AcTypes.lst), or null.</summary>
         public IReadOnlyDictionary<int, int>? AirframeMap;
+        /// <summary>Source ACD → destination flight model chosen for it (an aircraft given another BMS flight model).</summary>
+        public IReadOnlyDictionary<int, int>? AcdAirframe;
         /// <summary>The CT entries chosen by the user (always added when the destination has no identical one).</summary>
         public readonly HashSet<int> Selected = new();
         private readonly Dictionary<(string, int), int> _map = new();
@@ -284,8 +287,11 @@ public static partial class Interchange
                     if (naf != af) P.Report.Add($"  aircraft data ACD {idx}: flight model {af} of the source is {naf} in the destination (same name in AcTypes.lst)");
                     f = DbOps.With(f, ("AirframeDatIdx", naf.ToString(Ci)));
                 }
-                else P.Problems.Add($"aircraft data ACD {idx}: flight model {af} of the source has no flight model of the same name in the destination");
+                else if (AcdAirframe == null || !AcdAirframe.ContainsKey(idx))
+                    P.Problems.Add($"aircraft data ACD {idx}: flight model {af} of the source has no flight model of the same name in the destination");
             }
+            if (AcdAirframe != null && AcdAirframe.TryGetValue(idx, out int chosen))
+                f = DbOps.With(f, ("AirframeDatIdx", chosen.ToString(Ci)));
             for (int i = 0; i < 8; i++)
             {
                 int type = sr.Int($"SensorType_{i}", -1), si = sr.Int($"SensorIdx_{i}", -1);
