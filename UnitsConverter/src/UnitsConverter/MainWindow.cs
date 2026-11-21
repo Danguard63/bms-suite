@@ -66,7 +66,13 @@ public sealed class MainWindow : Window
         public bool IsAircraft { get; init; }
         public string TeName { get; set; } = "";
         public int TeTemplate { get; set; } = -1;
+        /// <summary>Aircraft: the BMS 4.38 flight model it will fly with (name), and the choices.</summary>
+        public string? FlightModel { get; set; }
+        public string? SameNameModel { get; init; }
+        public List<FmItem> FlightModels { get; init; } = new();
     }
+
+    public sealed record FmItem(string Name, string Label);
 
     public sealed record Tpl(int Id, string Label);
 
@@ -286,6 +292,24 @@ public sealed class MainWindow : Window
         var state = Text("3D model and state", nameof(Row.State), 0, star: true);
         state.MinWidth = 260;
         _grid.Columns.Add(state);
+        var ff = new FrameworkElementFactory(typeof(ComboBox));
+        ff.SetBinding(ItemsControl.ItemsSourceProperty, new Binding(nameof(Row.FlightModels)));
+        ff.SetValue(ItemsControl.DisplayMemberPathProperty, nameof(FmItem.Label));
+        ff.SetValue(Selector.SelectedValuePathProperty, nameof(FmItem.Name));
+        ff.SetBinding(Selector.SelectedValueProperty, new Binding(nameof(Row.FlightModel)) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+        ff.SetBinding(UIElement.IsEnabledProperty, new Binding(nameof(Row.IsAircraft)));
+        ff.AddHandler(Selector.SelectionChangedEvent, new SelectionChangedEventHandler((_, _) => { _install.IsEnabled = false; _plan = null; }));
+        _grid.Columns.Add(new DataGridTemplateColumn
+        {
+            Header = new TextBlock
+            {
+                Text = "Flies like",
+                ToolTip = "Aircraft: BMS 4.38 has no flight model of its own for it. It will fly, stand on its wheels and carry its pylons and racks like the BMS aircraft chosen here " +
+                          "(flight models are never copied nor changed).\n✓ racks on every pylon it uses, wheels close to the old height (the suggested one is chosen)\n" +
+                          "⚠ some pylons it uses have no racks: weapons there hang without pylon or rack.\nThe flight model of the same name flies more like the old one; the suggested one looks right on the ground and with weapons.",
+            },
+            CellTemplate = new DataTemplate { VisualTree = ff }, Width = new DataGridLength(330),
+        });
         _grid.Columns.Add(Check("Source model", nameof(Row.SourceModel), nameof(Row.SourceModelPossible),
             "BMS 4.38 has a different model with the same number: tick to bring the old database's model (with a free number) instead of BMS's"));
         var name = new DataGridTextColumn { Header = new TextBlock { Text = "Name in the TE", ToolTip = "Aircraft and helicopters: the name the Tactical Engagement shows" },
@@ -313,13 +337,28 @@ public sealed class MainWindow : Window
         {
             Mouse(true);
             var an = UnitsConversion.Analyze(s, d);
-            _rows = an.Candidates.Select(c => new Row
+            var S = BmsDatabase.Load(s.Theater.ObjectDir);
+            _rows = an.Candidates.Select(c =>
             {
-                Ct = c.Ct, Kind = c.Kind, Name = c.Name, CanConvert = c.CanImport,
-                State = c.What + (c.Note.Length > 0 ? " — " + c.Note : ""),
-                SourceModelPossible = c.OwnModelPossible && !c.OwnModelDefault, SourceModel = false,
-                IsAircraft = c.Entity.Kind is Interchange.EntityKind.Aircraft or Interchange.EntityKind.Helicopter,
-                TeName = c.Entity.Kind is Interchange.EntityKind.Aircraft or Interchange.EntityKind.Helicopter ? c.Name : "",
+                bool air = c.Entity.Kind is Interchange.EntityKind.Aircraft or Interchange.EntityKind.Helicopter;
+                var fits = air ? UnitsConversion.FlightModelsFor(s, d, S, c.Ct) : new();
+                var proposed = UnitsConversion.Proposed(fits);
+                string Label(UnitsConversion.FlightModelFit f) =>
+                    (f.NoRack.Count == 0 ? "✓ " : "⚠ ") + f.Model.Name + (f.SameName ? " (same name)" : "") + (f == proposed ? " — suggested" : "") +
+                    (f.NoRack.Count > 0 ? $": pylons {string.Join(", ", f.NoRack)} without racks" : ": racks on all pylons") +
+                    (double.IsNaN(f.GearDiff) ? "" : $", wheels {f.GearDiff:0.0} ft off");
+                var items = fits.Take(12).ToList();
+                foreach (var f in fits.Where(f => f.SameName || f == proposed)) if (!items.Contains(f)) items.Insert(0, f);
+                return (c, air, items, proposed, Label: (Func<UnitsConversion.FlightModelFit, string>)Label);
+            }).Select(x => new Row
+            {
+                Ct = x.c.Ct, Kind = x.c.Kind, Name = x.c.Name, CanConvert = x.c.CanImport,
+                State = x.c.What + (x.c.Note.Length > 0 ? " — " + x.c.Note : ""),
+                SourceModelPossible = x.c.OwnModelPossible && !x.c.OwnModelDefault, SourceModel = false,
+                IsAircraft = x.air, TeName = x.air ? x.c.Name : "",
+                FlightModels = x.items.Select(f => new FmItem(f.Model.Name, x.Label(f))).ToList(),
+                FlightModel = x.proposed?.Model.Name,
+                SameNameModel = x.items.FirstOrDefault(f => f.SameName)?.Model.Name,
             }).ToList();
             Fill();
             int ok = _rows.Count(r => r.CanConvert);
@@ -350,7 +389,8 @@ public sealed class MainWindow : Window
         _grid.CommitEdit(DataGridEditingUnit.Cell, true);
         _grid.CommitEdit(DataGridEditingUnit.Row, true);
         return _rows.Where(r => r.Convert && r.CanConvert)
-            .Select(r => new UnitsConversion.Pick(r.Ct, r.Name, r.SourceModel, r.IsAircraft && r.TeName.Trim().Length > 0 ? r.TeName.Trim() : null, r.TeTemplate)).ToList();
+            .Select(r => new UnitsConversion.Pick(r.Ct, r.Name, r.SourceModel, r.IsAircraft && r.TeName.Trim().Length > 0 ? r.TeName.Trim() : null, r.TeTemplate,
+                                                  r.IsAircraft && r.FlightModel != null && r.FlightModel != r.SameNameModel ? r.FlightModel : null)).ToList();
     }
 
     private string Key(List<UnitsConversion.Pick> p) => (Src?.Theater.ObjectDir ?? "") + "|" + (Dst?.Theater.ObjectDir ?? "") + "|" + string.Join("|", p);
