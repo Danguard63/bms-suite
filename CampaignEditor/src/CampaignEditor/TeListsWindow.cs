@@ -54,7 +54,7 @@ public sealed class TeListsWindow : Window
         tabs.Items.Add(new TabItem { Header = "Battalions by producer (TeUnits.lst)", Content = _ground.Build() });
         tabs.Items.Add(new TabItem { Header = "Naval units by producer (TeNavalUnits.lst)", Content = _naval.Build() });
 
-        var save = UnitText.Btn("Save", () => Save(), "Writes the changed lists into " + ws.EditsFolder + (ws.InstallCopyDir != null ? " and Output\\Install" : "") + " (never into BMS)");
+        var save = UnitText.Btn("Save", SaveAndClose, "Writes the changed lists into " + ws.EditsFolder + (ws.InstallCopyDir != null ? " and Output\\Install" : "") + " (never into BMS)");
         save.FontWeight = FontWeights.SemiBold;
         var bottom = new DockPanel { Margin = new Thickness(0, 8, 0, 0) };
         var right = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
@@ -274,7 +274,11 @@ public sealed class TeListsWindow : Window
             _planeRows.Add(r);
             _planesDirty = true;
             FillPlanes();
+            _planeGrid.SelectedItem = r;
+            _planeGrid.ScrollIntoView(r);
             w.Close();
+            MessageBox.Show(this, $"'{c.Item2}' added to the aircraft list (selected in the table).\n\nPress Save to write TePlanes.lst.", "Add aircraft",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         });
         var sp = new StackPanel { Margin = new Thickness(10) };
         sp.Children.Add(new TextBlock { Text = "Aircraft of the database (with a squadron) that are in no list:", Margin = new Thickness(0, 0, 0, 4) });
@@ -432,6 +436,22 @@ public sealed class TeListsWindow : Window
     }
 
     // ───────────────────────── salvataggio
+
+    /// <summary>The Save button: saves, says what was written and what comes next, then closes the window.</summary>
+    private void SaveAndClose()
+    {
+        if (!_planesDirty && !_ground.Dirty && !_naval.Dirty)
+        {
+            MessageBox.Show(this, "Nothing changed: there is nothing to save.", Title, MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (!Save()) return;
+        string next = _ws.InstallCopyDir != null
+            ? "Now press 'Install campaign files into BMS…' in the Campaign Editor's start window, then start BMS."
+            : "BMS is not touched: copy them into the theater's Campaign folder to use them.";
+        MessageBox.Show(this, _status.Text + "\n\n" + next, "TE lists saved", MessageBoxButton.OK, MessageBoxImage.Information);
+        Close();
+    }
 
     private bool Save()
     {
