@@ -71,6 +71,7 @@ public sealed class TeListsWindow : Window
         _naval.Load();
         Closing += (_, e) =>
         {
+            CommitEdits();
             if (!_planesDirty && !_ground.Dirty && !_naval.Dirty) return;
             var r = MessageBox.Show(this, "Save the changes?", Title, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
             if (r == MessageBoxResult.Cancel) e.Cancel = true;
@@ -270,7 +271,9 @@ public sealed class TeListsWindow : Window
         {
             if (list.SelectedItem is not ListBoxItem { Tag: ValueTuple<int, string, int> c } || tpl.SelectedItem is not ComboBoxItem { Tag: PlaneRow t }) return;
             var ct = _db.Ct[c.Item1];
-            var e = new TePlanesFile.Entry { Name = c.Item2, Type = ct.Type, SubType = ct.SubType, Specific = ct.Specific, UnitSubType = c.Item3, Id = t.Id, Text = t.TextId, Icon = t.Icon };
+            // ID: a number of its own (the TE keeps one aircraft per ID: with the template's ID the new one is not shown)
+            int id = _planeRows.Select(x => x.Id).Concat(_planesRef.Entries.Select(x => x.Id)).DefaultIfEmpty(21100).Max() + 1;
+            var e = new TePlanesFile.Entry { Name = c.Item2, Type = ct.Type, SubType = ct.SubType, Specific = ct.Specific, UnitSubType = c.Item3, Id = id, Text = t.TextId, Icon = t.Icon };
             var r = new PlaneRow { E = e, DbName = c.Item2, InDb = true, InKorea = false, Producer = TerrainTool.Core.Campaign.Producer.Short(TerrainTool.Core.Campaign.Producer.OfName(c.Item2)), Role = _roleName.GetValueOrDefault(c.Item3, "") };
             r.Init(true);
             r.Changed = () => _planesDirty = true;
@@ -440,12 +443,29 @@ public sealed class TeListsWindow : Window
 
     // ───────────────────────── salvataggio
 
+    /// <summary>A value typed in a cell and not confirmed yet (the cell still being edited when Save is pressed) goes into the row.</summary>
+    private void CommitEdits()
+    {
+        _planeGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        _planeGrid.CommitEdit(DataGridEditingUnit.Row, true);
+    }
+
     /// <summary>The Save button: saves, says what was written and what comes next, then closes the window.</summary>
     private void SaveAndClose()
     {
+        CommitEdits();
         if (!_planesDirty && !_ground.Dirty && !_naval.Dirty)
         {
             MessageBox.Show(this, "Nothing changed: there is nothing to save.", Title, MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var dup = _planeRows.Where(r => r.InList && r.Type != 0).GroupBy(r => r.Id).Where(g => g.Count() > 1).ToList();
+        if (dup.Count > 0)
+        {
+            MessageBox.Show(this, "Aircraft with the same ID (the Tactical Engagement shows only one of them):\n\n" +
+                string.Join("\n", dup.Select(g => $"ID {g.Key}: {string.Join(", ", g.Select(r => r.Name.Length > 0 ? r.Name : r.DbName))}")) +
+                "\n\nGive each one its own ID (double-click the ID cell; a number not used by the others, e.g. after the highest).", Title,
+                MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (!Save()) return;
