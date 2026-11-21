@@ -63,12 +63,17 @@ public sealed class BmsInstaller
         if (objects && !Directory.Exists(Path.Combine(Source, "Terrdata", ObjectsJob.FolderName))) Problems.Add($"{Source}\\Terrdata\\{ObjectsJob.FolderName} missing: run 'Objects' and 'Build theater' first");
         if (objects && Directory.Exists(Target))
         {
-            // il database nuovo non deve avere meno voci CT di quello in BMS: le campagne usano le voci aggiunte in fondo
-            // (copie delle disposizioni di basi e ponti); senza, BMS va in crash caricando gli obiettivi
-            int Count(string f) => File.Exists(f) ? System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(f), "<CT Num=").Count : 0;
-            int now = Count(Path.Combine(ObjectsTarget, "Falcon4_CT.xml")), nw = Count(Path.Combine(Source, "Terrdata", ObjectsJob.FolderName, "Falcon4_CT.xml"));
+            // il database nuovo non deve avere meno obiettivi (voci CT con EntityType 3) di quello in BMS: le campagne usano quelli
+            // aggiunti in fondo (copie delle disposizioni di basi e ponti); senza, BMS va in crash caricando gli obiettivi.
+            // Si contano solo gli obiettivi: le voci importate da un vecchio add-on (aerei, armi, squadroni) vengono dopo e
+            // possono cambiare di numero da un giro all'altro.
+            static int Objectives(string f) => File.Exists(f)
+                ? System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(f), @"<CT Num=""\d+"">(?:(?!</CT>).)*?<EntityType>3</EntityType>",
+                    System.Text.RegularExpressions.RegexOptions.Singleline).Count
+                : 0;
+            int now = Objectives(Path.Combine(ObjectsTarget, "Falcon4_CT.xml")), nw = Objectives(Path.Combine(Source, "Terrdata", ObjectsJob.FolderName, "Falcon4_CT.xml"));
             if (nw > 0 && nw < now)
-                Problems.Add($"The new Falcon4_CT.xml has {nw} records, the one in BMS {now}: the campaign files use the missing ones (layout copies of bases/bridges) and BMS would crash. " +
+                Problems.Add($"The new Falcon4_CT.xml has {nw} objective records, the one in BMS {now}: the campaign files use the missing ones (layout copies of bases/bridges) and BMS would crash. " +
                              "Usually 'Run Objects' ran without BMS's campaign terrain cache: start a campaign of the theater once in BMS, then Run Objects again.");
         }
         if (art && !Directory.Exists(ArtSource)) Problems.Add($"{ArtSource} missing: run '2D map (campmap)' and/or 'Theater art' first");
