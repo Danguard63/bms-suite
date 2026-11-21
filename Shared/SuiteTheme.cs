@@ -153,6 +153,11 @@ internal static class SuiteTheme
             if (child is DependencyObject d) FoldHelp(d, depth + 1);
     }
 
+    [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern IntPtr ExtractIcon(IntPtr instance, string file, int index);
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool DestroyIcon(IntPtr icon);
+
     private static ImageSource? _icon;
     private static bool _iconRead;
 
@@ -163,13 +168,20 @@ internal static class SuiteTheme
         _iconRead = true;
         try
         {
-            if (Environment.ProcessPath is { } exe && System.Drawing.Icon.ExtractAssociatedIcon(exe) is { } ico)
-                using (ico)
+            if (Environment.ProcessPath is { } exe)
+            {
+                IntPtr h = ExtractIcon(IntPtr.Zero, exe, 0);
+                if (h != IntPtr.Zero && h != new IntPtr(1))
                 {
-                    var bmp = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(ico.Handle, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
-                    bmp.Freeze();
-                    _icon = bmp;
+                    try
+                    {
+                        var bmp = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(h, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+                        bmp.Freeze();
+                        _icon = bmp;
+                    }
+                    finally { DestroyIcon(h); }
                 }
+            }
         }
         catch (Exception ex) when (ex is System.IO.IOException or ArgumentException or System.Runtime.InteropServices.ExternalException or InvalidOperationException) { }
         return _icon;
