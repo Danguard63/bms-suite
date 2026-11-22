@@ -62,7 +62,7 @@ internal static class SuiteTheme
             r[typeof(Button)] = ButtonStyle(r.Contains(typeof(Button)) ? r[typeof(Button)] as Style : null);
             r[typeof(DataGrid)] = DataGridStyle();
             r[typeof(DataGridColumnHeader)] = HeaderStyle();
-            r[typeof(ProgressBar)] = Simple(typeof(ProgressBar), (Control.ForegroundProperty, B(Amber)), (Control.BackgroundProperty, B(Color.FromRgb(0xE3, 0xE6, 0xEA))), (Control.BorderBrushProperty, B(Edge)));
+            r[typeof(ProgressBar)] = ProgressStyle();
             r[typeof(GroupBox)] = Simple(typeof(GroupBox), (Control.BorderBrushProperty, B(Color.FromRgb(0xD3, 0xD7, 0xDC))), (Control.PaddingProperty, new Thickness(6)));
             r[typeof(TextBox)] = Simple(typeof(TextBox), (Control.BorderBrushProperty, B(Edge)));
 
@@ -89,7 +89,7 @@ internal static class SuiteTheme
                     SetHeader(w, true);
                     FitWideScreen(w);
                 }
-                if (w is not SuiteMessageBox.Dialog && (w.SizeToContent & SizeToContent.Width) == 0) FoldHelp(w, 0);
+                if (w.Owner == null && w is not SuiteMessageBox.Dialog && (w.SizeToContent & SizeToContent.Width) == 0) FoldHelp(w, 0);
             }));
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or NotSupportedException)
@@ -283,6 +283,31 @@ internal static class SuiteTheme
         writes.Setters.Add(new Setter(Control.BorderBrushProperty, B(Ink)));
         writes.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
         s.Triggers.Add(writes);
+        s.Seal();
+        return s;
+    }
+
+    /// <summary>True when a progress bar is full (the job is over).</summary>
+    private sealed class FullConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object? parameter, CultureInfo culture) =>
+            values.Length == 2 && values[0] is double v && values[1] is double max && max > 0 && v >= max;
+        public object[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture) => Array.Empty<object>();
+    }
+
+    /// <summary>Amber while it works; grey once full, so a finished job does not leave a bright stripe in the window.</summary>
+    private static Style ProgressStyle()
+    {
+        var s = new Style(typeof(ProgressBar));
+        s.Setters.Add(new Setter(Control.ForegroundProperty, B(Amber)));
+        s.Setters.Add(new Setter(Control.BackgroundProperty, B(Color.FromRgb(0xE3, 0xE6, 0xEA))));
+        s.Setters.Add(new Setter(Control.BorderBrushProperty, B(Edge)));
+        var full = new MultiBinding { Converter = new FullConverter() };
+        full.Bindings.Add(new Binding("Value") { RelativeSource = RelativeSource.Self });
+        full.Bindings.Add(new Binding("Maximum") { RelativeSource = RelativeSource.Self });
+        var done = new DataTrigger { Binding = full, Value = true };
+        done.Setters.Add(new Setter(Control.ForegroundProperty, B(Color.FromRgb(0xA9, 0xB0, 0xB8))));
+        s.Triggers.Add(done);
         s.Seal();
         return s;
     }

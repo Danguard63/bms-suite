@@ -522,7 +522,7 @@ public sealed class MainWindow : Window
         DockPanel.SetDock(all, Dock.Top); dp.Children.Add(all);
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
-        var ok = new Button { Content = "OK – make the plan", Padding = new Thickness(12, 3, 12, 3), Margin = new Thickness(0, 0, 6, 0), IsDefault = true };
+        var ok = new Button { Content = "OK – make the plan", FontWeight = FontWeights.SemiBold, Padding = new Thickness(12, 3, 12, 3), Margin = new Thickness(0, 0, 6, 0), IsDefault = true };
         var cancel = new Button { Content = "Cancel", Padding = new Thickness(12, 3, 12, 3), IsCancel = true };
         buttons.Children.Add(ok); buttons.Children.Add(cancel);
         DockPanel.SetDock(buttons, Dock.Bottom); dp.Children.Add(buttons);
@@ -565,6 +565,7 @@ public sealed class MainWindow : Window
         int nRep = p.Conflicts.Count(c => c.Choice == Interchange.ConflictChoice.Replace);
         if (MessageBox.Show(this, $"Copy {_eCurrentCts.Count} item(s) from {p.Src.Name} into {p.Dst.Name}?\n\n{p.Records.Count} records ({nRep} of them replace the destination's), {p.Files.Count} files.\n" +
                                   $"Everything replaced is copied first to\n{BackupRoot}\nand Restore… removes what is added.\n\n" +
+                                  (ToCheck(p) > 0 ? $"⚠ The plan has {ToCheck(p)} thing(s) to check (models that cannot be copied, pieces that may look different): read them before installing.\n\n" : "") +
                                   "Make a backup copy of your BMS folder too before changing the database.", Title,
                             MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
         Cursor = System.Windows.Input.Cursors.Wait;
