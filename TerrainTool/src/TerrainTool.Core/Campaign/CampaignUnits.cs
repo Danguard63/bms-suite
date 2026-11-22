@@ -642,6 +642,17 @@ public sealed class UniFile
         u.Waypoints[i] = u.Waypoints[i] with { X = x, Y = y, Arrive = arrive };
     }
 
+    /// <summary>Waypoint i: quota in piedi (nel file decine di piedi; il segno del valore di prima resta).</summary>
+    public void SetWaypointAltitude(CampUnit u, int i, int feet)
+    {
+        if (i < 0 || i >= u.WpAt.Length) return;
+        int o = u.Start + u.WpAt[i];
+        short z = (short)Math.Clamp((int)Math.Round(feet / 10.0), 0, short.MaxValue);
+        if (u.Waypoints[i].Z < 0) z = (short)-z;
+        BitConverter.TryWriteBytes(Data.AsSpan(o + 5, 2), z);
+        u.Waypoints[i] = u.Waypoints[i] with { Z = z };
+    }
+
     public void SetTimeOnTarget(CampUnit f, uint tot)
     {
         if (f.Kind != UnitKind.Flight || f.TotAt == 0) return;

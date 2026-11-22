@@ -1001,12 +1001,38 @@ public sealed class CampaignEditorWindow : Window
             string act = w.ActionName + (w.IsTarget ? " (target)" : w.IsIp ? " (IP)" : "");
             if (d.Obj(w.Target) is { } to) act += " → " + to.Name;
             Cell(i + 1, 0, (i + 1).ToString(CultureInfo.InvariantCulture)); Cell(i + 1, 1, act);
-            Cell(i + 1, 2, w.AltitudeFt > 0 ? w.AltitudeFt.ToString("N0", CultureInfo.InvariantCulture) + " ft" : "ground");
+            if (u.Kind == UnitKind.Flight && w.Action is not (1 or 7) && i < u.WpAt.Length)
+            {
+                int wi = i;
+                var box = new TextBox
+                {
+                    Text = w.AltitudeFt.ToString(CultureInfo.InvariantCulture), Margin = new Thickness(0, 1, 4, 1), Padding = new Thickness(2, 0, 2, 0),
+                    ToolTip = "Altitude of this steerpoint in feet (e.g. 500 for a low attack on ships). Enter or leave the box to apply; Ctrl+Z undoes.",
+                };
+                void Apply()
+                {
+                    string t = box.Text.Trim().Replace(",", "").Replace(".", "").Replace("ft", "").Trim();
+                    int now = u.Waypoints[wi].AltitudeFt;
+                    if (!int.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out int ft) || ft < 0 || ft > 80000)
+                    { box.Text = now.ToString(CultureInfo.InvariantCulture); _status.Text = "Altitude: a number of feet from 0 to 80,000."; return; }
+                    ft = (int)Math.Round(ft / 10.0) * 10;
+                    if (ft == now) { box.Text = now.ToString(CultureInfo.InvariantCulture); return; }
+                    d.Units!.SetWaypointAltitude(u, wi, ft);
+                    _undo.Push(() => { d.Units!.SetWaypointAltitude(u, wi, now); RefreshProps(); _map.InvalidateVisual(); });
+                    MarkDirty(); _map.InvalidateVisual();
+                    box.Text = ft.ToString(CultureInfo.InvariantCulture);
+                    _status.Text = $"Steerpoint {wi + 1}: altitude {now:N0} → {ft:N0} ft.";
+                }
+                box.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Apply(); e.Handled = true; } };
+                box.LostKeyboardFocus += (_, _) => Apply();
+                Grid.SetRow(box, i + 1); Grid.SetColumn(box, 2); g.Children.Add(box);
+            }
+            else Cell(i + 1, 2, w.AltitudeFt > 0 ? w.AltitudeFt.ToString("N0", CultureInfo.InvariantCulture) + " ft" : "ground");
             Cell(i + 1, 3, CampWaypoint.Time(w.Arrive));
         }
         _props.Children.Add(g);
         _props.Children.Add(Note(u.Kind == UnitKind.Flight
-            ? "Drag a steerpoint on the map to move it (not takeoff and landing): the speed of each leg stays the same, so its time and the times after it change, TOT included. Ctrl+Z undoes."
+            ? "Drag a steerpoint on the map to move it (not takeoff and landing): the speed of each leg stays the same, so its time and the times after it change, TOT included. Altitudes in feet: type a new one in the box. Ctrl+Z undoes."
             : "Select a flight of the package to move its steerpoints on the map."));
     }
 
