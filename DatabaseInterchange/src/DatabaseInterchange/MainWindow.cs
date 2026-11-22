@@ -109,7 +109,7 @@ public sealed class MainWindow : Window
 
         var note = new TextBlock
         {
-            TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DimGray, Margin = new Thickness(8, 0, 8, 6), FontSize = 11.5,
+            TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DimGray, Margin = new Thickness(0, 0, 0, 6), FontSize = 11.5,
             Text = "Bases and ground objectives: choose layouts of the source theater (Ctrl / Shift + click for more), Make plan, then Install. " +
                    "Pieces and 3D models the destination already has the same are reused; the rest get free numbers at the end of the tables. " +
                    "Then use the new layout with Objective Studio (Replace layout).",
@@ -130,6 +130,7 @@ public sealed class MainWindow : Window
         var restore = Btn("Restore…"); restore.Click += (_, _) => Restore(); bar.Children.Add(restore);
         var right = new DockPanel { Margin = new Thickness(0, 0, 6, 6) };
         DockPanel.SetDock(bar, Dock.Top); right.Children.Add(bar);
+        DockPanel.SetDock(note, Dock.Top); right.Children.Add(note);
         DockPanel.SetDock(_sum, Dock.Top); right.Children.Add(_sum);
         right.Children.Add(_report);
 
@@ -141,7 +142,6 @@ public sealed class MainWindow : Window
         tabs.Items.Add(new TabItem { Header = "Aircraft, vehicles & weapons", Content = EntitiesTab() });
         var root = new DockPanel();
         DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
-        DockPanel.SetDock(note, Dock.Top); root.Children.Add(note);
         DockPanel.SetDock(_status, Dock.Bottom); root.Children.Add(_status);
         root.Children.Add(tabs);
         Content = root;
@@ -341,7 +341,7 @@ public sealed class MainWindow : Window
         _eGrid.Columns.Add(new DataGridTextColumn { Header = "Name", Binding = new System.Windows.Data.Binding(nameof(EntityRow.Name)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
         _eGrid.Columns.Add(new DataGridTextColumn { Header = "Kind", Binding = new System.Windows.Data.Binding(nameof(EntityRow.Kind)), Width = new DataGridLength(105) });
         _eGrid.Columns.Add(new DataGridTextColumn { Header = "In destination", Binding = new System.Windows.Data.Binding(nameof(EntityRow.InDest)), Width = new DataGridLength(90) });
-        _eGrid.Columns.Add(new DataGridTextColumn { Header = "Details", Binding = new System.Windows.Data.Binding(nameof(EntityRow.Detail)), Width = new DataGridLength(220) });
+        _eGrid.Columns.Add(new DataGridTextColumn { Header = "Details", Binding = new System.Windows.Data.Binding(nameof(EntityRow.Detail)), Width = new DataGridLength(260) });
 
         var filter = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
         DockPanel.SetDock(_kind, Dock.Left); filter.Children.Add(_kind);
@@ -444,6 +444,13 @@ public sealed class MainWindow : Window
             _eCurrent = blocked ? null : p;
             _eCurrentCts = cts;
             var lines = new List<string> { $"PLAN – nothing written yet ({DateTime.Now:HH:mm:ss})", "" };
+            if (p.Blocking.Count > 0)
+            {
+                lines.Add($"CANNOT BE INSTALLED ({p.Blocking.Count}):");
+                lines.AddRange(p.Blocking.Select(x => "  ✖ " + x));
+                lines.Add("  Choose a destination theater with its own 3D models, or leave these items out.");
+                lines.Add("");
+            }
             lines.AddRange(p.Report);
             if (p.Conflicts.Count > 0)
             {
@@ -465,10 +472,11 @@ public sealed class MainWindow : Window
             _eReport.Text = string.Join("\n", lines);
             Summary(_eSum, ($"{cts.Count}", "item(s)", false), ($"{added.Count}", "new records", false), ($"{replaced.Count}", "replaced", replaced.Count > 0),
                     ($"{p.Conflicts.Count}", "same name, other values", p.Conflicts.Count > 0), ($"{p.Files.Count}", "files", false),
-                    ($"{ToCheck(p)}", "to check", ToCheck(p) > 0));
-            _eInstall.IsEnabled = _eCurrent != null && (p.Records.Count > 0 || p.Files.Count > 0);
+                    ($"{ToCheck(p)}", "to check", ToCheck(p) > 0), ($"{p.Blocking.Count}", "cannot be installed", p.Blocking.Count > 0));
+            _eInstall.IsEnabled = _eCurrent != null && p.Blocking.Count == 0 && (p.Records.Count > 0 || p.Files.Count > 0);
             _eChoices.IsEnabled = _eCurrent != null && p.Conflicts.Count > 0;
-            _status.Text = _eInstall.IsEnabled ? "Plan ready: read it, then Install." : "Nothing to install.";
+            _status.Text = p.Blocking.Count > 0 ? "Not installable: a chosen item would have no 3D model in the destination (see the top of the plan)."
+                         : _eInstall.IsEnabled ? "Plan ready: read it, then Install." : "Nothing to install.";
         }
         catch (Exception ex) { _eReport.Text = "Plan not made: " + ex; }
         finally { Cursor = null; }
@@ -574,6 +582,7 @@ public sealed class MainWindow : Window
             string work = Path.Combine(Root(), "Transfers", $"{Safe(p.Src.Name)}_to_{Safe(p.Dst.Name)}_items");
             // il piano si rifa' adesso: numeri liberi calcolati sui file attuali della destinazione
             var fresh = Interchange.MakeEntities(p.Src, p.Dst, _data.Text.Trim(), _eCurrentCts, resolve: _eResolve, copySim: _eSim.IsChecked == true);
+            if (fresh.Blocking.Count > 0) throw new InvalidOperationException(string.Join("\n", fresh.Blocking));
             Interchange.Write(fresh, work, Path.Combine(work, "out"));
             var log = Interchange.Install(fresh, Path.Combine(work, "out"), BackupRoot);
             _eReport.Text = "INSTALLED\n\n" + string.Join("\n", log) + "\n\n" + string.Join("\n", fresh.Report) +

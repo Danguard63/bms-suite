@@ -283,6 +283,12 @@ internal static class SuiteTheme
         writes.Setters.Add(new Setter(Control.BorderBrushProperty, B(Ink)));
         writes.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
         s.Triggers.Add(writes);
+        // the same for a button whose text does not say it (the program marks it: Tag = "writes")
+        var marked = new Trigger { Property = FrameworkElement.TagProperty, Value = "writes" };
+        marked.Setters.Add(new Setter(Control.BackgroundProperty, B(Graphite)));
+        marked.Setters.Add(new Setter(Control.BorderBrushProperty, B(Ink)));
+        marked.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        s.Triggers.Add(marked);
         s.Seal();
         return s;
     }

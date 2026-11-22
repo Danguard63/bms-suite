@@ -389,7 +389,9 @@ public sealed class StartWindow : Window
         if (TerrainTool.Core.Campaign.ProjectCampaign.HasPending(p))
         {
             if (MessageBox.Show(this, "Run Objects changed objectives (moved, turned, replaced or removed) after the campaign files were last updated.\n\n" +
-                    "Write those changes into the campaign files first (CampObjData.XML, *.cam, Te_New_Nt.tac, stations+ils.dat), then install?",
+                    "The campaign files of the project (CampObjData.XML, *.cam, Te_New_Nt.tac, stations+ils.dat) must have those changes before they are installed. " +
+                    "Nothing is copied into BMS at this step: the next window lists the files and asks again.\n\n" +
+                    "Write the changes into the project's campaign files now?",
                     "Install campaign files into BMS", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes) != MessageBoxResult.Yes) return;
             try
             {

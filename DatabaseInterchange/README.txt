@@ -29,6 +29,8 @@ Tab 2 – aircraft, helicopters, ground vehicles, ships, weapons and unit types.
                          - weapon (WCD): radar, sim data (SWD), rocket pods (RKT) with their rockets;
                          - unit type (UCD): its vehicles, squadron stores (SSD, weapon numbers renumbered);
                          - 3D models (normal, damaged, destroyed) as for the layouts.
+                         A destination that uses BMS's shared models (no models of its own) cannot receive an item whose
+                         3D model is only in the source: the plan says so at the top and Install stays off.
                        A record the destination already has the same is reused; the rest goes at the end of the tables.
                        New weapon numbers are added to the racks with the same name in the destination's BmsRack.dat.
                        Same name, other values: a window asks, record by record (or "Apply to all"):

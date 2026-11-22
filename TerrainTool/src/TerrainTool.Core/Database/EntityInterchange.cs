@@ -78,6 +78,17 @@ public static partial class Interchange
             }
             res.Add(new Entity(c.Num, kind, e.Name, table, e.Num, model, detail));
         }
+        // the same name more than once: the list says what sets each one apart (another record, or the same record seen
+        // through another CT entry)
+        foreach (var g in res.GroupBy(x => (x.Kind, x.Name)).Where(g => g.Count() > 1).ToList())
+        {
+            foreach (var x in g)
+            {
+                var twin = g.Where(y => y.Idx == x.Idx && y.Ct != x.Ct).Select(y => y.Ct).OrderBy(y => y).ToList();
+                string what = twin.Count > 0 ? $"{x.Table} {x.Idx}, shared with CT {string.Join(", ", twin)}" : $"{x.Table} {x.Idx}";
+                res[res.IndexOf(x)] = x with { Detail = $"{what} – {x.Detail}" };
+            }
+        }
         return res.OrderBy(x => x.Kind).ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.Ct).ToList();
     }
 
@@ -340,7 +351,7 @@ public static partial class Interchange
         }
 
         /// <summary>3D model: the same if the destination has it identical, otherwise copied (with a new number when taken).</summary>
-        private int MapModel(int g, string forWhat)
+        private int MapModel(int g, string forWhat, bool chosen = false)
         {
             if (g <= 0) return g;
             if (P.ModelMap.TryGetValue(g, out int m)) return m;
@@ -351,7 +362,12 @@ public static partial class Interchange
             if (SharedModels)
             {
                 if (ddir != null) P.Report.Add($"  model {g} ({forWhat}): {P.Dst.Name} has its own model {g} (BMS's shared models, never changed): it keeps that one and may look different");
-                else P.Problems.Add($"model {g} ({forWhat}): not in BMS's shared models used by {P.Dst.Name}, which are never changed: it will not be visible");
+                else
+                {
+                    P.Problems.Add($"model {g} ({forWhat}): not in BMS's shared models used by {P.Dst.Name}, which are never changed: it will not be visible");
+                    // the item the person chose would be in the database with nothing to show: not installed
+                    if (chosen) P.Blocking.Add($"{forWhat}: its 3D model {g} is only in {P.Src.Name}. {P.Dst.Name} takes its models from BMS's shared Terrdata\\objects, which is never written, so it would have no 3D model there");
+                }
                 P.KeptModels++;
                 return P.ModelMap[g] = g;
             }
@@ -448,7 +464,7 @@ public static partial class Interchange
             // CT fields: models, aircraft data (air vehicles only; the other mover numbers are Sim data, kept)
             var cf = sc.Fields.ToList();
             foreach (var g in Graphics)
-                if (sc.Int(g, 0) > 0) cf = DbOps.With(cf, (g, MapModel(sc.Int(g), name).ToString(Ci)));
+                if (sc.Int(g, 0) > 0) cf = DbOps.With(cf, (g, MapModel(sc.Int(g), name, Selected.Contains(sct) && g == "GraphicsNormal").ToString(Ci)));
             if (et == BmsDatabase.Vehicle && dom == 2 && sc.Int("MoverDefinitionData", -1) >= 0)
                 cf = DbOps.With(cf, ("MoverDefinitionData", MapAcd(sc.Int("MoverDefinitionData")).ToString(Ci)));
 

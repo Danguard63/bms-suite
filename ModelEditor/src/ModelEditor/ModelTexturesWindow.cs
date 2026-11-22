@@ -32,7 +32,7 @@ public sealed class ModelTexturesWindow : Window
     private readonly TextBlock _info = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 6), FontSize = 12 };
     private readonly TextBlock _status = new() { Margin = new Thickness(6, 2, 6, 2), TextWrapping = TextWrapping.Wrap };
     private readonly ProgressBar _bar = new() { Height = 10, Minimum = 0, Maximum = 1, Margin = new Thickness(6, 0, 6, 4) };
-    private readonly Button _replace = new() { Content = "Replace with…", FontWeight = FontWeights.SemiBold };
+    private readonly Button _replace = new() { Content = "Replace with…", Tag = "writes" };
     private readonly Button _export = new() { Content = "Export as PNG…" };
     private readonly Button _undo = new() { Content = "Restore previous version" };
     private readonly Button _openDir = new() { Content = "Open folder" };

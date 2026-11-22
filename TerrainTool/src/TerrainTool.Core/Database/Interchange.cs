@@ -35,6 +35,8 @@ public static partial class Interchange
         public Dictionary<int, int> CtMap { get; } = new();
         /// <summary>Records the destination has with the same name but other values, with the choice applied (entities plan).</summary>
         public List<Conflict> Conflicts { get; } = new();
+        /// <summary>Why the plan must not be installed as it is (a chosen item would have no 3D model in the destination).</summary>
+        public List<string> Blocking { get; } = new();
         public int ReusedFeatures, AddedFeatures, ReusedModels, CopiedModels, KeptModels;
     }
 
