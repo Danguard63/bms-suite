@@ -188,8 +188,11 @@ public sealed class MainWindow : Window
         foreach (var t in BmsTheater.List(data).Where(t => Directory.Exists(t.ObjectDir)))
         {
             bool shared = DbInstaller.IsShared(data, t.ObjectDir);
-            _from.Items.Add(new ComboBoxItem { Content = t.Name, Tag = t, ToolTip = t.ObjectDir });
-            _to.Items.Add(new ComboBoxItem { Content = t.Name + (shared ? "  (shared: not writable)" : ""), Tag = t, IsEnabled = !shared, ToolTip = t.ObjectDir });
+            // database only in compiled FALCON4.* files: the suite cannot read it nor add to it
+            bool compiled = BmsDatabase.CompiledOnly(t.ObjectDir);
+            string tip = compiled ? BmsDatabase.CompiledOnlyText(t.Name, t.ObjectDir) + "." : t.ObjectDir;
+            _from.Items.Add(new ComboBoxItem { Content = t.Name + (compiled ? "  (compiled database: not readable)" : ""), Tag = t, ToolTip = tip });
+            _to.Items.Add(new ComboBoxItem { Content = t.Name + (shared ? "  (shared: not writable)" : compiled ? "  (compiled database: not writable)" : ""), Tag = t, IsEnabled = !shared && !compiled, ToolTip = tip });
         }
         int Find(ComboBox c, string? n) => c.Items.OfType<ComboBoxItem>().ToList().FindIndex(i => i.Tag is BmsTheater t && string.Equals(t.Name, n, StringComparison.OrdinalIgnoreCase) && i.IsEnabled);
         string? from = Read("from.txt"), to = Read("to.txt");
@@ -220,7 +223,9 @@ public sealed class MainWindow : Window
             _rows = Interchange.Layouts(s, db).Select(l => new LayoutRow(l.Ocd, l.Name, l.Type >= 0 ? EditorData.TypeName(l.Type) : "", l.Pieces)).ToList();
             _eRows = Interchange.Entities(db).Select(e => new EntityRow(e.Ct, Interchange.KindName(e.Kind), e.Name, e.Detail, "", e.Kind)).ToList();
             _dstNamesOf = null;
-            _status.Text = $"{s.Name}: {_rows.Count} layouts, {_eRows.Count} aircraft, vehicles, weapons and unit types ({s.ObjectDir})";
+            _status.Text = BmsDatabase.CompiledOnly(s.ObjectDir)
+                ? BmsDatabase.CompiledOnlyText(s.Name, s.ObjectDir) + ": nothing can be copied from it."
+                : $"{s.Name}: {_rows.Count} layouts, {_eRows.Count} aircraft, vehicles, weapons and unit types ({s.ObjectDir})";
         }
         catch (Exception ex) { _status.Text = "Source not read: " + ex.Message; _eRows.Clear(); }
         finally { Cursor = null; }
@@ -275,7 +280,7 @@ public sealed class MainWindow : Window
         try
         {
             var p = Interchange.Make(s, d, _data.Text.Trim(), sel.Select(r => r.Ocd).ToList());
-            _current = p.Problems.Any(x => x.StartsWith("Source and destination", StringComparison.Ordinal) || x.StartsWith("The destination uses", StringComparison.Ordinal)) ? null : p;
+            _current = p.Problems.Any(x => x.StartsWith("Source and destination", StringComparison.Ordinal) || x.StartsWith("The destination uses", StringComparison.Ordinal) || x.StartsWith("The source uses", StringComparison.Ordinal)) ? null : p;
             var lines = new List<string> { $"PLAN – nothing written yet ({DateTime.Now:HH:mm:ss})", "" };
             lines.AddRange(p.Report);
             if (p.Problems.Count > 0) { lines.Add(""); lines.Add($"To check ({p.Problems.Count}):"); lines.AddRange(p.Problems.Select(x => "  ! " + x)); }
@@ -440,7 +445,7 @@ public sealed class MainWindow : Window
                 ask = false;
                 p = Interchange.MakeEntities(s, d, _data.Text.Trim(), cts, resolve: _eResolve, copySim: sim);
             }
-            bool blocked = p.Problems.Any(x => x.StartsWith("Source and destination", StringComparison.Ordinal) || x.StartsWith("The destination uses", StringComparison.Ordinal));
+            bool blocked = p.Problems.Any(x => x.StartsWith("Source and destination", StringComparison.Ordinal) || x.StartsWith("The destination uses", StringComparison.Ordinal) || x.StartsWith("The source uses", StringComparison.Ordinal));
             _eCurrent = blocked ? null : p;
             _eCurrentCts = cts;
             var lines = new List<string> { $"PLAN – nothing written yet ({DateTime.Now:HH:mm:ss})", "" };
@@ -448,7 +453,8 @@ public sealed class MainWindow : Window
             {
                 lines.Add($"CANNOT BE INSTALLED ({p.Blocking.Count}):");
                 lines.AddRange(p.Blocking.Select(x => "  ✖ " + x));
-                lines.Add("  Choose a destination theater with its own 3D models, or leave these items out.");
+                if (p.Blocking.Any(x => x.Contains("3D model", StringComparison.Ordinal)))
+                    lines.Add("  Choose a destination theater with its own 3D models, or leave these items out.");
                 lines.Add("");
             }
             lines.AddRange(p.Report);

@@ -111,6 +111,7 @@ public static partial class Interchange
         if (modelMap != null) foreach (var kv in modelMap) p.ModelMap[kv.Key] = kv.Value;
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
+        if (CompiledOnlyBlock(p, src, dst)) return p;
         var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination, AirframeMap = airframeMap, AcdAirframe = acdAirframe, Resolve = resolve };
         foreach (int ct in cts) x.Selected.Add(ct);
         foreach (int ct in cts)
@@ -382,6 +383,7 @@ public static partial class Interchange
             foreach (var f in Directory.EnumerateFiles(sdir)) P.Files[Path.Combine(target, Path.GetFileName(f))] = (f, null);
             P.CopiedModels++;
             CheckTextures(P, P.Src, P.Dst, sdir, forWhat);
+            CheckPbrTextures(P, P.Dst, sdir, forWhat, SharedModels);
             return P.ModelMap[g] = n;
         }
 

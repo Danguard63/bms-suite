@@ -191,7 +191,7 @@ public sealed class SquadronWindow : Window
         int sets = 1;
         try { var md = ModelViewWindow.VehiclesOf(d, db, u).FirstOrDefault()?.ModelDir; if (md != null) sets = Math.Max(1, BmlModel.ReadParent(md)?.TextureSets ?? 1); } catch { }
         sets = Math.Max(sets, u.TexSet + 1);
-        for (int i = 0; i < sets; i++) skin.Items.Add(new ComboBoxItem { Content = i == 0 ? "1 (default)" : (i + 1).ToString(CultureInfo.InvariantCulture), Tag = i });
+        for (int i = 0; i < sets; i++) skin.Items.Add(new ComboBoxItem { Content = i == 0 ? "0 (default)" : i.ToString(CultureInfo.InvariantCulture), Tag = i });
         skin.SelectedIndex = Math.Clamp(u.TexSet, 0, sets - 1);
         var flagNum = UnitText.T($"Flags: {u.UnitFlags}", 12);
         flagNum.Foreground = Brushes.DimGray;

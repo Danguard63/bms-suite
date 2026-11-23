@@ -317,7 +317,7 @@ public sealed class ModelViewWindow : Window
             long len = File.Exists(f) ? new FileInfo(f).Length : 0;
             _lod.Items.Add(new ComboBoxItem { Content = $"{i} – {(i == 0 ? "most detailed" : i == _parent.Lods.Count - 1 ? "least detailed" : "")} {len / 1024.0 / 1024.0:0.0} MB".Replace("  ", " ") });
         }
-        for (int i = 0; i < _parent.TextureSets; i++) _set.Items.Add(new ComboBoxItem { Content = i == 0 ? "1 (default)" : (i + 1).ToString(CultureInfo.InvariantCulture) });
+        for (int i = 0; i < _parent.TextureSets; i++) _set.Items.Add(new ComboBoxItem { Content = i == 0 ? "0 (default)" : i.ToString(CultureInfo.InvariantCulture) });
         _lod.SelectedIndex = BmlModel.DefaultLod(_parent);
         _set.SelectedIndex = Math.Clamp(StartSet, 0, Math.Max(0, _set.Items.Count - 1));
         _filling = false;

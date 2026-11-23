@@ -80,8 +80,10 @@ public sealed partial class BmlScene
         yield return Path.Combine(modelsRoot, rel);
         if (rel.StartsWith("Data" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || rel.StartsWith("Data/", StringComparison.OrdinalIgnoreCase))
         {
-            var bms = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetFullPath(modelsRoot)))));
-            if (bms != null) yield return Path.Combine(bms, rel);
+            // la cartella di BMS e' 4 livelli sopra Models per la Korea (Data\Terrdata\objects\Models) ma 5 per un add-on
+            // (Data\Add-On X\Terrdata\objects\Models): si prova ogni cartella sopra, il primo file che esiste e' quello giusto
+            for (var up = Path.GetDirectoryName(Path.GetFullPath(modelsRoot)); up != null; up = Path.GetDirectoryName(up))
+                yield return Path.Combine(up, rel);
         }
     }
 

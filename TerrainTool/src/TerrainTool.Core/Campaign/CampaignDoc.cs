@@ -483,6 +483,17 @@ public sealed class CampaignDoc
         Dirty = true;
     }
 
+    /// <summary>Tutti i flag della squadra (.tea) come sono; usato anche per annullare.</summary>
+    public void SetTeamFlags(CampTeam t, short flags)
+    {
+        Teams?.SetTeamFlags(t, flags);
+        Dirty = true;
+    }
+
+    /// <summary>Accende o spegne solo TEAM_HASSATS (0x02); gli altri bit (attiva, aggiornata, TEAM_MEMBER_HASSATS...) restano.</summary>
+    public void SetTeamSatellites(CampTeam t, bool on) =>
+        SetTeamFlags(t, (short)(on ? t.TeamFlags | TeamFile.HasSats : t.TeamFlags & ~TeamFile.HasSats));
+
     public void SetTeamColor(CampTeam t, byte color)
     {
         Teams?.SetColor(t, color);

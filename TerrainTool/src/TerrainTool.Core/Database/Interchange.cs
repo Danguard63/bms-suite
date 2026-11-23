@@ -99,6 +99,7 @@ public static partial class Interchange
         var p = new Plan { Src = src, Dst = dst, BmsObjects = Path.Combine(dataDir, "Terrdata", "objects") };
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
+        if (CompiledOnlyBlock(p, src, dst)) return p;
         var s = BmsDatabase.Load(src.ObjectDir);
         var d = BmsDatabase.Load(dst.ObjectDir);
         var dLayouts = Directory.Exists(Path.Combine(dst.ObjectDir, "ObjectiveRelatedData"))
@@ -138,6 +139,7 @@ public static partial class Interchange
             foreach (var f in Directory.EnumerateFiles(sdir)) p.Files[Path.Combine(target, Path.GetFileName(f))] = (f, null);
             p.CopiedModels++;
             CheckTextures(p, src, dst, sdir, forWhat);
+            CheckPbrTextures(p, dst, sdir, forWhat, sharedModels);
             return p.ModelMap[g] = n;
         }
 
@@ -248,6 +250,23 @@ public static partial class Interchange
         return p;
     }
 
+    /// <summary>
+    /// Source or destination with a database only in compiled FALCON4.* files: the plan stops (the destination would be read as
+    /// empty and numbered from 0; the source would have nothing to offer). Messages start with "The source uses" / "The destination
+    /// uses" so that the windows treat them as blocking.
+    /// </summary>
+    private static bool CompiledOnlyBlock(Plan p, BmsTheater src, BmsTheater dst)
+    {
+        foreach (var (t, role) in new[] { (src, "source"), (dst, "destination") })
+            if (BmsDatabase.CompiledOnly(t.ObjectDir))
+            {
+                string why = $"The {role} uses a compiled-only database: " + BmsDatabase.CompiledOnlyText(t.Name, t.ObjectDir) + ".";
+                p.Problems.Add(why);
+                p.Blocking.Add(why);
+            }
+        return p.Blocking.Count > 0;
+    }
+
     private static string FeatKey(string name, DbRecord ct) => name.Trim().ToLowerInvariant() + "|" + ct.Int("GraphicsNormal", 0);
 
     /// <summary>Numbered textures (KoreaObj) of a classic model: copied if the destination does not have them; a different one with the same number is a problem.</summary>
@@ -284,6 +303,47 @@ public static partial class Interchange
             }
             p.Files[dFile] = (t, null);
             p.Report.Add($"texture {sub}\\{name} ({forWhat}) copied");
+        }
+    }
+
+    /// <summary>
+    /// Textures that a PBR model (Materials.mtl) takes from outside its own folder. "1909/PilotUS_ALB.dds" or "_MiscTex/x.dds" are
+    /// read from the theater's Models folder: copied there when the destination does not have them (a different file with the same
+    /// path is a problem, it belongs to another model). "Data/..." paths are read from the BMS folder itself, the same for every
+    /// theater: only checked. The model's own folder is copied whole by the caller.
+    /// </summary>
+    internal static void CheckPbrTextures(Plan p, BmsTheater dst, string modelDir, string forWhat, bool sharedModels)
+    {
+        string mtl = Path.Combine(modelDir, "Materials.mtl");
+        if (!File.Exists(mtl)) return;
+        string srcRoot = Path.GetDirectoryName(Path.GetFullPath(modelDir))!;
+        string dstRoot = Path.Combine(dst.ModelsDir, "Models");
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match m in Regex.Matches(File.ReadAllText(mtl), @"""File""\s*:\s*""([^""]+\.dds)""", RegexOptions.IgnoreCase))
+        {
+            string rel = m.Groups[1].Value.Replace("\\\\", "\\").Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            if (!seen.Add(rel) || File.Exists(Path.Combine(modelDir, rel))) continue;
+            if (rel.StartsWith("Data" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                string bmsRoot = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Norm(p.BmsObjects))))!;   // Data\Terrdata\objects → BMS
+                if (!File.Exists(Path.Combine(bmsRoot, rel)))
+                    p.Problems.Add($"{forWhat}: texture {rel} of its Materials.mtl not found in the BMS folder");
+                continue;
+            }
+            string sFile = Path.Combine(srcRoot, rel);
+            if (!File.Exists(sFile)) { p.Problems.Add($"{forWhat}: texture {rel} of its Materials.mtl not found in the source"); continue; }
+            string dFile = Path.Combine(dstRoot, rel), bFile = Path.Combine(p.BmsObjects, "Models", rel);
+            string? have = File.Exists(dFile) ? dFile : sharedModels && File.Exists(bFile) ? bFile : null;
+            if (have != null)
+            {
+                if (Norm(have) != Norm(sFile) && !SameFile(sFile, have))
+                    p.Problems.Add($"{forWhat}: texture {rel} (shared with other models) is a different file in the destination: the model may look different");
+                continue;
+            }
+            if (sharedModels) { p.Problems.Add($"{forWhat}: texture {rel} (shared with other models) is not in BMS's shared models used by {dst.Name}, which are never changed"); continue; }
+            if (p.Files.ContainsKey(dFile)) continue;
+            p.Files[dFile] = (sFile, null);
+            p.Report.Add($"texture {rel} ({forWhat}, taken from another model's folder) copied");
         }
     }
 

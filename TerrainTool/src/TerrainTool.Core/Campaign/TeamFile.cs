@@ -10,8 +10,11 @@ public sealed class CampTeam
     public byte[] Member = new byte[8];
     public short[] Stance = new short[8];
     public byte Flag, Color, Equipment;
-    /// <summary>Flag della squadra: 1 attiva, 2 ha i satelliti (vede tutte le unita' nemiche), 4 aggiornata, 8 priorita' del giocatore,
-    /// 16 un membro ha i satelliti (stessi nomi di Mission Commander).</summary>
+    /// <summary>Flag della squadra (TeamClass::flags_ di BMS, stessi nomi di Mission Commander): 1 TEAM_ACTIVE, 2 TEAM_HASSATS,
+    /// 4 TEAM_UPDATED, 8 TEAM_PLAYERPRIO, 16 TEAM_MEMBER_HASSATS. Satelliti (verificato in BMS 4.38, TeamClass::HasSatellites =
+    /// flags &amp; 0x12, letto solo da CampBaseClass::GetSpotted): basta uno dei due bit; individuano solo task force navali e
+    /// obiettivi/oggetti fermi (questi dopo la prima ora), con probabilita' secondo il meteo della cella e nulla col maltempo.
+    /// Non vedono aerei ne' unita' di terra in movimento.</summary>
     public short TeamFlags;
     internal int TeamFlagsAt;
     public string Name = "", Motto = "";

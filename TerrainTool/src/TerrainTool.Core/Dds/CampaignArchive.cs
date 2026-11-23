@@ -47,8 +47,10 @@ public static class CampaignArchive
     }
 
     /// <summary>
-    /// BMS cerca i file interni con il nome dell'archivio (Te_New_Nt.tac → Te_New_Nt.cmp, Te_New_Nt.obj ...; cosi' sono quelli
-    /// della Korea): se tutti i file interni hanno un altro nome (te_new.* copiati in Te_New_Nt.tac) si rinominano.
+    /// Nei file della Korea i file interni hanno il nome dell'archivio (Te_New_Nt.tac → Te_New_Nt.cmp, Te_New_Nt.obj ...): se tutti
+    /// hanno un altro nome (te_new.* copiati in Te_New_Nt.tac) si rinominano. OpenCampFile di BMS 4.38 confronta solo la parte dal
+    /// primo punto in poi (strchr '.', _stricmp): con nomi senza punti basta l'estensione, ma se il nome dell'archivio ha un punto
+    /// (es. "Op.Telic.tac" cerca ".Telic.tea") i file interni devono avere lo stesso nome, ed e' cio' che questa funzione garantisce.
     /// </summary>
     public static List<(string Name, byte[] Data)> MatchNames(List<(string Name, byte[] Data)> files, string baseName)
     {

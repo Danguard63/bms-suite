@@ -218,7 +218,7 @@ public sealed class ModelViewer : DockPanel
             string size = File.Exists(f) ? $"{new FileInfo(f).Length / 1024.0 / 1024.0:0.0} MB" : "missing";
             _lod.Items.Add(new ComboBoxItem { Content = $"{i} – {_parent.Lods[i].File} ({_parent.Lods[i].Distance:0} ft, {size})" });
         }
-        for (int i = 0; i < _parent.TextureSets; i++) _set.Items.Add(new ComboBoxItem { Content = i == 0 ? "1 (default)" : (i + 1).ToString(CultureInfo.InvariantCulture) });
+        for (int i = 0; i < _parent.TextureSets; i++) _set.Items.Add(new ComboBoxItem { Content = i == 0 ? "0 (default)" : i.ToString(CultureInfo.InvariantCulture) });
         _lod.SelectedIndex = same && oldLod >= 0 && oldLod < _lod.Items.Count ? oldLod : 0;
         _set.SelectedIndex = same && oldSet >= 0 && oldSet < _set.Items.Count ? oldSet : 0;
         _filling = false;

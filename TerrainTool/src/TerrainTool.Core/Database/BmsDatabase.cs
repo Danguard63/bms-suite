@@ -50,6 +50,19 @@ public sealed class BmsDatabase
 
     private static readonly EnumerationOptions NoCase = new() { MatchCasing = MatchCasing.CaseInsensitive };
 
+    /// <summary>
+    /// The database is only in the compiled FALCON4.* files, with no Falcon4_*.xml (e.g. a theater made with older tools): the suite
+    /// reads and writes the XML tables, so it sees such a database as empty and must not plan anything for it.
+    /// </summary>
+    public static bool CompiledOnly(string objectsDir) =>
+        Directory.Exists(objectsDir) && !Directory.EnumerateFiles(objectsDir, "Falcon4_*.xml", NoCase).Any() &&
+        Directory.EnumerateFiles(objectsDir, "FALCON4.CT", NoCase).Any();
+
+    /// <summary>The explanation shown when a theater's database is <see cref="CompiledOnly"/>.</summary>
+    public static string CompiledOnlyText(string theater, string objectsDir) =>
+        $"{theater} has its database only in compiled FALCON4.* files ({objectsDir}), with no Falcon4_*.xml tables: the BMS Suite reads and writes " +
+        "the XML tables, so it cannot read this database nor add to it";
+
     public static BmsDatabase Load(string objectsDir)
     {
         var db = new BmsDatabase(objectsDir);

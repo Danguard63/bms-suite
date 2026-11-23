@@ -207,10 +207,8 @@ public sealed class BmlModel
             if (t.Contains("Glass", StringComparison.OrdinalIgnoreCase)) glass = true;
             if (mt.Albedo == null) return null;
             string rel = mt.Albedo.Replace('/', Path.DirectorySeparatorChar);
-            var f1 = Path.Combine(parent.Folder, rel);
-            if (File.Exists(f1)) return f1;
-            var f2 = Path.Combine(modelsRoot, rel);
-            return File.Exists(f2) ? f2 : null;
+            // accanto al modello, nella cartella Models ("1909/x.dds") o dalla cartella di BMS ("Data/TerrData/...")
+            return BmlScene.TextureCandidates(parent.Folder, modelsRoot, rel).FirstOrDefault(File.Exists);
         }
         if (ver != 1)
         {

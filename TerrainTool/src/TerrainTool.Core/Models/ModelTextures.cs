@@ -73,9 +73,10 @@ public static class ModelTextures
         }
         string? ResolvePbr(string rel)
         {
+            // accanto al modello, nella cartella Models ("1909/x.dds") o dalla cartella di BMS ("Data/TerrData/...")
             rel = rel.Replace('/', Path.DirectorySeparatorChar);
-            var a = Path.Combine(modelDir, rel); if (System.IO.File.Exists(a)) return Path.GetFullPath(a);
-            var b = Path.Combine(modelsRoot, rel); return System.IO.File.Exists(b) ? Path.GetFullPath(b) : null;
+            var f = BmlScene.TextureCandidates(modelDir, modelsRoot, rel).FirstOrDefault(System.IO.File.Exists);
+            return f == null ? null : Path.GetFullPath(f);
         }
 
         for (int lod = 0; lod < parent.Lods.Count; lod++)
@@ -91,7 +92,8 @@ public static class ModelTextures
                 int per = sets > 1 && ids.Count % sets == 0 ? ids.Count / sets : ids.Count;
                 for (int i = 0; i < ids.Count; i++)
                 {
-                    if (ids[i] < 0) continue;
+                    // 9990-9999: numeri speciali dei modelli vecchi (nessuna texture / colore), non sono file
+                    if (ids[i] < 0 || ids[i] is >= 9990 and <= 9999) continue;
                     string? found = null, other = null;
                     foreach (var d in textureDirs)
                     {

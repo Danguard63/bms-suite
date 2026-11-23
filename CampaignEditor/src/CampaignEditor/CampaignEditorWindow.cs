@@ -1415,7 +1415,7 @@ public sealed class CampaignEditorWindow : Window
             try { veh = ModelViewWindow.VehiclesOf(d, _unitDb, u); var md = veh.FirstOrDefault()?.ModelDir; if (md != null) sets = Math.Max(1, TerrainTool.Core.Models.BmlModel.ReadParent(md)?.TextureSets ?? 1); } catch { }
             sets = Math.Max(sets, u.TexSet + 1);
             var skin = new ComboBox { ToolTip = "Which skin (texture set) the aircraft of this squadron wear (Mission Commander: Skin set). Ctrl+Z undoes." };
-            for (int i = 0; i < sets; i++) skin.Items.Add(i == 0 ? "1 (default)" : (i + 1).ToString(CultureInfo.InvariantCulture));
+            for (int i = 0; i < sets; i++) skin.Items.Add(i == 0 ? "0 (default)" : i.ToString(CultureInfo.InvariantCulture));
             skin.SelectedIndex = Math.Clamp(u.TexSet, 0, sets - 1);
             skin.SelectionChanged += (_, _) =>
             {
@@ -1423,7 +1423,7 @@ public sealed class CampaignEditorWindow : Window
                 if (now < 0 || now == old) return;
                 d.Units!.SetTexSet(u, now); _undo.Push(() => { d.Units!.SetTexSet(u, old); RefreshProps(); });
                 MarkDirty();
-                _status.Text = $"{UnitLabel(u)}: skin {old + 1} → {now + 1}.";
+                _status.Text = $"{UnitLabel(u)}: skin {old} → {now}.";
             };
             var view = new Button { Content = "3D view…", Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(6, 0, 0, 0), ToolTip = "The aircraft in the chosen skin" };
             view.Click += (_, _) => ModelViewWindow.Open(this, UnitLabel(u), veh, Math.Max(0, skin.SelectedIndex));
@@ -1602,6 +1602,23 @@ public sealed class CampaignEditorWindow : Window
                 _props.Children.Add(Note(txt));
             }
         }
+
+        // satelliti: TEAM_HASSATS (0x02) del .tea; BMS (TeamClass::HasSatellites) accetta anche TEAM_MEMBER_HASSATS (0x10)
+        bool member = (t.TeamFlags & TeamFile.MemberHasSats) != 0;
+        var sats = new CheckBox { Content = "Has satellites", IsChecked = (t.TeamFlags & TeamFile.HasSats) != 0, VerticalAlignment = VerticalAlignment.Center,
+            ToolTip = "TEAM_HASSATS (Mission Commander 'Team has sats'), saved in the .cam / .tac. Satellites spot enemy naval task forces " +
+                      "and objectives (objectives after the first hour of the campaign), with a chance that depends on the weather of the cell; " +
+                      "nothing in poor weather. They never spot aircraft or moving ground units." };
+        sats.Click += (_, _) =>
+        {
+            short old = t.TeamFlags;
+            d.SetTeamSatellites(t, sats.IsChecked == true); _undo.Push(() => d.SetTeamFlags(t, old));
+            MarkDirty(); ShowTeam(t);
+        };
+        _props.Children.Add(Row("Satellites", sats));
+        if (member)
+            _props.Children.Add(Note("'Team member has sats' (0x10) is also set in the file (BMS sets it when a team with satellites becomes its ally through a campaign trigger): " +
+                                     "this team has satellites even with the box unchecked."));
 
         // schieramento: con chi combatte (cteam); i membri si ricalcolano da soli
         var side = new ComboBox { ToolTip = "The side this team fights on (cteam). Teams on the same side share the war: e.g. Kuwait and Saudi Arabia on the Coalition side." };
