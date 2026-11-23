@@ -1503,6 +1503,32 @@ public sealed class CampaignEditorWindow : Window
         5 => new SolidColorBrush(Color.FromRgb(220, 40, 40)), _ => Brushes.Transparent,
     };
 
+    /// <summary>Interruttore ON/OFF ben visibile (binario grigio / ambra con il pallino che si sposta).</summary>
+    private static System.Windows.Controls.Primitives.ToggleButton OnOffSwitch(bool on)
+    {
+        const string xaml = @"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='ToggleButton'>
+  <Grid Width='64' Height='24' Cursor='Hand' Background='Transparent'>
+    <Border x:Name='track' CornerRadius='12' Background='#9AA0A6'/>
+    <TextBlock x:Name='lbl' Text='OFF' Foreground='White' FontWeight='SemiBold' FontSize='11' VerticalAlignment='Center' HorizontalAlignment='Right' Margin='0,0,9,0'/>
+    <Ellipse x:Name='knob' Width='18' Height='18' Fill='White' HorizontalAlignment='Left' Margin='3,0,0,0'/>
+  </Grid>
+  <ControlTemplate.Triggers>
+    <Trigger Property='IsChecked' Value='True'>
+      <Setter TargetName='track' Property='Background' Value='#E8A317'/>
+      <Setter TargetName='knob' Property='HorizontalAlignment' Value='Right'/>
+      <Setter TargetName='knob' Property='Margin' Value='0,0,3,0'/>
+      <Setter TargetName='lbl' Property='Text' Value='ON'/>
+      <Setter TargetName='lbl' Property='HorizontalAlignment' Value='Left'/>
+      <Setter TargetName='lbl' Property='Margin' Value='10,0,0,0'/>
+    </Trigger>
+  </ControlTemplate.Triggers>
+</ControlTemplate>";
+        return new System.Windows.Controls.Primitives.ToggleButton
+        {
+            IsChecked = on, Template = (ControlTemplate)System.Windows.Markup.XamlReader.Parse(xaml), VerticalAlignment = VerticalAlignment.Center,
+        };
+    }
+
     private void ShowTeam(CampTeam t)
     {
         var d = _doc!;
@@ -1578,11 +1604,10 @@ public sealed class CampaignEditorWindow : Window
                                       && u.Owner < d.Teams.Teams.Count && d.Teams.Teams[u.Owner].CTeam != t.CTeam;
             var enemies = d.Units.Units.Where(Enemy).ToList();
             int seen = enemies.Count(u => (d.Units.Spotted(u) & bits) == bits);
-            var bar = new WrapPanel();
-            var spot = new Button { Content = $"Show all {enemies.Count} enemy units", Margin = new Thickness(0, 2, 6, 2),
-                ToolTip = "Marks every unit of the other side as already spotted by this team (and the teams on its side), at the time of this file: its pilots see them on the 2D map from the start. Ctrl+Z undoes." };
-            var hide = new Button { Content = "Hide them", Margin = new Thickness(0, 2, 6, 2),
-                ToolTip = "Removes this side's spotted mark from every enemy unit: they appear on the map only once found in the mission. Ctrl+Z undoes." };
+            bool allSeen = enemies.Count > 0 && seen == enemies.Count;
+            var sw = OnOffSwitch(allSeen);
+            sw.ToolTip = "ON: every unit of the other side is marked as already spotted by this team (and the teams on its side) at the time of this file, " +
+                         "so its pilots see them on the 2D map from the start. OFF: they appear only once found in the mission. Ctrl+Z undoes.";
             void Mark(bool show)
             {
                 var old = enemies.Select(u => (u, d.Units.Spotted(u), d.Units.SpotTime(u))).ToList();
@@ -1595,12 +1620,17 @@ public sealed class CampaignEditorWindow : Window
                 }
                 _undo.Push(() => { foreach (var (u, m, st) in old) d.Units!.SetSpotted(u, m, st); ShowTeam(t); });
                 MarkDirty(); ShowTeam(t);
-                _status.Text = $"{t.Name}: {(show ? "all enemy units spotted" : "enemy units hidden")} ({enemies.Count}).";
+                _status.Text = $"{t.Name}: enemy units {(show ? "visible from the start" : "hidden until found")} ({enemies.Count}).";
             }
-            spot.Click += (_, _) => Mark(true);
-            hide.Click += (_, _) => Mark(false);
-            bar.Children.Add(spot); bar.Children.Add(hide);
-            bar.Children.Add(new TextBlock { Text = $"{seen} of {enemies.Count} already spotted", VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.DimGray });
+            sw.Click += (_, _) => Mark(sw.IsChecked == true);
+            var bar = new StackPanel { Orientation = Orientation.Horizontal };
+            bar.Children.Add(sw);
+            bar.Children.Add(new TextBlock
+            {
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), TextWrapping = TextWrapping.Wrap,
+                Text = allSeen ? $"visible on the 2D map from the start ({enemies.Count} units)"
+                     : seen > 0 ? $"hidden until found ({seen} of {enemies.Count} already spotted)" : $"hidden until found ({enemies.Count} units)",
+            });
             _props.Children.Add(Row("Enemy units", bar));
         }
 
