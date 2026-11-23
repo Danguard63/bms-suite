@@ -1407,6 +1407,31 @@ public sealed class CampaignEditorWindow : Window
             };
             _props.Children.Add(Row("Orders", ord));
         }
+        if (u.Kind == UnitKind.Squadron && u.TexSetAt != 0)
+        {
+            // skin degli aerei dello squadrone (texSet), come "Skin set" di Mission Commander
+            int sets = 1;
+            List<ModelViewWindow.Vehicle> veh = new();
+            try { veh = ModelViewWindow.VehiclesOf(d, _unitDb, u); var md = veh.FirstOrDefault()?.ModelDir; if (md != null) sets = Math.Max(1, TerrainTool.Core.Models.BmlModel.ReadParent(md)?.TextureSets ?? 1); } catch { }
+            sets = Math.Max(sets, u.TexSet + 1);
+            var skin = new ComboBox { ToolTip = "Which skin (texture set) the aircraft of this squadron wear (Mission Commander: Skin set). Ctrl+Z undoes." };
+            for (int i = 0; i < sets; i++) skin.Items.Add(i == 0 ? "1 (default)" : (i + 1).ToString(CultureInfo.InvariantCulture));
+            skin.SelectedIndex = Math.Clamp(u.TexSet, 0, sets - 1);
+            skin.SelectionChanged += (_, _) =>
+            {
+                int old = u.TexSet, now = skin.SelectedIndex;
+                if (now < 0 || now == old) return;
+                d.Units!.SetTexSet(u, now); _undo.Push(() => { d.Units!.SetTexSet(u, old); RefreshProps(); });
+                MarkDirty();
+                _status.Text = $"{UnitLabel(u)}: skin {old + 1} → {now + 1}.";
+            };
+            var view = new Button { Content = "3D view…", Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(6, 0, 0, 0), ToolTip = "The aircraft in the chosen skin" };
+            view.Click += (_, _) => ModelViewWindow.Open(this, UnitLabel(u), veh, Math.Max(0, skin.SelectedIndex));
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(skin); sp.Children.Add(view);
+            _props.Children.Add(Row("Skin", sp));
+            _props.Children.Add(Line($"{sets} skin{(sets == 1 ? "" : "s")} in the 3D model of this aircraft."));
+        }
         if (u.IsGround)
         {
             var div = new TextBox { Text = u.Division.ToString(CultureInfo.InvariantCulture) };

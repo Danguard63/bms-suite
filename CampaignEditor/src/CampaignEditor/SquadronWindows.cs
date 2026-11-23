@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using TerrainTool.Core.Campaign;
+using TerrainTool.Core.Models;
 
 namespace CampaignEditor;
 
@@ -183,6 +184,15 @@ public sealed class SquadronWindow : Window
         int max = db.FullRoster(ct);
         var patch = new TextBox { Text = u.Patch.ToString(CultureInfo.InvariantCulture) };
         var fuel = new TextBox { Text = u.Fuel.ToString(CultureInfo.InvariantCulture), ToolTip = $"Standard for this type: {se.FuelFor(ct)}" };
+        // skin (texture set) degli aerei dello squadrone: quante ce ne sono lo dice il Parent.dat del modello
+        var skin = new ComboBox { IsEnabled = u.TexSetAt != 0,
+            ToolTip = u.TexSetAt != 0 ? "Which skin (texture set) the aircraft of this squadron wear, as 'Skin set' in Mission Commander. '3D view…' shows the one chosen here."
+                                      : "This file is too old to keep a skin per squadron." };
+        int sets = 1;
+        try { var md = ModelViewWindow.VehiclesOf(d, db, u).FirstOrDefault()?.ModelDir; if (md != null) sets = Math.Max(1, BmlModel.ReadParent(md)?.TextureSets ?? 1); } catch { }
+        sets = Math.Max(sets, u.TexSet + 1);
+        for (int i = 0; i < sets; i++) skin.Items.Add(new ComboBoxItem { Content = i == 0 ? "1 (default)" : (i + 1).ToString(CultureInfo.InvariantCulture), Tag = i });
+        skin.SelectedIndex = Math.Clamp(u.TexSet, 0, sets - 1);
         var flagNum = UnitText.T($"Flags: {u.UnitFlags}", 12);
         flagNum.Foreground = Brushes.DimGray;
         var human = new CheckBox { Content = "Players can fly it (Human Cont)", IsChecked = SquadronEditor.IsHuman(u), Margin = new Thickness(0, 4, 0, 4), FontWeight = FontWeights.SemiBold,
@@ -226,7 +236,7 @@ public sealed class SquadronWindow : Window
         var change = new GroupBox { Header = "Change", Padding = new Thickness(6), Width = 470, Margin = new Thickness(0, 0, 10, 0),
             Content = new StackPanel { Children =
             {
-                UnitText.Form(("Team", team), ("Name (number)", name), ("Specialty", spec), ("Roster", rosterBox), ("Squad patch", patch), ("Fuel", fuel)),
+                UnitText.Form(("Team", team), ("Name (number)", name), ("Specialty", spec), ("Roster", rosterBox), ("Squad patch", patch), ("Skin", skin), ("Fuel", fuel)),
                 UnitText.Btn($"Max roster: {max} ({UnitText.Vehicles(max)} aircraft)", () => rosterBox.Text = max.ToString(CultureInfo.InvariantCulture)),
                 human, flagNum, sameType,
                 new TextBlock { Text = "Aircraft", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 0) }, acBox, changeAc,
@@ -358,13 +368,14 @@ public sealed class SquadronWindow : Window
             {
                 Owner = team.SelectedItem is ComboBoxItem { Tag: byte t } ? t : u.Owner, Specialty = (byte)Math.Max(0, spec.SelectedIndex),
                 NameId = nm, Patch = pa, Roster = ro, Flags = fl, Fuel = fu, Stores = stores,
+                Skin = u.TexSetAt != 0 && skin.SelectedItem is ComboBoxItem { Tag: int sk } ? sk : null,
                 Csr = csr.Length == 16 ? roleRows.Select(r => (byte)Math.Clamp(r.Value, 0, 255)).ToArray() : Array.Empty<byte>(),
                 ResetPilots = resetPilots, ResetPilotStats = resetStats, ClearSchedule = clearSched,
             }));
         });
         apply.FontWeight = FontWeights.SemiBold;
         var right = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        right.Children.Add(UnitText.Btn("3D view…", () => ModelViewWindow.Open(this, UnitText.Title(db, u), ModelViewWindow.VehiclesOf(d, db, u)), "The aircraft of this squadron in 3D with the BMS textures"));
+        right.Children.Add(UnitText.Btn("3D view…", () => ModelViewWindow.Open(this, UnitText.Title(db, u), ModelViewWindow.VehiclesOf(d, db, u), skin.SelectedIndex), "The aircraft of this squadron in 3D with the BMS textures, in the skin chosen above"));
         right.Children.Add(UnitText.Btn("Cancel", Close)); right.Children.Add(apply);
         DockPanel.SetDock(del, Dock.Left); bottom.Children.Add(del); bottom.Children.Add(right);
 

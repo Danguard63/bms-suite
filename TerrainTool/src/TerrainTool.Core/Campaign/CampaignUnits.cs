@@ -88,6 +88,8 @@ public sealed class CampUnit
     public int FuelAt, CsrAt, PilotsAt, PilotCount, PilotSize, ScheduleAt, RatingAt, KillsAt, PatchAt, PatchSize, RetaskAt;
     public int Fuel;
     public ushort Patch;
+    /// <summary>Squadrone (versione 105 in poi): set di texture (skin) degli aerei, come "Skin set" di Mission Commander; TexSetAt 0 = non c'e'.</summary>
+    public int TexSetAt, TexSet;
 
     internal CampUnit Copy() { var c = (CampUnit)MemberwiseClone(); c.Elements = new List<VuId>(Elements); c.Waypoints = new List<CampWaypoint>(Waypoints); return c; }
     internal void CopyFrom(CampUnit c)
@@ -290,7 +292,7 @@ public sealed class UniFile
         // il nome a 80 caratteri (v >= 101) MC lo legge solo con "Export": nei file normali non c'e'
         if (v < 100 && v >= 83) o += 3;
         if (v >= 102) { u.RetaskAt = o - s; o += 5; }   // squadronRetaskAt, veh_relocate
-        if (v >= 105) o += 4;                            // texSet
+        if (v >= 105) { u.TexSetAt = o - s; u.TexSet = BitConverter.ToInt32(b, o); o += 4; }   // texSet (skin)
     }
 
     private static void ReadFlight(byte[] b, ref int o, int v, CampUnit u, bool cft)
@@ -723,6 +725,12 @@ public sealed class UniFile
 
     public void SetFuel(CampUnit u, int fuel) { if (u.FuelAt == 0) return; BitConverter.TryWriteBytes(Data.AsSpan(u.Start + u.FuelAt, 4), fuel); u.Fuel = fuel; }
     public void SetSpecialty(CampUnit u, byte v) { if (u.FuelAt == 0) return; Data[u.Start + u.FuelAt + 4] = v; u.Specialty = v; }
+    public void SetTexSet(CampUnit u, int v)
+    {
+        if (u.TexSetAt == 0) return;
+        BitConverter.TryWriteBytes(Data.AsSpan(u.Start + u.TexSetAt, 4), v);
+        u.TexSet = v;
+    }
     public void SetPatch(CampUnit u, ushort v)
     {
         if (u.PatchSize == 2) BitConverter.TryWriteBytes(Data.AsSpan(u.Start + u.PatchAt, 2), v);

@@ -174,6 +174,7 @@ public sealed class SquadronEditor
         public short NameId;
         public ushort Patch;
         public int Roster, Flags, Fuel;
+        public int? Skin;
         public byte[] Stores = Array.Empty<byte>();
         public byte[] Csr = Array.Empty<byte>();
         public bool ResetPilots, ResetPilotStats, ClearSchedule;
@@ -190,6 +191,7 @@ public sealed class SquadronEditor
         uf.SetRoster(u, e.Roster);
         uf.SetUnitFlags(u, e.Flags);
         uf.SetFuel(u, e.Fuel);
+        if (e.Skin is int sk) uf.SetTexSet(u, sk);
         if (e.Stores.Length > 0) uf.SetStores(u, e.Stores);
         if (e.Csr.Length == 16) uf.SetCampSpecificRating(u, e.Csr);
         if (e.ResetPilots || e.ResetPilotStats) uf.ResetPilots(u, e.ResetPilotStats);

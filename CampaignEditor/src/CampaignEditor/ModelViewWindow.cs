@@ -32,6 +32,7 @@ public sealed class ModelViewWindow : Window
     private readonly PerspectiveCamera _cam = new() { FieldOfView = 40, UpDirection = new Vector3D(0, 1, 0) };
     private BmlModel.ParentInfo? _parent;
     private bool _filling;
+    private int _startSet;
     private int _loadNo;
 
     // camera in orbita attorno al centro del modello
@@ -59,14 +60,14 @@ public sealed class ModelViewWindow : Window
         return res;
     }
 
-    public static void Open(Window? owner, string title, List<Vehicle> vehicles)
+    public static void Open(Window? owner, string title, List<Vehicle> vehicles, int skin = 0)
     {
         if (vehicles.Count == 0)
         {
             MessageBox.Show(owner!, "This unit type has no vehicles in the database (brigades: their battalions have them).", "3D view");
             return;
         }
-        new ModelViewWindow(title, vehicles) { Owner = owner }.Show();
+        new ModelViewWindow(title, vehicles) { Owner = owner, _startSet = skin }.Show();
     }
 
     private ModelViewWindow(string title, List<Vehicle> vehicles)
@@ -204,7 +205,7 @@ public sealed class ModelViewWindow : Window
         }
         for (int i = 0; i < _parent.TextureSets; i++) _set.Items.Add(new ComboBoxItem { Content = i == 0 ? "1 (default)" : (i + 1).ToString(CultureInfo.InvariantCulture) });
         _lod.SelectedIndex = BmlModel.DefaultLod(_parent);
-        _set.SelectedIndex = 0;
+        _set.SelectedIndex = Math.Clamp(_startSet, 0, Math.Max(0, _parent.TextureSets - 1)); _startSet = 0;
         _filling = false;
         Reload(resetView: true);
     }
