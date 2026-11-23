@@ -1572,8 +1572,8 @@ public sealed class CampaignEditorWindow : Window
         // di ogni unita' dell'altro schieramento, con l'ora della TE. Cosi' le vede sulla mappa 2D prima di decollare.
         if (d.Units != null && d.Teams != null)
         {
-            var side = d.Teams.Teams.Where(x => x.CTeam == t.CTeam).Select(x => x.Index).Append(t.Index).Distinct().ToList();
-            short bits = 0; foreach (int i in side) bits |= (short)(1 << i);
+            var ourSide = d.Teams.Teams.Where(x => x.CTeam == t.CTeam).Select(x => x.Index).Append(t.Index).Distinct().ToList();
+            short bits = 0; foreach (int i in ourSide) bits |= (short)(1 << i);
             bool Enemy(CampUnit u) => u.Kind is UnitKind.Battalion or UnitKind.Brigade or UnitKind.TaskForce or UnitKind.Flight or UnitKind.Package or UnitKind.Squadron
                                       && u.Owner < d.Teams.Teams.Count && d.Teams.Teams[u.Owner].CTeam != t.CTeam;
             var enemies = d.Units.Units.Where(Enemy).ToList();
