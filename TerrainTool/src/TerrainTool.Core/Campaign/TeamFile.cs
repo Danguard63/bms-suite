@@ -10,6 +10,10 @@ public sealed class CampTeam
     public byte[] Member = new byte[8];
     public short[] Stance = new short[8];
     public byte Flag, Color, Equipment;
+    /// <summary>Flag della squadra: 1 attiva, 2 ha i satelliti (vede tutte le unita' nemiche), 4 aggiornata, 8 priorita' del giocatore,
+    /// 16 un membro ha i satelliti (stessi nomi di Mission Commander).</summary>
+    public short TeamFlags;
+    internal int TeamFlagsAt;
     public string Name = "", Motto = "";
     internal int FlagAt, ColorAt, EquipmentAt, NameAt, MemberAt, StanceAt, CTeamAt;
     /// <summary>Priorita' della squadra (come nei file .pri): tipi di obiettivo (36), tipi di unita' (20), missioni (41 o 50).</summary>
@@ -44,7 +48,7 @@ public sealed class TeamFile
                 var tm = new CampTeam { Index = i };
                 o += 8 + 2;
                 tm.Who = b[o]; tm.CTeamAt = o + 1; tm.CTeam = b[o + 1]; o += 2;
-                o += 2;
+                tm.TeamFlagsAt = o; tm.TeamFlags = BitConverter.ToInt16(b, o); o += 2;
                 tm.MemberAt = o; Array.Copy(b, o, tm.Member, 0, 8); o += 8;
                 tm.StanceAt = o; for (int k = 0; k < 8; k++) { tm.Stance[k] = BitConverter.ToInt16(b, o); o += 2; }
                 o += 8;                                   // first colonel/commander/wingman, last wingman
@@ -129,6 +133,15 @@ public sealed class TeamFile
                 byte m = (byte)(k < Teams.Count && Teams[k].CTeam == l.Index ? 1 : 0);
                 l.Member[k] = m; Data[l.MemberAt + k] = m;
             }
+    }
+
+    public const short HasSats = 2, MemberHasSats = 16;
+
+    public void SetTeamFlags(CampTeam t, short flags)
+    {
+        if (t.TeamFlagsAt <= 0) return;
+        BitConverter.TryWriteBytes(Data.AsSpan(t.TeamFlagsAt, 2), flags);
+        t.TeamFlags = flags;
     }
 
     public void SetFlag(CampTeam t, byte flag) { if (t.FlagAt > 0) { Data[t.FlagAt] = flag; t.Flag = flag; } }

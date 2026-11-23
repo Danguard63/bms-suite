@@ -1547,6 +1547,28 @@ public sealed class CampaignEditorWindow : Window
         col.SelectionChanged += (_, _) => { if (col.SelectedIndex >= 0 && col.SelectedIndex != t.Color) { byte old = t.Color; d.SetTeamColor(t, (byte)col.SelectedIndex); _undo.Push(() => d.SetTeamColor(t, old)); MarkDirty(); FillTeams(); _map.InvalidateVisual(); } };
         _props.Children.Add(Row("Map colour", col));
 
+        // satelliti: la squadra vede tutte le unita' nemiche sulla mappa 2D (flag TEAM HAS SATS di Mission Commander)
+        if (d.Teams != null)
+        {
+            var sats = new CheckBox
+            {
+                Content = "Has satellites: sees every enemy unit on the 2D map", IsChecked = (t.TeamFlags & TeamFile.HasSats) != 0,
+                ToolTip = "On: this team's pilots see all enemy units on the map of the campaign / TE, as if found by satellite. Off: they see only the units their side has spotted.",
+                Margin = new Thickness(0, 2, 0, 2),
+            };
+            sats.Click += (_, _) =>
+            {
+                short old = t.TeamFlags;
+                short now = sats.IsChecked == true ? (short)(old | TeamFile.HasSats) : (short)(old & ~TeamFile.HasSats);
+                if (now == old) return;
+                d.Teams!.SetTeamFlags(t, now);
+                _undo.Push(() => { d.Teams!.SetTeamFlags(t, old); ShowTeam(t); });
+                MarkDirty();
+                _status.Text = $"{t.Name}: satellites {(now != old && (now & TeamFile.HasSats) != 0 ? "on" : "off")}.";
+            };
+            _props.Children.Add(Row("Intelligence", sats));
+        }
+
         // produttore dei mezzi (come in Korea: USA/Giappone/NATO occidentale, ROK sudcoreano, CIS sovietico, PRC cinese, DPRK nordcoreano)
         var eq = new ComboBox { ToolTip = "Who builds this team's equipment (the old Western / Soviet division). Korea: U.S., Japan, NATO = US/Western; ROK = South Korean; CIS = Soviet/Russian; PRC = Chinese; DPRK = North Korean." };
         foreach (var n in Producer.EquipmentNames) eq.Items.Add(n);
