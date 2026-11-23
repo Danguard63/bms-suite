@@ -1503,32 +1503,6 @@ public sealed class CampaignEditorWindow : Window
         5 => new SolidColorBrush(Color.FromRgb(220, 40, 40)), _ => Brushes.Transparent,
     };
 
-    /// <summary>Interruttore ON/OFF ben visibile (binario grigio / ambra con il pallino che si sposta).</summary>
-    private static System.Windows.Controls.Primitives.ToggleButton OnOffSwitch(bool on)
-    {
-        const string xaml = @"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='ToggleButton'>
-  <Grid Width='64' Height='24' Cursor='Hand' Background='Transparent'>
-    <Border x:Name='track' CornerRadius='12' Background='#9AA0A6'/>
-    <TextBlock x:Name='lbl' Text='OFF' Foreground='White' FontWeight='SemiBold' FontSize='11' VerticalAlignment='Center' HorizontalAlignment='Right' Margin='0,0,9,0'/>
-    <Ellipse x:Name='knob' Width='18' Height='18' Fill='White' HorizontalAlignment='Left' Margin='3,0,0,0'/>
-  </Grid>
-  <ControlTemplate.Triggers>
-    <Trigger Property='IsChecked' Value='True'>
-      <Setter TargetName='track' Property='Background' Value='#E8A317'/>
-      <Setter TargetName='knob' Property='HorizontalAlignment' Value='Right'/>
-      <Setter TargetName='knob' Property='Margin' Value='0,0,3,0'/>
-      <Setter TargetName='lbl' Property='Text' Value='ON'/>
-      <Setter TargetName='lbl' Property='HorizontalAlignment' Value='Left'/>
-      <Setter TargetName='lbl' Property='Margin' Value='10,0,0,0'/>
-    </Trigger>
-  </ControlTemplate.Triggers>
-</ControlTemplate>";
-        return new System.Windows.Controls.Primitives.ToggleButton
-        {
-            IsChecked = on, Template = (ControlTemplate)System.Windows.Markup.XamlReader.Parse(xaml), VerticalAlignment = VerticalAlignment.Center,
-        };
-    }
-
     private void ShowTeam(CampTeam t)
     {
         var d = _doc!;
@@ -1573,66 +1547,6 @@ public sealed class CampaignEditorWindow : Window
         col.SelectionChanged += (_, _) => { if (col.SelectedIndex >= 0 && col.SelectedIndex != t.Color) { byte old = t.Color; d.SetTeamColor(t, (byte)col.SelectedIndex); _undo.Push(() => d.SetTeamColor(t, old)); MarkDirty(); FillTeams(); _map.InvalidateVisual(); } };
         _props.Children.Add(Row("Map colour", col));
 
-        // satelliti: la squadra vede tutte le unita' nemiche sulla mappa 2D (flag TEAM HAS SATS di Mission Commander)
-        if (d.Teams != null)
-        {
-            var sats = new CheckBox
-            {
-                Content = "Has satellites: sees every enemy unit on the 2D map", IsChecked = (t.TeamFlags & TeamFile.HasSats) != 0,
-                ToolTip = "The team flag of Mission Commander (TEAM HAS SATS). In a BMS 4.38 TE it did not show the enemy units on the 2D map by itself: use 'Show all enemy units' below for that.",
-                Margin = new Thickness(0, 2, 0, 2),
-            };
-            sats.Click += (_, _) =>
-            {
-                short old = t.TeamFlags;
-                short now = sats.IsChecked == true ? (short)(old | TeamFile.HasSats) : (short)(old & ~TeamFile.HasSats);
-                if (now == old) return;
-                d.Teams!.SetTeamFlags(t, now);
-                _undo.Push(() => { d.Teams!.SetTeamFlags(t, old); ShowTeam(t); });
-                MarkDirty();
-                _status.Text = $"{t.Name}: satellites {(now != old && (now & TeamFile.HasSats) != 0 ? "on" : "off")}.";
-            };
-            _props.Children.Add(Row("Intelligence", sats));
-        }
-        // unita' nemiche gia' "viste" all'inizio: il bit della squadra (e delle squadre del suo schieramento) nel campo spotted
-        // di ogni unita' dell'altro schieramento, con l'ora della TE. Cosi' le vede sulla mappa 2D prima di decollare.
-        if (d.Units != null && d.Teams != null)
-        {
-            var ourSide = d.Teams.Teams.Where(x => x.CTeam == t.CTeam).Select(x => x.Index).Append(t.Index).Distinct().ToList();
-            short bits = 0; foreach (int i in ourSide) bits |= (short)(1 << i);
-            bool Enemy(CampUnit u) => u.Kind is UnitKind.Battalion or UnitKind.Brigade or UnitKind.TaskForce or UnitKind.Flight or UnitKind.Package or UnitKind.Squadron
-                                      && u.Owner < d.Teams.Teams.Count && d.Teams.Teams[u.Owner].CTeam != t.CTeam;
-            var enemies = d.Units.Units.Where(Enemy).ToList();
-            int seen = enemies.Count(u => (d.Units.Spotted(u) & bits) == bits);
-            bool allSeen = enemies.Count > 0 && seen == enemies.Count;
-            var sw = OnOffSwitch(allSeen);
-            sw.ToolTip = "ON: every unit of the other side is marked as already spotted by this team (and the teams on its side) at the time of this file, " +
-                         "so its pilots see them on the 2D map from the start. OFF: they appear only once found in the mission. Ctrl+Z undoes.";
-            void Mark(bool show)
-            {
-                var old = enemies.Select(u => (u, d.Units.Spotted(u), d.Units.SpotTime(u))).ToList();
-                uint now = d.CurrentTime;
-                foreach (var u in enemies)
-                {
-                    short m = d.Units.Spotted(u);
-                    short nm = show ? (short)(m | bits) : (short)(m & ~bits);
-                    if (nm != m) d.Units.SetSpotted(u, nm, show ? now : d.Units.SpotTime(u));
-                }
-                _undo.Push(() => { foreach (var (u, m, st) in old) d.Units!.SetSpotted(u, m, st); ShowTeam(t); });
-                MarkDirty(); ShowTeam(t);
-                _status.Text = $"{t.Name}: enemy units {(show ? "visible from the start" : "hidden until found")} ({enemies.Count}).";
-            }
-            sw.Click += (_, _) => Mark(sw.IsChecked == true);
-            var bar = new StackPanel { Orientation = Orientation.Horizontal };
-            bar.Children.Add(sw);
-            bar.Children.Add(new TextBlock
-            {
-                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), TextWrapping = TextWrapping.Wrap,
-                Text = allSeen ? $"visible on the 2D map from the start ({enemies.Count} units)"
-                     : seen > 0 ? $"hidden until found ({seen} of {enemies.Count} already spotted)" : $"hidden until found ({enemies.Count} units)",
-            });
-            _props.Children.Add(Row("Enemy units", bar));
-        }
 
         // produttore dei mezzi (come in Korea: USA/Giappone/NATO occidentale, ROK sudcoreano, CIS sovietico, PRC cinese, DPRK nordcoreano)
         var eq = new ComboBox { ToolTip = "Who builds this team's equipment (the old Western / Soviet division). Korea: U.S., Japan, NATO = US/Western; ROK = South Korean; CIS = Soviet/Russian; PRC = Chinese; DPRK = North Korean." };
