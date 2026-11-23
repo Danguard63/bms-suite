@@ -93,6 +93,7 @@ public sealed class CampaignEditorWindow : Window
     public CampaignEditorWindow(CampaignWorkspace ws, string? open = null)
     {
         _ws = ws;
+        PatchPicker.ArtDirs = ws.ArtDirs;
         _p = ws.Project;
         Title = "Campaign editor – " + ws.Name;
         Width = 1500; Height = 950; MinWidth = 1000; MinHeight = 650;
@@ -1431,6 +1432,7 @@ public sealed class CampaignEditorWindow : Window
             sp.Children.Add(skin); sp.Children.Add(view);
             _props.Children.Add(Row("Skin", sp));
             _props.Children.Add(Line($"{sets} skin{(sets == 1 ? "" : "s")} in the 3D model of this aircraft."));
+            _props.Children.Add(Row("Patch", PatchPicker.View(u.Patch)));
         }
         if (u.IsGround)
         {

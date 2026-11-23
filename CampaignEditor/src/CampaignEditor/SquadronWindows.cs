@@ -90,7 +90,8 @@ public sealed class AddSquadronWindow : Window
         team.SelectionChanged += (_, _) => picker.Fill(null);
         var sqs = d.Units?.Units.Where(u => u.Kind == UnitKind.Squadron).ToList() ?? new();
         var name = new TextBox { Text = (sqs.Where(u => u.Owner == startTeam).Select(u => (int)u.NameId).DefaultIfEmpty(0).Max() + 1).ToString(CultureInfo.InvariantCulture) };
-        var patch = new TextBox { Text = (sqs.FirstOrDefault(u => u.Owner == startTeam)?.Patch ?? 0).ToString(CultureInfo.InvariantCulture), ToolTip = "Squadron patch number (as the other squadrons of the team)" };
+        // stemma: come gli altri squadroni della squadra; elenco con immagine e nome dall'Art del teatro
+        var (patch, patchValue) = PatchPicker.Make(sqs.FirstOrDefault(u => u.Owner == startTeam)?.Patch ?? 0);
         var spec = new ComboBox();
         foreach (var s in SquadronEditor.Specialties) spec.Items.Add(s);
         spec.SelectedIndex = 0;
@@ -111,7 +112,7 @@ public sealed class AddSquadronWindow : Window
         var apply = UnitText.Btn("Apply", () =>
         {
             if (ac.SelectedItem is not ComboBoxItem { Tag: int ct }) { MessageBox.Show(this, "Choose the aircraft.", Title); return; }
-            if (!short.TryParse(name.Text, out short nm) || !ushort.TryParse(patch.Text, out ushort pa)) { MessageBox.Show(this, "Check name and patch.", Title); return; }
+            if (!short.TryParse(name.Text, out short nm) || patchValue() is not ushort pa) { MessageBox.Show(this, "Check name and patch.", Title); return; }
             byte t = team.SelectedItem is ComboBoxItem { Tag: byte tt } ? tt : startTeam;
             var (u, undo, err) = se.Add(ct, t, picker.Objective, picker.Carrier, nm, pa, (byte)Math.Max(0, spec.SelectedIndex), humanNew.IsChecked == true);
             if (err != null) { MessageBox.Show(this, err, Title); return; }
@@ -182,7 +183,7 @@ public sealed class SquadronWindow : Window
         spec.SelectedIndex = u.Specialty < spec.Items.Count ? u.Specialty : -1;
         var rosterBox = new TextBox { Text = u.Roster.ToString(CultureInfo.InvariantCulture) };
         int max = db.FullRoster(ct);
-        var patch = new TextBox { Text = u.Patch.ToString(CultureInfo.InvariantCulture) };
+        var (patch, patchValue) = PatchPicker.Make(u.Patch);
         var fuel = new TextBox { Text = u.Fuel.ToString(CultureInfo.InvariantCulture), ToolTip = $"Standard for this type: {se.FuelFor(ct)}" };
         // skin (texture set) degli aerei dello squadrone: quante ce ne sono lo dice il Parent.dat del modello
         var skin = new ComboBox { IsEnabled = u.TexSetAt != 0,
@@ -361,7 +362,7 @@ public sealed class SquadronWindow : Window
         del.Foreground = Brushes.DarkRed;
         var apply = UnitText.Btn("Apply", () =>
         {
-            if (!short.TryParse(name.Text, out short nm) || !int.TryParse(rosterBox.Text, out int ro) || !ushort.TryParse(patch.Text, out ushort pa) || !int.TryParse(fuel.Text, out int fu))
+            if (!short.TryParse(name.Text, out short nm) || !int.TryParse(rosterBox.Text, out int ro) || patchValue() is not ushort pa || !int.TryParse(fuel.Text, out int fu))
             { MessageBox.Show(this, "Check the numbers.", Title); return; }
             int fl = human.IsChecked == true ? flags | UnitEditor.FHumanCont : flags & ~UnitEditor.FHumanCont;
             Done(se.Apply(u, new SquadronEditor.Edit

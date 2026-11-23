@@ -313,7 +313,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
   <ul>
     <li><b>Replace with an image...</b> – any PNG, JPG, BMP, GIF, TIFF, TGA or DDS: choose the part to use (the frame keeps the proportions BMS needs); it is resized and converted for every file that has it.</li>
     <li><b>Take from reference</b>, <b>Reset to BMS 4.38</b>, <b>Export as PNG...</b>.</li>
-    <li>Squadron patches: <b>Add a new patch...</b> adds the image and its number; the squadrons of the campaign use that number (Campaign Editor).</li>
+    <li>Squadron patches: <b>Add a new patch...</b> adds the image and its id in <code>PatchesImageIds.id</code> (70001, 70002...). A squadron uses it as that id minus 70001 (70030 is patch 29); in the Campaign Editor you pick it by name and picture.</li>
   </ul>
   <figure><img src="shots/34_ae_texts.jpg"><figcaption><b>Figure 7.5</b> Texts: country and team names, campaign titles and descriptions. Edit the <b>Theater</b> column; the Korea text is shown for comparison.</figcaption></figure>
   <div class="keep"><h2>Saving</h2>
@@ -343,7 +343,7 @@ td:first-child { white-space: nowrap; font-weight: 600; }
     <figure><img src="shots/46_ce_teams_c.jpg"><figcaption><b>Figure 8.3</b> Teams with their flags, objectives and units.</figcaption></figure>
     <figure><img src="shots/47_ce_squadrons_c.jpg"><figcaption><b>Figure 8.4</b> Squadrons by team, with aircraft and base.</figcaption></figure>
   </div>
-  <p>Select a squadron (Squadrons tab or map): on the right, <b>Skin</b> chooses which texture set its aircraft wear, as "Skin set" in Mission Commander and with the same numbers (0 = default set of the model), with <b>3D view...</b> to see it. The full squadron window (Units → Units list → Open...) has the same <b>Skin</b> next to team, name, roster, patch, fuel, aircraft type and base.</p>
+  <p>Select a squadron (Squadrons tab or map): on the right, <b>Skin</b> chooses which texture set its aircraft wear, as "Skin set" in Mission Commander and with the same numbers (0 = default set of the model), with <b>3D view...</b> to see it. The full squadron window (Units → Units list → Open...) has the same <b>Skin</b> next to team, name, roster, fuel, aircraft type and base, and <b>Squad patch</b>: the theater's squadron patches with their picture, name and number (the properties panel shows the patch the squadron wears).</p>
   <div class="keep"><h2>Toolbar</h2>
   <p>The file buttons come first; the tools are in two menus: <b>Units</b> (Battalions &amp; brigades, Units list, Deploy divisions, Air defense plan, Convert unit types) and <b>Theater files</b> (Station ILS, Campaign AI, TE lists, Campaign terrain).</p>
   <table>

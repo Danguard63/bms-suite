@@ -45,8 +45,8 @@ public static class ArtCatalog
                 "(tab 7, Theater art); you can also put your own image.",
         Screens => "Backgrounds of other screens. BMS uses generic pictures here: change them only if you want a full theater look.",
         Medals => "Medals and logos with a theater meaning (the Korea campaign medal, the UN logo).",
-        Patches => "Squadron patches (96×96) shown in the squadron lists and in the logbook. Each patch has a number in Patches\\ImageIds.id: " +
-                   "the squadrons of the campaign use that number. New patches go at the end of the list.",
+        Patches => "Squadron patches (96×96) shown in the squadron lists and in the logbook. Each patch has an id in Patches\\ImageIds.id (70001, 70002...): " +
+                   "a squadron of the campaign uses it as that id minus 70001 (70030 → patch 29, chosen in the Campaign Editor's squadron window). New patches go at the end of the list.",
         SoundsCat => "The sounds of the interface (button clicks, mouse over, windows...): listen to them, see how many buttons use each one, and replace a sound " +
                      "with another .ogg file for this theater only (the KTO sounds are not changed). Which sound a button makes is chosen in the visual editor: right-click → Button look and sound.",
         FontsCat => "The interface fonts of BMS (Art\\Fonts): pixel fonts at a fixed height, made from TrueType fonts. A font can be replaced with another TrueType font " +
@@ -118,7 +118,7 @@ public static class ArtCatalog
 
     /// <summary>Casella di una patch (le patch non sono fisse: dipendono dall'archivio aperto).</summary>
     public static ArtSlot PatchSlot(string entry, int? id) =>
-        new(Patches, entry, id != null ? $"Squadron patch number {id} (Patches\\ImageIds.id)." : "Squadron patch without a number in Patches\\ImageIds.id: the squadrons cannot use it.",
+        new(Patches, entry, id != null ? $"Squadron patch id {id} in Patches\\ImageIds.id: squadrons use it as patch {id - TerrainTool.Core.Campaign.SquadronPatches.IdBase} (Campaign Editor, squadron window)." : "Squadron patch without a number in Patches\\ImageIds.id: the squadrons cannot use it.",
             SlotKind.Patch, new[] { PatchArchive }, new[] { entry }, "Transparent background: use a PNG with transparency.");
 
     /// <summary>Etichetta leggibile di una voce di Theater.irc.</summary>

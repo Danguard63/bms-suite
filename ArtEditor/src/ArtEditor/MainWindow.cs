@@ -717,7 +717,7 @@ public sealed class MainWindow : Window
         var cw = new CropWindow(src, 96, 96, name, new[] { "Patch: 96×96, emblem on a transparent background (PNG with transparency); keep it bold and simple." }) { Owner = this };
         if (cw.ShowDialog() != true) return;
         int id = _art.AddPatch(name, src, cw.Result);
-        _status.Text = $"Patch {name} added with number {id}. Save to write it; in the Campaign Editor the squadrons can then use patch {id}.";
+        _status.Text = $"Patch {name} added with id {id}. Save to write it; in the Campaign Editor the squadrons can then use it as patch {id - TerrainTool.Core.Campaign.SquadronPatches.IdBase} (squadron window, 'Squad patch').";
         _sel = null;
         Refresh();
     }
