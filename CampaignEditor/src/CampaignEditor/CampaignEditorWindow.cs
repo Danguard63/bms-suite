@@ -1553,7 +1553,7 @@ public sealed class CampaignEditorWindow : Window
             var sats = new CheckBox
             {
                 Content = "Has satellites: sees every enemy unit on the 2D map", IsChecked = (t.TeamFlags & TeamFile.HasSats) != 0,
-                ToolTip = "On: this team's pilots see all enemy units on the map of the campaign / TE, as if found by satellite. Off: they see only the units their side has spotted.",
+                ToolTip = "The team flag of Mission Commander (TEAM HAS SATS). In a BMS 4.38 TE it did not show the enemy units on the 2D map by itself: use 'Show all enemy units' below for that.",
                 Margin = new Thickness(0, 2, 0, 2),
             };
             sats.Click += (_, _) =>
@@ -1567,6 +1567,41 @@ public sealed class CampaignEditorWindow : Window
                 _status.Text = $"{t.Name}: satellites {(now != old && (now & TeamFile.HasSats) != 0 ? "on" : "off")}.";
             };
             _props.Children.Add(Row("Intelligence", sats));
+        }
+        // unita' nemiche gia' "viste" all'inizio: il bit della squadra (e delle squadre del suo schieramento) nel campo spotted
+        // di ogni unita' dell'altro schieramento, con l'ora della TE. Cosi' le vede sulla mappa 2D prima di decollare.
+        if (d.Units != null && d.Teams != null)
+        {
+            var side = d.Teams.Teams.Where(x => x.CTeam == t.CTeam).Select(x => x.Index).Append(t.Index).Distinct().ToList();
+            short bits = 0; foreach (int i in side) bits |= (short)(1 << i);
+            bool Enemy(CampUnit u) => u.Kind is UnitKind.Battalion or UnitKind.Brigade or UnitKind.TaskForce or UnitKind.Flight or UnitKind.Package or UnitKind.Squadron
+                                      && u.Owner < d.Teams.Teams.Count && d.Teams.Teams[u.Owner].CTeam != t.CTeam;
+            var enemies = d.Units.Units.Where(Enemy).ToList();
+            int seen = enemies.Count(u => (d.Units.Spotted(u) & bits) == bits);
+            var bar = new WrapPanel();
+            var spot = new Button { Content = $"Show all {enemies.Count} enemy units", Margin = new Thickness(0, 2, 6, 2),
+                ToolTip = "Marks every unit of the other side as already spotted by this team (and the teams on its side), at the time of this file: its pilots see them on the 2D map from the start. Ctrl+Z undoes." };
+            var hide = new Button { Content = "Hide them", Margin = new Thickness(0, 2, 6, 2),
+                ToolTip = "Removes this side's spotted mark from every enemy unit: they appear on the map only once found in the mission. Ctrl+Z undoes." };
+            void Mark(bool show)
+            {
+                var old = enemies.Select(u => (u, d.Units.Spotted(u), d.Units.SpotTime(u))).ToList();
+                uint now = d.CurrentTime;
+                foreach (var u in enemies)
+                {
+                    short m = d.Units.Spotted(u);
+                    short nm = show ? (short)(m | bits) : (short)(m & ~bits);
+                    if (nm != m) d.Units.SetSpotted(u, nm, show ? now : d.Units.SpotTime(u));
+                }
+                _undo.Push(() => { foreach (var (u, m, st) in old) d.Units!.SetSpotted(u, m, st); ShowTeam(t); });
+                MarkDirty(); ShowTeam(t);
+                _status.Text = $"{t.Name}: {(show ? "all enemy units spotted" : "enemy units hidden")} ({enemies.Count}).";
+            }
+            spot.Click += (_, _) => Mark(true);
+            hide.Click += (_, _) => Mark(false);
+            bar.Children.Add(spot); bar.Children.Add(hide);
+            bar.Children.Add(new TextBlock { Text = $"{seen} of {enemies.Count} already spotted", VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.DimGray });
+            _props.Children.Add(Row("Enemy units", bar));
         }
 
         // produttore dei mezzi (come in Korea: USA/Giappone/NATO occidentale, ROK sudcoreano, CIS sovietico, PRC cinese, DPRK nordcoreano)

@@ -152,6 +152,8 @@ public sealed class CampaignDoc
     public string TheaterName = "", Scenario = "", SaveFile = "";
     public int TheaterSizeX, TheaterSizeY;     // km
     public byte[]? CmpRaw;                     // intestazione espansa (contiene anche nome, bandiera e colore delle squadre)
+    /// <summary>Ora corrente della campagna / TE (primo campo del .cmp, ms dall'inizio; come "Current Time" di Mission Commander).</summary>
+    public uint CurrentTime => CmpRaw != null && CmpRaw.Length >= 4 ? BitConverter.ToUInt32(CmpRaw, 0) : 0;
     private bool _cmpDirty, _obdDirty;
     /// <summary>Il .cmp e' cambiato (lista squadroni...): va riscritto al salvataggio.</summary>
     public void CmpChanged() => _cmpDirty = true;

@@ -642,6 +642,18 @@ public sealed class UniFile
         u.Waypoints[i] = u.Waypoints[i] with { X = x, Y = y, Arrive = arrive };
     }
 
+    // "spotted": un bit per squadra (1 << squadra) = quella squadra ha visto l'unita'; spotTime = quando (ms dall'inizio).
+    // Verificato su una TE di BMS 4.38 dopo il volo: la task force vista dall'Iraq (squadra 6) ha spotted 0x40.
+    private int SpotTimeAt(CampUnit u) => u.Start + u.XAt + 4 + (Version >= 70 ? 4 : 0);
+    public short Spotted(CampUnit u) => BitConverter.ToInt16(Data, SpotTimeAt(u) + 4);
+    public uint SpotTime(CampUnit u) => BitConverter.ToUInt32(Data, SpotTimeAt(u));
+    public void SetSpotted(CampUnit u, short mask, uint time)
+    {
+        int o = SpotTimeAt(u);
+        BitConverter.TryWriteBytes(Data.AsSpan(o, 4), time);
+        BitConverter.TryWriteBytes(Data.AsSpan(o + 4, 2), mask);
+    }
+
     /// <summary>Waypoint i: quota in piedi (nel file decine di piedi; il segno del valore di prima resta).</summary>
     public void SetWaypointAltitude(CampUnit u, int i, int feet)
     {
