@@ -697,6 +697,44 @@ public static class UnitsConversion
         if (names != null && names.Changed) names.Write(plan, workDir);
     }
 
+    /// <summary>
+    /// TE lines for aircraft that a Database Interchange plan adds (aircraft CT and squadron type CT as numbered in the destination):
+    /// the same rule as the converter's: picture and icon of the TE aircraft with the same flight model (else the same squadron role),
+    /// the aircraft's name in the theater's own interface files when it has its own art (BMS's Data\Art is never changed).
+    /// </summary>
+    internal static void AddTeLines(Interchange.Plan plan, BmsDatabase dst, BmsTheater t, string dataDir, IEnumerable<(int Aircraft, int Squadron, string Name)> items)
+    {
+        var d = new Destination(t, dataDir, null);
+        var D = new Lookup(dst, plan);
+        var te = TePlanes(d);
+        string? art = OwnArtRoot(d);
+        var names = art != null ? new UiNames(d, art) : null;
+        bool changed = false;
+        foreach (var (vct, sq, name) in items)
+        {
+            int type = D.Int("CT", vct, "Type"), sub = D.Int("CT", vct, "SubType"), spec = D.Int("CT", vct, "Specific"), usub = D.Int("CT", sq, "SubType");
+            if (te.Entries.Any(e => e.Type == type && e.SubType == sub && e.Specific == spec && e.UnitSubType == usub)) { plan.Report.Add($"  {name}: already in the TE list"); continue; }
+            var tpl = SameFlightModel(D, vct, te) ?? te.Entries.FirstOrDefault(e => e.Type != 0 && e.UnitSubType == usub) ?? te.Entries.FirstOrDefault(e => e.Type != 0);
+            if (tpl == null) { plan.Problems.Add($"{name}: the TE list of {t.Name} has no aircraft to take the picture and icon from: not added to the TE"); continue; }
+            int id = te.Entries.Select(e => e.Id).DefaultIfEmpty(21100).Max() + 1;
+            int text = tpl.Text;
+            string note;
+            if (names != null) { text = names.Add(name, te.Entries.Select(e => e.Text).DefaultIfEmpty(0).Max()); note = $"name '{name}' (text {text}) in the theater's interface files"; }
+            else note = $"the TE shows the name '{tpl.Name}': {t.Name} uses BMS's own interface files, which are never changed";
+            te.Entries.Add(new TePlanesFile.Entry { Name = name, Type = type, SubType = sub, Specific = spec, UnitSubType = usub, Id = id, Text = text, Icon = tpl.Icon });
+            changed = true;
+            plan.Report.Add($"  {name}: TE line {type} {sub} {spec} {usub}, ID {id}, picture and icon of {tpl.Name}; {note}");
+        }
+        if (!changed) return;
+        string work = Path.Combine(Path.GetTempPath(), "BMSSuite_te_" + Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(work);
+        string f = Path.Combine(work, "TePlanes.lst");
+        te.Save(f);
+        plan.Files[Path.Combine(t.CampaignDir, "TePlanes.lst")] = (f, null);
+        if (names != null && names.Changed) names.Write(plan, work);
+        plan.Report.Add($"TePlanes.lst of {t.Name}: the new aircraft are offered in the Tactical Engagement");
+    }
+
     /// <summary>The TE entry of a BMS aircraft with the same flight model (AirframeDatIdx), for picture and icon.</summary>
     private static TePlanesFile.Entry? SameFlightModel(Lookup D, int vct, TePlanesFile te)
     {

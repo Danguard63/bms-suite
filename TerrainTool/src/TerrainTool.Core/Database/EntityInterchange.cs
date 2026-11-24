@@ -125,6 +125,8 @@ public static partial class Interchange
                 ? $"{name} (CT {ct}): already in {dst.Name} as CT {n}, the same – nothing to add"
                 : $"{name} (CT {ct}) → CT {n} in {dst.Name}");
         }
+        // the Tactical Engagement offers squadrons: a copied aircraft gets its squadron types and a line in TePlanes.lst
+        if (!preferDestination) x.TacticalEngagement(dataDir);
         x.Racks();
         if (preferDestination) { x.ServiceYears(); x.DropUnknownFields(); }
         else if (copySim) SimCopy.Apply(p, x.S, x.D, dataDir);
@@ -161,6 +163,12 @@ public static partial class Interchange
 
         private ConflictChoice Choice(string table, string name) =>
             Resolve != null && Resolve.TryGetValue(ConflictKey(table, name), out var c) ? c : ConflictChoice.AddNew;
+
+        /// <summary>
+        /// Squadron types brought only for the TE: never a same-name conflict (the destination's "Fighter" is never replaced or
+        /// kept instead, the copy is added), and their stores keep only weapons the plan brings or the destination has by name.
+        /// </summary>
+        private bool _teUnits;
         /// <summary>The CT entries chosen by the user (always added when the destination has no identical one).</summary>
         public readonly HashSet<int> Selected = new();
         private readonly Dictionary<(string, int), int> _map = new();
@@ -215,7 +223,7 @@ public static partial class Interchange
                 foreach (var r in D.All(table))
                     if (r.Name == sr.Name && Same(r.Fields, fields) && (alsoSame?.Invoke(r) ?? true)) { Reused++; return _map[(table, sr.Num)] = r.Num; }
             // the destination has a record with this name but other values: what the user chose (add new, replace it, keep it)
-            if (!PreferDestination && sr.Name.Length > 0 && (dSame != null && dSame.Name == sr.Name ? dSame : D.All(table).FirstOrDefault(r => r.Name == sr.Name)) is { } other)
+            if (!PreferDestination && !_teUnits && sr.Name.Length > 0 && (dSame != null && dSame.Name == sr.Name ? dSame : D.All(table).FirstOrDefault(r => r.Name == sr.Name)) is { } other)
             {
                 var ch = Choice(table, sr.Name);
                 if (!P.Conflicts.Any(c => c.Table == table && c.Name == sr.Name)) P.Conflicts.Add(new Conflict(table, sr.Name, sr.Num, other.Num, ch));
@@ -315,6 +323,14 @@ public static partial class Interchange
                 if (PreferDestination && !_map.ContainsKey(("WCD", w)) && S.Get("WCD", w) is { } sw && sw.Name.Length > 0 &&
                     !D.All("WCD").Any(x => x.Name == sw.Name))
                 { left.Add(sw.Name); continue; }
+                if (_teUnits && !_map.ContainsKey(("WCD", w)))
+                {
+                    // a weapon of the squadron's stock that the chosen aircraft does not carry: the destination's own of that name, or left out
+                    var dw = S.Get("WCD", w) is { } sw2 && sw2.Name.Length > 0 ? D.All("WCD").FirstOrDefault(x => x.Name == sw2.Name) : null;
+                    if (dw == null) { left.Add(S.Get("WCD", w)?.Name ?? $"WCD {w}"); continue; }
+                    f.Add(($"WpnStores_{dw.Num.ToString(Ci)}", v));
+                    continue;
+                }
                 f.Add(($"WpnStores_{MapWcd(w).ToString(Ci)}", v));
             }
             if (left.Count > 0) P.Report.Add($"  squadron stores SSD {idx}: {left.Count} weapons the destination does not have left out ({string.Join(", ", left.Take(8))}{(left.Count > 8 ? "…" : "")})");
@@ -422,7 +438,7 @@ public static partial class Interchange
             // the user chose to keep the destination's own record with this name (nothing of the source's version is added)
             DbRecord? SameName() => D.Get("CT", sct) is { } dn && dn.Int("EntityType") == et && D.Get(table, dn.Int("EntityIdx"))?.Name == name ? dn
                 : D.All("CT").FirstOrDefault(c => c.Int("EntityType") == et && D.Get(table, c.Int("EntityIdx"))?.Name == name);
-            if (!PreferDestination && Choice(table, name) == ConflictChoice.Keep && SameName() is { } kept)
+            if (!PreferDestination && !_teUnits && Choice(table, name) == ConflictChoice.Keep && SameName() is { } kept)
             {
                 Reused += 2;
                 if (!P.Conflicts.Any(c => c.Table == table && c.Name == name)) P.Conflicts.Add(new Conflict(table, name, se.Num, kept.Int("EntityIdx"), ConflictChoice.Keep));
@@ -491,7 +507,7 @@ public static partial class Interchange
             }
             // the destination has one with this name but other values: replace it (its CT number and class numbers stay, so
             // campaigns, TE lists and squadrons that use it keep working) or add the source's as a new one
-            if (!PreferDestination && SameName() is { } other)
+            if (!PreferDestination && !_teUnits && SameName() is { } other)
             {
                 var ch = Choice(table, name);
                 if (!P.Conflicts.Any(c => c.Table == table && c.Name == name)) P.Conflicts.Add(new Conflict(table, name, se.Num, other.Int("EntityIdx"), ch));
@@ -630,6 +646,34 @@ public static partial class Interchange
                 fields.RemoveAll(f => { bool drop = !k.Contains(Family(f.Field)); if (drop) dropped.Add($"{t}.{f.Field}"); return drop; });
             }
             if (dropped.Count > 0) P.Report.Add($"Fields the destination's database does not have, left out: {string.Join(", ", dropped)}");
+        }
+
+        /// <summary>
+        /// Every chosen aircraft or helicopter added as a new entry: the source's squadron types made of it (Type 3 units whose
+        /// vehicles are that aircraft) are brought too, and the destination's TePlanes.lst gets a line for each of them
+        /// (UnitsConversion.AddTeLine, as the 4.37 Units Converter does), so that the aircraft is offered in the TE.
+        /// </summary>
+        public void TacticalEngagement(string dataDir)
+        {
+            var lines = new List<(int Aircraft, int Squadron, string Name)>();
+            foreach (int sct in Selected.ToList())
+            {
+                var sc = S.Get("CT", sct);
+                if (sc == null || sc.Int("Domain") != 2 || BmsDatabase.EntityTable(sc.Int("EntityType")) != "VCD") continue;
+                if (!_map.TryGetValue(("CT", sct), out int vct) || !_newCtEntity.ContainsKey(vct)) continue;   // reused: it is already in the destination
+                var squads = S.All("CT").Where(c => BmsDatabase.EntityTable(c.Int("EntityType")) == "UCD" && c.Int("Domain") == 2 && c.Int("Type") == 3
+                                                    && S.EntityOf(c.Num) is { } ue && S.Elements(ue).Any(e => e.Ct == sct) && S.Elements(ue).All(e => e.Ct == sct || e.Ct <= 0 || e.Count <= 0)).ToList();
+                if (squads.Count == 0) { P.Report.Add($"  {S.CtName(sct)}: no squadron type made of it in {P.Src.Name}: not offered in the TE (Campaign Editor, TE lists)"); continue; }
+                foreach (var q in squads)
+                {
+                    _teUnits = true;
+                    int nq;
+                    try { nq = MapCt(q.Num); } finally { _teUnits = false; }
+                    P.CtMap[q.Num] = nq;
+                    lines.Add((vct, nq, S.CtName(sct)));
+                }
+            }
+            if (lines.Count > 0) UnitsConversion.AddTeLines(P, D, P.Dst, dataDir, lines);
         }
 
         /// <summary>
