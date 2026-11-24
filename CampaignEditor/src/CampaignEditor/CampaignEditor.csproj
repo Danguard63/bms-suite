@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Windows text-to-speech voices for the ATC airbase names (Microsoft, MIT) -->
+    <PackageReference Include="System.Speech" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- the look shared by every program of the suite -->
     <Compile Include="..\..\..\Shared\SuiteTheme.cs" Link="SuiteTheme.cs" />
   </ItemGroup>

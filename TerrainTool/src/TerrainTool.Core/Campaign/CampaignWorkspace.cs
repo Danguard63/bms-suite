@@ -21,6 +21,10 @@ public sealed class BmsTheater
     public string NewTerrainDir { get; init; } = "";
     /// <summary>Cartella "artdir" della .tdf (grafica dell'interfaccia: bandiere, icone, mappa 2D).</summary>
     public string ArtDir { get; init; } = "";
+    /// <summary>Cartella "sounddir" della .tdf (voci radio Falcon.tlk, fragfile.xml, effetti sonori): Data\Sounds se il teatro non ne ha una.</summary>
+    public string SoundDir { get; init; } = "";
+    /// <summary>Cartella "subtitlesdir" della .tdf (F4Talk.csv dei sottotitoli radio).</summary>
+    public string SubtitlesDir { get; init; } = "";
     public string TheaterTxt => Path.Combine(NewTerrainDir, "Theater.txt");
     public bool IsNewTerrain => File.Exists(TheaterTxt);
     /// <summary>Cartella dell'add-on in Data (es. "Add-On Mideast128"); "BMS" per i teatri della 4.38 (TerrData\TheaterDefinition di BMS).</summary>
@@ -78,6 +82,8 @@ public sealed class BmsTheater
             ObjectDir = D("objectdir", @"Terrdata\objects"),
             ModelsDir = D("3ddatadir", @"Terrdata\objects"),
             ArtDir = D("artdir", "Art"),
+            SoundDir = D("sounddir", "Sounds"),
+            SubtitlesDir = D("subtitlesdir", kv.TryGetValue("sounddir", out var sd) && sd.Length > 0 ? sd : "Sounds"),
             TerrainDir = terrain,
             NewTerrainDir = kv.TryGetValue("newterraindir", out var nt) && nt.Length > 0 ? Path.GetFullPath(Path.Combine(dataDir, Norm(nt))) : Path.Combine(terrain, "NewTerrain"),
         };

@@ -8,5 +8,9 @@
     <RootNamespace>TerrainTool.Core</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Speex codec of the BMS radio voices (Falcon.tlk): MIT wrapper of libspeex (BSD) -->
+    <PackageReference Include="SpeexSharp" Version="1.2.0" />
+  </ItemGroup>
 
 </Project>

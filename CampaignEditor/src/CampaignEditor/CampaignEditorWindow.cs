@@ -147,13 +147,16 @@ public sealed class CampaignEditorWindow : Window
         var teB = new Button { Content = "TE lists…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "TePlanes.lst, TeUnits.lst, TeNavalUnits.lst: the aircraft, battalions and naval units offered in the Tactical Engagement (by producer), checked against this theater's database and the Korea" };
         teB.Click += (_, _) => new TeListsWindow(_ws, _db) { Owner = this }.Show();
+        var atcB = new Button { Content = "ATC airbase voices…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
+            ToolTip = "What BMS's ATC says for every airbase (Tower / Ground / Approach fragments of stations+ils.dat and Falcon.tlk): listen, and make new names with a Windows voice and a radio effect for the two ATC voices; installs the theater's own Sounds folder with a backup" };
+        atcB.Click += (_, _) => new AtcVoicesWindow(_ws, _doc) { Owner = this }.Show();
         var thrB = new Button { Content = "Campaign terrain (.thr)…", Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 12, 0),
             ToolTip = "The campaign's .thr (ground cover, relief, rail per km², still used by BMS 4.38 for move times, cover and 'near water'): view it, rebuild it from the New Terrain, compare it with the terrain BMS generates for the campaign" };
         // the tools in two menus (one entry per group instead of nine buttons in a row)
         var unitTools = new List<Button> { utB, ulB, depB, adB };
         if (_p != null) unitTools.Add(convertB);
         var unitsMenu = BmsSuiteUi.SuiteTheme.MenuButton("Units", unitTools, "Battalions and brigades, the units list, deploying divisions, the air defense plan, converting old unit types");
-        var filesMenu = BmsSuiteUi.SuiteTheme.MenuButton("Theater files", new[] { stB, aiB, teB, thrB }, "Station ILS, Campaign AI, TE lists, campaign terrain (.thr)");
+        var filesMenu = BmsSuiteUi.SuiteTheme.MenuButton("Theater files", new[] { stB, atcB, aiB, teB, thrB }, "Station ILS, ATC airbase voices, Campaign AI, TE lists, campaign terrain (.thr)");
         filesMenu.Margin = new Thickness(0, 0, 12, 0);
         bar.Children.Add(unitsMenu);
         bar.Children.Add(filesMenu);
