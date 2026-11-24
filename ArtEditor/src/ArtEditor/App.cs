@@ -62,6 +62,13 @@ public sealed class App : Application
 
     private void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        // a change tried on the Korea art opened read only: not an error, just say why
+        if (e.Exception is ReadOnlyArtException ro)
+        {
+            MessageBox.Show(ro.Message, "Read only", MessageBoxButton.OK, MessageBoxImage.Information);
+            e.Handled = true;
+            return;
+        }
         Log(e.Exception);
         MessageBox.Show(e.Exception.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;

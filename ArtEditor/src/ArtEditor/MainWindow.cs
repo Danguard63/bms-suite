@@ -115,13 +115,12 @@ public sealed class MainWindow : Window
         _startTheater = startTheater;
         Loaded += (_, _) =>
         {
-            // from the BMS Suite main menu: the art of its working theater (the KTO art is never opened in place: Open… then)
+            // from the BMS Suite main menu: the art of its working theater (the KTO art opens read only)
             if (_startTheater is { } t)
             {
                 string r = ArtSet.ArtRoot(t.ArtDir);
-                bool kto = Path.GetFullPath(r).TrimEnd('\\').Equals(Path.GetFullPath(Path.Combine(t.DataDir, "Art")).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
-                if (!kto && Directory.Exists(r)) { _dataDir = t.DataDir; Load(r, t.Name); return; }
                 _dataDir = t.DataDir;
+                if (Directory.Exists(r)) { Load(r, t.Name); return; }
                 OpenArt();
                 return;
             }
@@ -173,21 +172,18 @@ public sealed class MainWindow : Window
             MessageBox.Show(this, $"BMS art not found: {baseArt}\nChoose the BMS Data folder in Open….", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
             ShowEmpty(); return;
         }
-        // la KTO (Data\Art) e' il master di tutti i teatri: non si apre mai per modificarla
-        if (Path.GetFullPath(ArtSet.ArtRoot(root)).TrimEnd('\\').Equals(Path.GetFullPath(baseArt).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
-        {
-            MessageBox.Show(this, $"{root} is the KTO art (Data\\Art), the master used by every theater: it is never changed by the editor.\n" +
-                "Use 'New theater art…' to start a theater art from it, or open the art folder of a theater.", Title, MessageBoxButton.OK, MessageBoxImage.Warning);
-            ShowEmpty(); return;
-        }
-        _art = new ArtSet(baseArt, root, label);
+        // la KTO (Data\Art) e' il master di tutti i teatri: si apre solo per guardarla (sola lettura: nessuna modifica, nessun salvataggio)
+        bool kto = Path.GetFullPath(ArtSet.ArtRoot(root)).TrimEnd('\\').Equals(Path.GetFullPath(baseArt).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+        _art = new ArtSet(baseArt, kto ? baseArt : root, label) { ReadOnly = kto };
         _ui = new UiArt(_art);
         _visual.SetArt(Category == ArtCatalog.Visual ? _ui : null);
         _warnedBms = false;
         Settings.Set("work", root); Settings.Set("label", label);
         UpdateTitle();
         if (_cats.SelectedIndex < 0) _cats.SelectedIndex = 0; else ShowCategory();
-        _status.Text = $"Opened {label}: {root}. Files the theater does not have come from BMS ({baseArt}).";
+        _status.Text = kto
+            ? $"Opened the Korea (KTO) art READ ONLY: {baseArt}. It is the master used by every theater and is never changed; to change it for a theater use Open… → New theater art…."
+            : $"Opened {label}: {root}. Files the theater does not have come from BMS ({baseArt}).";
     }
 
     private void OpenReference()
@@ -205,9 +201,9 @@ public sealed class MainWindow : Window
     private void UpdateTitle()
     {
         if (_art == null) { _where.Text = ""; Title = "BMS Art Editor"; return; }
-        Title = $"BMS Art Editor · {_art.Label}{(_art.IsDirty ? " *" : "")}";
-        _where.Text = $"Editing: {_art.WorkRoot}" + (_art.ReferenceRoot != null ? $"    ·    Reference: {_art.ReferenceRoot}" : "");
-        _save.IsEnabled = _art.IsDirty;
+        Title = $"BMS Art Editor · {_art.Label}{(_art.ReadOnly ? " (read only)" : _art.IsDirty ? " *" : "")}";
+        _where.Text = (_art.ReadOnly ? $"Viewing, read only: {_art.BaseRoot}" : $"Editing: {_art.WorkRoot}") + (_art.ReferenceRoot != null ? $"    ·    Reference: {_art.ReferenceRoot}" : "");
+        _save.IsEnabled = _art.IsDirty && !_art.ReadOnly;
     }
 
     private void ShowEmpty()
@@ -246,7 +242,9 @@ public sealed class MainWindow : Window
         }
         if (cat == ArtCatalog.Patches)
         {
-            var add = new Button { Content = "Add a new patch…", Padding = new Thickness(10, 3, 10, 3) };
+            bool ro = _art.ReadOnly;
+            var add = new Button { Content = "Add a new patch…", Padding = new Thickness(10, 3, 10, 3), IsEnabled = !ro,
+                ToolTip = ro ? "The Korea art is read only: open a theater's art (or New theater art…) to add patches" : null };
             add.Click += (_, _) => AddPatch();
             _centerTop.Children.Add(add);
         }
@@ -339,9 +337,10 @@ public sealed class MainWindow : Window
             b.Click += (_, _) => a(); btns.Children.Add(b); return b;
         }
         bool has = sizes.Count > 0;
-        B("Replace with an image…", "PNG, JPG, BMP, TGA, DDS… of any size: you choose the part to use, the editor resizes and converts it", Replace, has).FontWeight = FontWeights.SemiBold;
-        B("Take from reference", _art.ReferenceRoot == null ? "Choose a reference art first (Reference… at the top)" : "The same image of the reference art (resized if its size is different)", FromReference, has && _art.Image(s, "ref") != null);
-        B("Reset to BMS 4.38", "Puts back the BMS image", Reset, has && s.Kind != SlotKind.Patch);
+        bool edit = has && !_art.ReadOnly;   // the Korea art opened read only: look and export only
+        B("Replace with an image…", "PNG, JPG, BMP, TGA, DDS… of any size: you choose the part to use, the editor resizes and converts it", Replace, edit).FontWeight = FontWeights.SemiBold;
+        B("Take from reference", _art.ReferenceRoot == null ? "Choose a reference art first (Reference… at the top)" : "The same image of the reference art (resized if its size is different)", FromReference, edit && _art.Image(s, "ref") != null);
+        B("Reset to BMS 4.38", "Puts back the BMS image", Reset, edit && s.Kind != SlotKind.Patch);
         B("Export as PNG…", "Saves the image to edit it in another program (then use Replace)", Export, has);
         _details.Children.Add(btns);
 
@@ -762,6 +761,7 @@ public sealed class MainWindow : Window
     private async Task SaveAsCopy()
     {
         if (_art == null) return;
+        if (_art.ReadOnly) { MessageBox.Show(this, new ReadOnlyArtException().Message, Title); return; }
         var name = Prompt.Ask(this, "Save as a copy", "Name of the copy (e.g. 'Mideast PvP'). It is made in ArtEditor\\Theaters\\<name>\\Art with the changes not saved yet; the art you opened is not changed:",
             _art.Label + " PvP");
         if (string.IsNullOrWhiteSpace(name)) return;
@@ -843,6 +843,7 @@ public sealed class MainWindow : Window
     private void CopyInto()
     {
         if (_art == null) return;
+        if (_art.ReadOnly) { MessageBox.Show(this, new ReadOnlyArtException().Message, Title); return; }
         if (_art.IsDirty && !Save()) return;
         var w = new OpenWindow(true) { Owner = this, Title = "Copy this art into a theater (choose the theater)" };
         if (w.ShowDialog() != true || w.Root == null) return;

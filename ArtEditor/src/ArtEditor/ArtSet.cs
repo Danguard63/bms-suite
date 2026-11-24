@@ -18,7 +18,7 @@ public sealed class ArtSet
     /// Sposta il lavoro su un'altra cartella (Save as a copy): le modifiche non salvate restano in memoria e il prossimo Save le scrive
     /// nella cartella nuova. I file del teatro gia' letti restano validi perche' la cartella nuova ne e' una copia.
     /// </summary>
-    public void Retarget(string root) => WorkRoot = root;
+    public void Retarget(string root) { Writable(); WorkRoot = root; }
     public string? ReferenceRoot { get; private set; }
     public string Label { get; }
 
@@ -33,6 +33,14 @@ public sealed class ArtSet
     {
         BaseRoot = baseRoot; WorkRoot = workRoot; Label = label;
     }
+
+    /// <summary>
+    /// Sola lettura: la KTO (Data\Art), aperta solo per guardarla (stemmi, schermate, bandiere). Tutto viene dalla KTO, niente si
+    /// cambia e niente si scrive: ogni modifica e il salvataggio danno ReadOnlyArtException.
+    /// </summary>
+    public bool ReadOnly { get; init; }
+
+    private void Writable() { if (ReadOnly) throw new ReadOnlyArtException(); }
 
     /// <summary>
     /// La cartella che contiene davvero _FHD, Resource, Main: alcune artdir puntano alla cartella che contiene "Art"
@@ -75,7 +83,7 @@ public sealed class ArtSet
     }
 
     public ResourceBundle? Base(string rel) => Open(_base, BaseRoot, rel);
-    public ResourceBundle? WorkOnly(string rel) => Open(_work, WorkRoot, rel);
+    public ResourceBundle? WorkOnly(string rel) => ReadOnly ? null : Open(_work, WorkRoot, rel);
     public ResourceBundle? Reference(string rel) => ReferenceRoot == null ? null : Open(_ref, ReferenceRoot, rel);
     /// <summary>L'archivio come lo vede BMS: quello del teatro se c'e', se no quello di BMS.</summary>
     public ResourceBundle? Effective(string rel) => WorkOnly(rel) ?? Base(rel);
@@ -86,6 +94,7 @@ public sealed class ArtSet
     /// <summary>L'archivio del teatro da modificare: se il teatro non ce l'ha ancora, si parte da una copia di quello di BMS.</summary>
     private ResourceBundle? Editable(string rel)
     {
+        Writable();
         var w = WorkOnly(rel);
         if (w != null) return w;
         if (TheaterArtJob.FindCI(BaseRoot, rel) is not { } f) return null;
@@ -224,6 +233,7 @@ public sealed class ArtSet
     /// </summary>
     public List<string> Replace(ArtSlot s, Pic src, System.Windows.Int32Rect crop)
     {
+        Writable();
         var done = new List<string>();
         if (s.Kind == SlotKind.Flag)
         {
@@ -257,6 +267,7 @@ public sealed class ArtSet
     /// <summary>Riporta la casella all'immagine di BMS (solo negli archivi che il teatro ha).</summary>
     public int Reset(ArtSlot s)
     {
+        Writable();
         int n = 0;
         foreach (var rel in s.Archives)
         {
@@ -274,6 +285,7 @@ public sealed class ArtSet
     /// </summary>
     public List<string> FromReference(ArtSlot s)
     {
+        Writable();
         var done = new List<string>();
         if (s.Kind == SlotKind.Flag)
         {
@@ -375,6 +387,7 @@ public sealed class ArtSet
     /// <summary>Patch nuova: voce nell'archivio (alla misura delle altre) e riga in ImageIds.id con il numero dopo l'ultimo.</summary>
     public int AddPatch(string name, Pic src, System.Windows.Int32Rect crop)
     {
+        Writable();
         var w = Editable(ArtCatalog.PatchArchive) ?? throw new InvalidOperationException("Patches archive not found in BMS");
         var model = w.Entries.FirstOrDefault(e => e.IsImage);
         int pw = model?.Width ?? 96, ph = model?.Height ?? 96;
@@ -413,6 +426,7 @@ public sealed class ArtSet
 
     public void SetText(string key, string text)
     {
+        Writable();
         var i = Irc();
         if (i == null || i.Get(key) == text) return;
         i.Set(key, text);
@@ -437,7 +451,7 @@ public sealed class ArtSet
         return f != null ? File.ReadAllLines(f, System.Text.Encoding.Latin1).ToList() : null;
     }
 
-    public void SetScf(string rel, List<string> lines) { _scf[rel] = lines; _dirty.Add(rel); }
+    public void SetScf(string rel, List<string> lines) { Writable(); _scf[rel] = lines; _dirty.Add(rel); }
 
     // ───────────────────────── immagini nuove (stati dei pulsanti) ─────────────────────────
 
@@ -448,6 +462,7 @@ public sealed class ArtSet
     /// </summary>
     public void AddImage(string archive, string name, Pic pic, string? like = null)
     {
+        Writable();
         var w = Editable(archive) ?? throw new InvalidOperationException(archive + " not found");
         var model = like != null ? w.Find(like) : null;
         bool key = model != null && (model.Flags & 0x40000000u) != 0;
@@ -529,6 +544,7 @@ public sealed class ArtSet
     /// </summary>
     public string SetSound(string name, string oggFile)
     {
+        Writable();
         string artRel = WorkRelToData() ?? (Path.GetFileName(Path.GetDirectoryName(WorkRoot.TrimEnd('\\', '/'))!) + @"\Art");
         string file = "Sounds\\" + name.ToLowerInvariant() + ".ogg";
         string path = artRel + "\\" + file;
@@ -570,6 +586,7 @@ public sealed class ArtSet
     /// <summary>Rimette il suono della KTO (la riga di SoundRc.irc della KTO).</summary>
     public void ResetSound(string name)
     {
+        Writable();
         var kto = ParseSounds(SoundBaseLines()).FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (kto.Name == null) return;
         var baseLine = SoundBaseLines()[kto.Line];
@@ -621,11 +638,12 @@ public sealed class ArtSet
     public bool FontInKto(string rel) => TheaterArtJob.FindCI(BaseRoot, rel) != null;
 
     /// <summary>Mette un nuovo .bft al posto di quello esistente (nella cartella del teatro: la KTO non si tocca).</summary>
-    public void SetFontFile(string rel, byte[] bytes) { _fontNew[rel] = bytes; _fontDel.Remove(rel); _dirty.Add(rel); }
+    public void SetFontFile(string rel, byte[] bytes) { Writable(); _fontNew[rel] = bytes; _fontDel.Remove(rel); _dirty.Add(rel); }
 
     /// <summary>Toglie il .bft del teatro: torna quello della KTO.</summary>
     public void ResetFontFile(string rel)
     {
+        Writable();
         _fontNew.Remove(rel);
         if (TheaterArtJob.FindCI(WorkRoot, rel) != null) { _fontDel.Add(rel); _dirty.Add(rel); }
     }
@@ -633,6 +651,7 @@ public sealed class ArtSet
     /// <summary>Aggiunge un font nuovo: file .bft, riga [LOADFONT] in FontRc.irc e numero in FontIds.id (copie del teatro).</summary>
     public int AddFont(string name, string rel, byte[] bytes)
     {
+        Writable();
         var rc = FontRcLines().ToList();
         var ids = FontIdLines().ToList();
         int next = 1;
@@ -653,6 +672,7 @@ public sealed class ArtSet
     /// <summary>Toglie un font aggiunto dal teatro (non quelli della KTO).</summary>
     public void RemoveFont(string name, string rel)
     {
+        Writable();
         var rx = new System.Text.RegularExpressions.Regex(@"^\s*\[LOADFONT\]\s+" + System.Text.RegularExpressions.Regex.Escape(name) + @"\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         _fontRcLines = FontRcLines().Where(l => !rx.IsMatch(l)).ToList();
         var rx2 = new System.Text.RegularExpressions.Regex(@"^\s*" + System.Text.RegularExpressions.Regex.Escape(name) + @"\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -675,6 +695,7 @@ public sealed class ArtSet
     /// </summary>
     public List<string> Save(string backupDir)
     {
+        Writable();
         var written = new List<string>();
         void Backup(string path)
         {
@@ -836,4 +857,11 @@ public sealed class ArtSet
         if (IsDirty) res.Add("There are changes not saved yet.");
         return res;
     }
+}
+
+/// <summary>A change or a save tried on the KTO art opened read only.</summary>
+public sealed class ReadOnlyArtException : InvalidOperationException
+{
+    public ReadOnlyArtException() : base("The Korea (KTO) art is open read only: it is the master used by every theater and is never changed. " +
+        "To change it for a theater, use Open… → New theater art…, which starts a theater art from it.") { }
 }
