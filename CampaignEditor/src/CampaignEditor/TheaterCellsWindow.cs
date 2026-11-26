@@ -204,7 +204,7 @@ public sealed class TheaterCellsWindow : Window
             Log("Ground units in water: reading the campaign and TE files of the theater…");
             var (moves, files, db) = await Task.Run(() =>
             {
-                var db = CampaignDb.Load(ws.DbDirs);
+                var db = CampaignDb.Load(ws.DbDirs, compiledInFirstDir: ws.BmsTheater != null);
                 var g = new GroundUnitsInWater(cache);
                 var all = new List<GroundUnitsInWater.Move>();
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

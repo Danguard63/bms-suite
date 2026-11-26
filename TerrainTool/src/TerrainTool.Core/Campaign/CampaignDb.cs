@@ -7,7 +7,7 @@ namespace TerrainTool.Core.Campaign;
 /// Database delle classi (Falcon4_CT, UCD, VCD) per l'editor di campagna: dominio/classe/tipo di ogni voce CT,
 /// nomi dei tipi di unita' e dei loro mezzi. Ogni file si cerca nelle cartelle date, in ordine (prima l'add-on).
 /// </summary>
-public sealed class CampaignDb
+public sealed partial class CampaignDb
 {
     public sealed record CtEntry(int Domain, int Class, int Type, int SubType, int Specific, int EntityType, int EntityIdx, int Graphics = 0);
     /// <summary>Capacita' di un mezzo (VCD): forza contro fanteria / mezzi cingolati / aerei, raggio antiaereo, radar, armi.</summary>
@@ -60,11 +60,20 @@ public sealed class CampaignDb
         return v;
     }
 
-    public static CampaignDb Load(IEnumerable<string> dirs)
+    /// <param name="compiledInFirstDir">
+    /// Teatro installato: se la prima cartella che ha un database lo ha solo compilato (FALCON4.CT senza Falcon4_CT.xml,
+    /// es. Korea TvT), si legge quello invece di passare alle tabelle XML di BMS, che hanno altri record.
+    /// </param>
+    public static CampaignDb Load(IEnumerable<string> dirs, bool compiledInFirstDir = false)
     {
         var db = new CampaignDb();
         var list = dirs.Where(d => !string.IsNullOrWhiteSpace(d) && Directory.Exists(d)).ToList();
         db._dirs = list;
+        if (compiledInFirstDir && list.FirstOrDefault(HasDatabase) is { } first && !HasXmlCt(first) && CompiledCt(first) is { } ct)
+        {
+            db.LoadCompiled(first, ct);
+            return db;
+        }
         string? Find(string f) => list.Select(d => Path.Combine(d, f)).FirstOrDefault(File.Exists);
         db.CtPath = Find("Falcon4_CT.xml");
         if (db.CtPath != null)

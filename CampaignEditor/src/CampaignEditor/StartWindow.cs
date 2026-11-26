@@ -118,7 +118,7 @@ public sealed class StartWindow : Window
         {
             var ws = _ws ?? MakeWorkspace();
             if (ws == null) { MessageBox.Show(this, "Choose a project or a theater on the left.", Title); return; }
-            try { new TeListsWindow(ws, CampaignDb.Load(ws.DbDirs)) { Owner = this }.Show(); }
+            try { new TeListsWindow(ws, CampaignDb.Load(ws.DbDirs, compiledInFirstDir: ws.BmsTheater != null)) { Owner = this }.Show(); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "TE lists", MessageBoxButton.OK, MessageBoxImage.Warning); }
         }, "TePlanes.lst, TeUnits.lst, TeNavalUnits.lst: the aircraft, battalions and naval units offered in the Tactical Engagement (also in the editor's toolbar)"));
         buttons.Children.Add(UnitText.Btn("Remove project from the list", RemoveProject, "Only from this list: no file is deleted"));
@@ -278,7 +278,7 @@ public sealed class StartWindow : Window
         {
             _info.Text =
                 $"Campaign   {Exists(t.CampaignDir)}\n" +
-                $"Database   {Exists(t.ObjectDir)}{(File.Exists(Path.Combine(t.ObjectDir, "Falcon4_CT.xml")) ? "" : "   (no Falcon4_CT.xml: BMS's own is used)")}\n" +
+                $"Database   {Exists(t.ObjectDir)}{(File.Exists(Path.Combine(t.ObjectDir, "Falcon4_CT.xml")) ? "" : CampaignDb.IsCompiledOnly(t.ObjectDir) ? "   (compiled FALCON4.* files, read only)" : "   (no Falcon4_CT.xml: BMS's own is used)")}\n" +
                 $"3D models  {Exists(t.ModelsDir)}\n" +
                 $"Map        {map}\n" +
                 $"Saves to   {ws.EditsFolder}";

@@ -100,7 +100,7 @@ public sealed class CampaignEditorWindow : Window
         RestoreWindowPlacement();
         Closing += (_, _) => SaveWindowPlacement();
         _grid = ws.Theater.CreateGrid();
-        _db = CampaignDb.Load(ws.DbDirs);
+        _db = CampaignDb.Load(ws.DbDirs, compiledInFirstDir: ws.BmsTheater != null);
         _unitDb = _db;
         _map = new CampaignMap(ws.Theater.SizeKm, ws.PhotoDir, ws.Theater.SizeMeters);
 
