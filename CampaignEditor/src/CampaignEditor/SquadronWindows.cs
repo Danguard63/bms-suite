@@ -228,7 +228,7 @@ public sealed class SquadronWindow : Window
         var picker = new BasePicker(d, db, (object?)ab ?? tf) { Team = () => u.Owner };
         var move = UnitText.Btn("Move to airbase", () =>
         {
-            if (picker.Objective == ab && picker.Carrier == tf) return;
+            if (picker.Objective == ab && picker.Carrier == tf) { MessageBox.Show(this, "The squadron is already there: choose another base in the list above.", Title); return; }
             var (undo, err, fl) = se.Move(u, picker.Objective, picker.Carrier);
             if (fl > 0 && err == null) MessageBox.Show(this, $"The squadron has {fl} planned flights: they keep their old route (BMS will plan new ones).", Title);
             Done((undo, err));

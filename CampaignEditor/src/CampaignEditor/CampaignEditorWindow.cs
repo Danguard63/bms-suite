@@ -777,6 +777,9 @@ public sealed class CampaignEditorWindow : Window
             var mi = new MenuItem { Header = "Change aircraft type…" };
             mi.Click += (_, _) => ChangeSquadronAircraft(u);
             m.Items.Add(mi);
+            var mb = new MenuItem { Header = "Move to airbase…" };
+            mb.Click += (_, _) => MoveSquadronToBase(u);
+            m.Items.Add(mb);
         }
         else if (u.Kind == UnitKind.Flight)
         {
@@ -846,6 +849,33 @@ public sealed class CampaignEditorWindow : Window
         if (Pick("Change aircraft type", text, se.SquadronTypes().Select(x => ((object)x.Ct, x.Text)), sq.Type - 100) is not int ct || ct == sq.Type - 100) return;
         var (undo, err) = se.ChangeAircraft(sq, ct);
         AfterAirChange(undo, err, err == null && flights.Count > 0 ? $"{flights.Count} flight{(flights.Count == 1 ? "" : "s")} now fly {_unitDb.UnitVehicles(ct).FirstOrDefault()}: loadout reset to the gun only." : null);
+    }
+
+    /// <summary>"Move To Airbase" dal tasto destro: aeroporti, piste e portaerei della squadra dello squadrone.</summary>
+    private void MoveSquadronToBase(CampUnit sq)
+    {
+        if (_doc?.Units == null) return;
+        var se = new SquadronEditor(_doc, _unitDb);
+        object? cur = (object?)_doc.Obj(sq.Airbase) ?? _doc.Unit(sq.Airbase);
+        var squadrons = _doc.Units.Units.Where(s => s.Kind == UnitKind.Squadron).ToList();
+        string Count(VuId id) { int n = squadrons.Count(s => s.Airbase == id); return n > 0 ? $", {n} squadron{(n == 1 ? "" : "s")}" : ""; }
+        var bases = new List<(object, string)>();
+        foreach (var o in _doc.Objectives.Where(o => se.IsAirfield(o) && (o.Owner == sq.Owner || o == cur)).OrderBy(o => o.Name))
+            bases.Add((o, $"{o.Name}  ({CampaignValidator.TeamName(_doc, o.Owner)}{Count(o.Id)})"));
+        foreach (var t in _doc.Units.Units.Where(t => t.Kind == UnitKind.TaskForce && (t.Owner == sq.Owner || t == cur)))
+            bases.Add((t, $"⚓ {_unitDb.UnitVehicles(t.Type - 100).FirstOrDefault()} – TF {t.NameId}  ({CampaignValidator.TeamName(_doc, t.Owner)}{Count(t.Id)})"));
+        string team = CampaignValidator.TeamName(_doc, sq.Owner);
+        if (bases.Count <= 1)
+        {
+            MessageBox.Show(this, $"{team} has no other airbase, airstrip or carrier. Give one to {team} first (objective owner).", Title);
+            return;
+        }
+        string text = $"New base for {SquadronName(sq)} (airbases, airstrips and carriers of {team}). Its planned flights keep their old route: BMS plans new ones.";
+        var pick = Pick("Move to airbase", text, bases, cur);
+        if (pick == null || ReferenceEquals(pick, cur)) return;
+        var (undo, err, fl) = se.Move(sq, pick as CampObjective, pick as CampUnit);
+        string? where = pick is CampObjective po ? po.Name : "the carrier";
+        AfterAirChange(undo, err, err == null ? $"{SquadronName(sq)} is now at {where}." + (fl > 0 ? $" Its {fl} planned flight{(fl == 1 ? "" : "s")} keep the old route." : "") : null);
     }
 
     private void MoveFlightToSquadron(CampUnit f)
