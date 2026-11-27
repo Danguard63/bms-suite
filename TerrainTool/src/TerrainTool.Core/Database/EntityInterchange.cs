@@ -112,6 +112,7 @@ public static partial class Interchange
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
         if (CompiledOnlyBlock(p, src, dst)) return p;
+        NumberingCheck(p, dst);
         var x = new EntityCopy(p, BmsDatabase.Load(src.ObjectDir), BmsDatabase.Load(dst.ObjectDir)) { PreferDestination = preferDestination, AirframeMap = airframeMap, AcdAirframe = acdAirframe, Resolve = resolve };
         foreach (int ct in cts) x.Selected.Add(ct);
         foreach (int ct in cts)

@@ -58,6 +58,22 @@ if (File.Exists(Path.Combine(bmsObjects, "Falcon4_CT.xml")) && File.Exists(Path.
   } finally { Directory.Delete(tmpDb, true); }
 } else Console.WriteLine($"compiled database not checked: {bmsObjects} has no Falcon4_CT.xml + FALCON4.CT");
 
+// numerazione delle tabelle XML come le carica BMS (dimensione = Num dell'ultimo record + 1, record al posto del suo Num)
+{
+  void Expect(string what, bool ok) { if (!ok) fail++; Console.WriteLine($"{(ok ? "OK  " : "FAIL")} numbering: {what}"); }
+  string T(params int[] n) => "<CTRecords>" + string.Concat(n.Select(x => $"<CT Num=\"{x}\"><Domain>1</Domain></CT>")) + "</CTRecords>";
+  var X = TerrainTool.Core.Database.XmlNumbering.CheckText;
+  Expect("0..3 in order: no issues", X("a.xml", "CT", T(0, 1, 2, 3)).Count == 0);
+  var gx = X("a.xml", "CT", T(0, 1, 4, 5, 9));
+  Expect("gaps found and serious in CT", gx.Count == 1 && gx[0].Serious && gx[0].Text.StartsWith("5 missing numbers: 2-3, 6-8"));
+  Expect("gaps only a warning in VCD", X("a.xml", "VCD", T(0, 2).Replace("CT", "VCD")).Single().Serious == false);
+  var lx = X("a.xml", "CT", T(0, 1, 3, 2));
+  Expect("last record lower than the highest", lx.Any(i => i.Serious && i.Text.StartsWith("the last record is 2 but 3 is higher")));
+  Expect("duplicate number", X("a.xml", "CT", T(0, 1, 1, 2)).Any(i => i.Text.StartsWith("number used twice: 1")));
+  var stock = TerrainTool.Core.Database.XmlNumbering.Check(bmsObjects);
+  Expect($"BMS stock tables in {bmsObjects}: {stock.Count} issues", stock.Count == 0);
+}
+
 // Korea TvT (solo database compilato): la campagna si legge con il suo database, non con quello di BMS
 string tvt = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(bmsObjects)!)!, "Add-On Korea TvT");
 string tvtCam = Path.Combine(tvt, "Campaign", "TvT_Start.cam");

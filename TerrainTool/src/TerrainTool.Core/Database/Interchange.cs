@@ -100,6 +100,7 @@ public static partial class Interchange
         if (Norm(src.ObjectDir) == Norm(dst.ObjectDir)) { p.Problems.Add("Source and destination use the same database: nothing to copy."); return p; }
         if (DbInstaller.IsShared(dataDir, dst.ObjectDir)) { p.Problems.Add("The destination uses BMS's shared Terrdata\\objects (Korea): it is never written."); return p; }
         if (CompiledOnlyBlock(p, src, dst)) return p;
+        NumberingCheck(p, dst);
         var s = BmsDatabase.Load(src.ObjectDir);
         var d = BmsDatabase.Load(dst.ObjectDir);
         var dLayouts = Directory.Exists(Path.Combine(dst.ObjectDir, "ObjectiveRelatedData"))
@@ -265,6 +266,16 @@ public static partial class Interchange
                 p.Blocking.Add(why);
             }
         return p.Blocking.Count > 0;
+    }
+
+    /// <summary>
+    /// Numbering of the destination's XML tables as BMS loads them (see <see cref="XmlNumbering"/>): problems the destination already
+    /// has, reported under "To check" (they are not caused by the plan; new records still go after the highest number).
+    /// </summary>
+    private static void NumberingCheck(Plan p, BmsTheater dst)
+    {
+        foreach (var i in XmlNumbering.Check(dst.ObjectDir))
+            p.Problems.Add($"Destination table {i.File}: {i.Text}.");
     }
 
     private static string FeatKey(string name, DbRecord ct) => name.Trim().ToLowerInvariant() + "|" + ct.Int("GraphicsNormal", 0);
